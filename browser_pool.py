@@ -133,3 +133,5 @@ if __name__ == "__main__":
         asyncio.run(main())
     except Exception as e:
         logger.error(f"程序运行出错: {str(e)}")
+
+# Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
