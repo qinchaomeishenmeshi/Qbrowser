@@ -57,6 +57,7 @@ class BrowserManager:
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
                     "--disable-blink-features=AutomationControlled",
+                    f"--window-title=浏览器ID: {self.user_id}"  # 设置窗口标题
                 ],
                 "viewport": {
                     "width": self.config.viewport_width,
@@ -68,13 +69,16 @@ class BrowserManager:
 
             self.context = await self._playwright.chromium.launch_persistent_context(**context_args)
             self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
+            empty_page = await self.context.new_page()
 
             self.page.set_default_timeout(30000)
+            # 设置浏览器标题为 user_id
+            await empty_page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
+            # 新打开一个页面
+
             await self.page.goto(self.config.base_url, wait_until="networkidle")
             self._startup_time = asyncio.get_running_loop().time()
 
-            # 设置浏览器标题为 user_id
-            await self.page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
             logger.info(f"浏览器已启动，用户: {self.user_id}")
             return True
 
