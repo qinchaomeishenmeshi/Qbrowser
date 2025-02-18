@@ -2,8 +2,7 @@ import asyncio
 import logging
 import threading
 import time
-from asyncio import Lock, run
-from contextlib import asynccontextmanager
+from asyncio import Semaphore
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, List
@@ -43,7 +42,6 @@ class BrowserManager:
         self.user_data_dir = self.config.data_dir_base / user_id
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
-        self.cleanup_lock = Lock()  # 为清理资源操作加锁
 
     async def initialize(self) -> bool:
         """初始化浏览器上下文和页面"""
@@ -72,11 +70,11 @@ class BrowserManager:
             self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
 
             self.page.set_default_timeout(30000)
-            await self._setup_page_handlers()
-
             await self.page.goto(self.config.base_url, wait_until="networkidle")
             self._startup_time = asyncio.get_running_loop().time()
 
+            # 设置浏览器标题为 user_id
+            await self.page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
             logger.info(f"浏览器已启动，用户: {self.user_id}")
             return True
 
@@ -85,54 +83,31 @@ class BrowserManager:
             await self.cleanup()
             return False
 
-    async def _setup_page_handlers(self):
-        """设置页面事件处理器"""
-        if not self.page:
-            return
-
-        async def handle_dialog(dialog):
-            await dialog.dismiss()
-
-        async def handle_error(error):
-            logger.error(f"页面错误 {self.user_id}: {error}")
-
-        self.page.on("dialog", handle_dialog)
-        self.page.on("pageerror", handle_error)
-
-    @asynccontextmanager
-    async def error_boundary(self):
-        """错误边界处理器"""
-        try:
-            yield
-        except Exception as e:
-            logger.error(f"操作失败 {self.user_id}: {str(e)}", exc_info=True)
-            await self.cleanup()
-            raise
-
     async def cleanup(self):
         """清理资源"""
         try:
-            print("清理资源", self._playwright)
+            if self.page:
+                await self.page.close()
+                self.page = None
+                logger.info(f"已关闭页面: {self.user_id}")
+
+            if self.context:
+                await self.context.close()
+                self.context = None
+                logger.info(f"已关闭上下文: {self.user_id}")
 
             if self._playwright:
-                try:
-                    await self._playwright.stop()
-                    self._playwright = None
-                    logger.info(f"已停止 playwright 浏览器: {self.user_id}")
-                except Exception as e:
-                    logger.warning(f"Playwright 浏览器已停止或不存在，无法再次停止: {str(e)}")
-            else:
-                logger.info(f"没有playwright浏览器需要停止: {self.user_id}")
-
+                await self._playwright.stop()
+                self._playwright = None
+                logger.info(f"已停止 playwright 浏览器: {self.user_id}")
         except Exception as e:
             logger.error(f"清理资源时出错: {str(e)}", exc_info=True)
-            raise
 
     @property
     def is_running(self) -> bool:
         """优化后的浏览器状态检测（线程安全/版本兼容/异常防护）"""
         try:
-            return bool(self.context.pages[0])
+            return bool(self.context)
         except Exception:
             return False
 
@@ -140,31 +115,23 @@ class BrowserManager:
     def uptime(self) -> Optional[float]:
         """获取运行时间（秒），修改为同步方式"""
         if self._startup_time and self.is_running:
-            # 如果没有异步事件循环，使用时间戳计算
             return time.time() - self._startup_time
         return None
 
 
 class BrowserPool:
-    def __init__(self):
+    def __init__(self, max_concurrent_instances: int = 10):
         self.browser_managers: Dict[str, BrowserManager] = {}
         self._local = threading.local()
-
-    @property
-    def lock(self):
-        if not hasattr(self._local, 'lock'):
-            self._local.lock = asyncio.Lock()
-        return self._local.lock
+        self._semaphore = Semaphore(max_concurrent_instances)  # 限制最大并发实例数
 
     async def initialize_user(self, user_id: str) -> bool:
-        """安全地初始化用户浏览器（修复死锁问题）"""
-        async with self.lock:
+        """初始化用户浏览器，使用信号量限制并发"""
+        async with self._semaphore:
             try:
-                # 直接清理而不嵌套获取锁
                 if manager := self.browser_managers.pop(user_id, None):
                     await manager.cleanup()
 
-                # 创建新浏览器
                 manager = BrowserManager(user_id)
                 success = await manager.initialize()
                 if success:
@@ -175,19 +142,17 @@ class BrowserPool:
                 return False
 
     async def cleanup_user(self, user_id: str):
-        """清理用户浏览器（无需锁保护，由调用方保证）"""
-        print(self.browser_managers)
+        """清理用户浏览器"""
         if manager := self.browser_managers.pop(user_id, None):
-            await manager.cleanup()  # 确保关闭页面和浏览器
+            await manager.cleanup()
 
     async def cleanup_all(self):
-        """清理所有浏览器（由锁保护）"""
-        async with self.lock:
-            for user_id in list(self.browser_managers.keys()):
-                await self.cleanup_user(user_id)  # 直接调用无需锁
+        """清理所有浏览器"""
+        for user_id in list(self.browser_managers.keys()):
+            await self.cleanup_user(user_id)
 
     def get_instance_status(self) -> List[Dict]:
-        """获取浏览器状态（线程安全读取）"""
+        """获取浏览器状态"""
         return [
             {
                 "user_id": user_id,
@@ -201,21 +166,6 @@ class BrowserPool:
 browser_pool = BrowserPool()
 
 
-async def shutdown_hook():
-    """关闭钩子"""
-    await browser_pool.cleanup_all()
-
-
-def run_async(coro):
-    """异步执行器"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
 @app.route('/api/status', methods=['GET'])
 def get_status():
     """API端点：获取状态"""
@@ -226,11 +176,10 @@ def get_status():
 def start_instance():
     """API端点：启动浏览器"""
     user_id = request.json.get('user_id')
-    print(f"Starting instance for user: {user_id}")
     if not user_id:
         return jsonify({"error": "Missing user_id"}), 400
 
-    success = run_async(browser_pool.initialize_user(user_id))
+    success = asyncio.run(browser_pool.initialize_user(user_id))
     return jsonify({"success": success})
 
 
@@ -241,8 +190,7 @@ def stop_instance():
     if not user_id:
         return jsonify({"error": "Missing user_id"}), 400
 
-    # 异步执行清理任务
-    run(browser_pool.cleanup_user(user_id))
+    asyncio.run(browser_pool.cleanup_user(user_id))
     return jsonify({"success": True})
 
 
@@ -343,7 +291,7 @@ def index():
                                             </span>
                                         </div>
                                     </div>
-                                
+
                                 </div>
                             {% endfor %}
                         {% else %}
@@ -351,7 +299,7 @@ def index():
                         {% endif %}
                     </div>
                     <div class="refresh-notice">
-                        ※ 状态每30秒自动刷新，切换标签页时暂停刷新
+                        ※ 页面加载时自动获取最新状态
                     </div>
                 </div>
 
@@ -388,26 +336,6 @@ def index():
                             console.error(`停止浏览器失败: ${userId}`, error);
                         }
                     }
-
-                    // 自动刷新状态（页面可见时每30秒刷新）
-                    setInterval(() => {
-                        if (document.visibilityState === 'visible') {
-                            fetch('/api/status')
-                                .then(response => response.json())
-                                .then(data => {
-                                    const currentIds = new Set(
-                                        Array.from(document.querySelectorAll('.instance-item'))
-                                            .map(el => el.querySelector('strong').textContent.trim())
-                                    );
-                                    const newIds = new Set(data.instances.map(i => i.user_id));
-
-                                    if (currentIds.size !== newIds.size || 
-                                        ![...currentIds].every(id => newIds.has(id))) {
-                                        location.reload();
-                                    }
-                                });
-                        }
-                    }, 30000);
                 </script>
             </body>
         </html>
