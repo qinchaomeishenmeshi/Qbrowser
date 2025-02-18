@@ -1,0 +1,68 @@
+{
+  "manifest_version": 3,
+  "name": "直播中控",
+  "description": "直播常用词管理",
+  "version": "1.0",
+  "permissions": [
+    "storage",
+    "tabs",
+    "webRequest",
+    "storage",
+    "scripting",
+    "sockets",
+    "experimental",
+    {
+      "socket": [
+        "tcp-connect"
+      ]
+    },
+    "app.window",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.douyin.com/*",
+    "https://*.kuaishou.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.douyin.com/*",
+        "https://*.kuaishou.com/*"
+      ],
+      "js": [
+        "content.js",
+        "utils/dom.js"
+      ],
+      "run_at": "document_start",
+      "word": "MAIN"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "*.js",
+        "*.html"
+      ],
+      "matches": [
+        "https://*.douyin.com/*",
+        "https://*.kuaishou.com/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
