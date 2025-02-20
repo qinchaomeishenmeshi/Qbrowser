@@ -68,12 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
         chatItems: 'div[class*="item-"]'
     }
 
-    // 开启页面刷新的定时器
-    startReloadPageTimer()
 
     // 创建 MutationObserver 回调函数
     const observerCallback = async () => {
         try {
+            // 开启页面刷新的定时器
+            startReloadPageTimer()
             // 查找聊天容器
             const chatWrap = document.querySelector(SELECTORS.chatWrap)
             if (!chatWrap) return
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('准备连接socket')
     setTimeout(() => {
         getDyAccountNo()
-    },5000)
+    }, 5000)
 })
 
 // 发送消息
@@ -307,7 +307,7 @@ function connectSocket() {
                         type: 'ping',
                         roomName: localStorage.getItem('dyRoomName'),
                         roomNo: localStorage.getItem('dyAccountNo'),
-                        terminal:"pc"
+                        terminal: "pc"
                     })
                 )
             }

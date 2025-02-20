@@ -76,7 +76,7 @@ class BrowserManager:
             await empty_page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
             # 新打开一个页面
 
-            await self.page.goto(self.config.base_url, wait_until="networkidle")
+            await self.page.goto(self.config.base_url)
             self._startup_time = asyncio.get_running_loop().time()
 
             logger.info(f"浏览器已启动，用户: {self.user_id}")
