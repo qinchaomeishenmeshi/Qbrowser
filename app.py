@@ -68,9 +68,8 @@ class BrowserManager:
             }
 
             self.context = await self._playwright.chromium.launch_persistent_context(**context_args)
+            self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
             empty_page = await self.context.new_page()
-            await asyncio.sleep(0.5)
-            self.page = self.context.pages[1] if self.context.pages[1] else await self.context.new_page()
 
             self.page.set_default_timeout(30000)
             # 设置浏览器标题为 user_id
