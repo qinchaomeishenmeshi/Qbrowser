@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import platform
 import threading
 import time
 from asyncio import Semaphore
@@ -23,13 +24,62 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
+class ExtensionLoader:
+    def __init__(self, base_dir=None):
+        # 获取项目根目录（自动识别）
+        self.root_path = Path(base_dir) if base_dir else Path(__file__).parent.resolve()
+        # 配置默认扩展路径
+        self.default_extension = self.root_path / "extensions" / "live_room"
+
+        # Windows路径处理标志
+        self.is_windows = platform.system() == 'Windows'
+
+    def get_safe_extension_path(self, custom_path=None):
+        """获取安全格式的扩展路径"""
+        # 确定最终路径
+        target_path = Path(custom_path) if custom_path else self.default_extension
+
+        # 转换为绝对路径
+        abs_path = target_path.resolve()
+
+        # 存在性验证
+        if not abs_path.exists():
+            raise FileNotFoundError(f"扩展目录不存在: {abs_path}")
+
+        # 确保是目录
+        if not abs_path.is_dir():
+            raise NotADirectoryError(f"扩展路径不是一个目录: {abs_path}")
+
+        # 格式化路径
+        formatted_path = self._format_path(abs_path)
+        return formatted_path
+
+    def _format_path(self, path):
+        """格式化路径以适应不同操作系统"""
+        abs_path = path.resolve()
+        if self.is_windows:
+            # 转换路径分隔符并添加引号
+            formatted = f'"{abs_path.as_posix()}"'
+
+            # 处理特殊字符（示例处理空格）
+            if ' ' in formatted:
+                formatted = f'"{formatted}"'  # 双层引号
+
+            return formatted
+
+        # 非Windows系统处理
+        return f'"{abs_path}"'
+
+
 @dataclass
 class BrowserConfig:
     """浏览器配置数据类"""
+    loader = ExtensionLoader()
     viewport_width: int = 1280
     viewport_height: int = 720
     base_url: str = "https://eos.douyin.com"
-    extension_path: str = "live_room"
+    extension_path: str = loader.get_safe_extension_path()
+
     data_dir_base: Path = Path("browser_data") / "douyin"
 
 
@@ -43,17 +93,28 @@ class BrowserManager:
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
 
+        if platform.system() == 'Windows':
+            import ctypes
+            # 禁用最大化按钮
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            style = ctypes.windll.user32.GetWindowLongPtrW(hwnd, -16)  # GWL_STYLE
+            style &= ~0x00010000  # WS_MAXIMIZEBOX
+            ctypes.windll.user32.SetWindowLongPtrW(hwnd, -16, style)
+
     async def initialize(self) -> bool:
         """初始化浏览器上下文和页面"""
         try:
             self.user_data_dir.mkdir(parents=True, exist_ok=True)
             self._playwright = await async_playwright().start()
-
+            print(f"扩展路径: {self.config.extension_path}")
             context_args = {
                 "user_data_dir": str(self.user_data_dir),
                 "headless": False,
                 "channel": "chrome",
                 "args": [
+                    '--disable-window-maximize',
+                    '--disable-features=Fullscreen',
+                    '--disable-fullscreen',
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
                     "--disable-blink-features=AutomationControlled",
@@ -68,13 +129,22 @@ class BrowserManager:
             }
 
             self.context = await self._playwright.chromium.launch_persistent_context(**context_args)
-            self.page = self.context.pages[0] if self.context.pages else await self.context.new_page()
-            empty_page = await self.context.new_page()
-
-            self.page.set_default_timeout(30000)
+            # 增加一个空页作为浏览器标识
+            empty_page = self.context.pages[0] if self.context.pages[0] else await self.context.new_page()
             # 设置浏览器标题为 user_id
             await empty_page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
             # 新打开一个页面
+            self.page = await self.context.new_page()
+            self.page.set_default_timeout(30000)
+            await self.page.add_init_script("""
+                                Object.defineProperty(window, 'resizeTo', {
+                                    value: function() {},
+                                    writable: false
+                                });
+                                window.addEventListener('resize', function(e) {
+                                    e.preventDefault();
+                                }, { passive: false });
+                            """)
 
             await self.page.goto(self.config.base_url)
             self._startup_time = asyncio.get_running_loop().time()
