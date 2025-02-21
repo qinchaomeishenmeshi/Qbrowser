@@ -24,16 +24,47 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
+def get_absolute_extension_path(relative_path: str) -> str:
+    """跨平台安全的绝对路径获取"""
+    base_dir = Path(__file__).parent
+
+    # 构建完整路径对象
+    extension_path = base_dir / relative_path
+
+    # 转换为绝对路径并解析符号链接
+    absolute_path = extension_path.resolve(strict=True)
+
+    # Windows特殊处理
+    if platform.system() == 'Windows':
+        # 转换为Windows原生路径格式
+        win_path = str(absolute_path)
+
+        # 处理空格和特殊字符
+        if any(c in win_path for c in (' ', '&', '^')):
+            win_path = f'"{win_path}"'
+
+        # 可选：转换为短路径格式（8.3格式）
+        try:
+            from ctypes import windll, create_unicode_buffer
+            buffer = create_unicode_buffer(256)
+            if windll.kernel32.GetShortPathNameW(win_path, buffer, 256):
+                win_path = buffer.value
+        except Exception:
+            pass
+
+        return win_path
+
+    # 非Windows系统处理
+    return str(absolute_path)
+
+
 @dataclass
 class BrowserConfig:
     """浏览器配置数据类"""
     viewport_width: int = 1280
     viewport_height: int = 720
     base_url: str = "https://eos.douyin.com"
-    if platform.system() == 'Windows':
-        extension_path = r"extensions/live_room"
-    else:
-        extension_path = "extensions/live_room"
+    extension_path = get_absolute_extension_path("extensions/live_room")
 
     data_dir_base: Path = Path("browser_data") / "douyin"
 
