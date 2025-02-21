@@ -65,15 +65,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const SELECTORS = {
         chatWrap: "div[class*='comment-wrap-']",
         chatList: "div[class*='list-']",
-        chatItems: 'div[class*="item-"]'
+        chatItems: 'div[class*="item-"]',
+        submenu: "div.okee-main-submenu-content"
     }
 
 
     // 创建 MutationObserver 回调函数
     const observerCallback = async () => {
         try {
-            // 开启页面刷新的定时器
-            startReloadPageTimer()
+            const subMenuEle = document.querySelector(SELECTORS.submenu)
+            const liveStatus = /正在直播/.test(subMenuEle.textContent)
+            console.log('检测到直播间状态变化', liveStatus)
+            if (liveStatus) {
+                console.log('开启页面刷新的定时器')
+                startReloadPageTimer()
+            }
+            if (!subMenuEle) return
+
             // 查找聊天容器
             const chatWrap = document.querySelector(SELECTORS.chatWrap)
             if (!chatWrap) return
