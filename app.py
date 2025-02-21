@@ -24,61 +24,16 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
-class ExtensionLoader:
-    def __init__(self, base_dir=None):
-        # 获取项目根目录（自动识别）
-        self.root_path = Path(base_dir) if base_dir else Path(__file__).parent.resolve()
-        # 配置默认扩展路径
-        self.default_extension = self.root_path / "extensions" / "live_room"
-
-        # Windows路径处理标志
-        self.is_windows = platform.system() == 'Windows'
-
-    def get_safe_extension_path(self, custom_path=None):
-        """获取安全格式的扩展路径"""
-        # 确定最终路径
-        target_path = Path(custom_path) if custom_path else self.default_extension
-
-        # 转换为绝对路径
-        abs_path = target_path.resolve()
-
-        # 存在性验证
-        if not abs_path.exists():
-            raise FileNotFoundError(f"扩展目录不存在: {abs_path}")
-
-        # 确保是目录
-        if not abs_path.is_dir():
-            raise NotADirectoryError(f"扩展路径不是一个目录: {abs_path}")
-
-        # 格式化路径
-        formatted_path = self._format_path(abs_path)
-        return formatted_path
-
-    def _format_path(self, path):
-        """格式化路径以适应不同操作系统"""
-        abs_path = path.resolve()
-        if self.is_windows:
-            # 转换路径分隔符并添加引号
-            formatted = f'"{abs_path.as_posix()}"'
-
-            # 处理特殊字符（示例处理空格）
-            if ' ' in formatted:
-                formatted = f'"{formatted}"'  # 双层引号
-
-            return formatted
-
-        # 非Windows系统处理
-        return f'"{abs_path}"'
-
-
 @dataclass
 class BrowserConfig:
     """浏览器配置数据类"""
-    loader = ExtensionLoader()
     viewport_width: int = 1280
     viewport_height: int = 720
     base_url: str = "https://eos.douyin.com"
-    extension_path: str = loader.get_safe_extension_path()
+    if platform.system() == 'Windows':
+        extension_path = r"extensions/live_room"
+    else:
+        extension_path = "extensions/live_room"
 
     data_dir_base: Path = Path("browser_data") / "douyin"
 
