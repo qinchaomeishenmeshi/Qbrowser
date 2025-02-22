@@ -80,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('开启页面刷新的定时器')
                 startReloadPageTimer()
             }
-            if (!subMenuEle) return
 
             // 查找聊天容器
             const chatWrap = document.querySelector(SELECTORS.chatWrap)
