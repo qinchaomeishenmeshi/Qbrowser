@@ -75,31 +75,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // 创建 MutationObserver 回调函数
     const observerCallback = async () => {
         try {
+            // // 自动进入直播间
+            // if (!playLiveScreenBtn) {
+            //     playLiveScreenBtn = document.querySelector('button[class="okee-current-live-btn okee-current-live-btn-size-md okee-current-live-btn-type-primary okee-current-live-btn-shape-angle okee-current-live-can-input-grouped"]');
+            //     if (playLiveScreenBtn) {
+            //         playLiveScreenBtn.click()
+            //         console.log("监测到播放直播画面按钮")
+            //     } else {
+            //         console.log("未监测到播放直播画面按钮")
+            //     }
+            // }
+            //
+            // // 获取直播间配置信息中的是否开启音频检测
+            // const result = await chrome.storage.local.get('liveroom_comments_rule');
+            // const audioChecked = result.liveroom_comments_rule?.audioChecked || false
+            // if (audioChecked) {
+            //     console.log('已配置开启直播间声音检测')
+            //     startAudioTimer()
+            // } else {
+            //     console.log('未配置开启直播间声音检测')
+            //     checkAudioStopTimer()
+            // }
+
             // 查找聊天容器
             const chatWrap = document.querySelector(SELECTORS.chatWrap)
             if (!chatWrap) return
-
-            // 自动进入直播间
-            if (!playLiveScreenBtn) {
-                playLiveScreenBtn = document.querySelector('button[class="okee-current-live-btn okee-current-live-btn-size-md okee-current-live-btn-type-primary okee-current-live-btn-shape-angle okee-current-live-can-input-grouped"]');
-                if (playLiveScreenBtn) {
-                    playLiveScreenBtn.click()
-                    console.log("监测到播放直播画面按钮")
-                } else {
-                    console.log("未监测到播放直播画面按钮")
-                }
-            }
-
-            // 获取直播间配置信息中的是否开启音频检测
-            const result = await chrome.storage.local.get('liveroom_comments_rule');
-            const audioChecked = result.liveroom_comments_rule?.audioChecked || false
-            if (audioChecked) {
-                console.log('已配置开启直播间声音检测')
-                startAudioTimer()
-            } else {
-                console.log('未配置开启直播间声音检测')
-                checkAudioStopTimer()
-            }
 
             // 查找评论列表
             const chatListEle = chatWrap.querySelector(SELECTORS.chatList)
