@@ -73,14 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 创建 MutationObserver 回调函数
     const observerCallback = async () => {
         try {
-            const subMenuEle = document.querySelector(SELECTORS.submenu)
-            const liveStatus = /正在直播/.test(subMenuEle.textContent)
-            console.log('检测到直播间状态变化', liveStatus)
-            if (liveStatus) {
-                console.log('开启页面刷新的定时器')
-                startReloadPageTimer()
-            }
-
             // 查找聊天容器
             const chatWrap = document.querySelector(SELECTORS.chatWrap)
             if (!chatWrap) return
@@ -135,10 +127,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // 创建并启动 observer
     const observer = new MutationObserver(observerCallback)
     observer.observe(document.body, observerConfig)
+
+    const subMenuObserverCallback = () => {
+        const subMenuEle = document.querySelector(SELECTORS.submenu)
+        console.log(subMenuEle.textContent, 'subMenuEle.textContent')
+        const liveStatus = /本地直播专业版/.test(subMenuEle.textContent)
+        console.log('检测到直播间状态变化======', liveStatus)
+        if (liveStatus) {
+            console.log('开启页面刷新的定时器')
+            startReloadPageTimer()
+        } else {
+            console.log('停止页面刷新的定时器')
+            stopReloadPageTimer()
+        }
+    }
+
+
     creatTopTips('插件已开启评论区监听')
     console.log('准备连接socket')
     setTimeout(() => {
         getDyAccountNo()
+        const subMenuEle = document.querySelector(SELECTORS.submenu)
+        if (subMenuEle) {
+            const subMenuObserver = new MutationObserver(subMenuObserverCallback)
+            console.log('准备subMenuEle监听')
+            const subMenuObserverConfig = {
+                childList: true,
+                characterData: true,
+                subtree: true
+            }
+            subMenuObserver.observe(subMenuEle, subMenuObserverConfig)
+        }
     }, 5000)
 })
 
