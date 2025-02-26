@@ -18,6 +18,8 @@ const liveScreenURL = 'https://eos.douyin.com/dp/liveScreen'
 
 let comment = {}
 
+let subMenuEle = null
+
 // 监听消息
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     console.log('request', request)
@@ -129,9 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     observer.observe(document.body, observerConfig)
 
     const subMenuObserverCallback = () => {
-        const subMenuEle = document.querySelector(SELECTORS.submenu)
-        console.log(subMenuEle.textContent, 'subMenuEle.textContent')
-        const liveStatus = /本地直播专业版/.test(subMenuEle.textContent)
+        const liveStatus = /正在直播/.test(subMenuEle.textContent)
         console.log('检测到直播间状态变化======', liveStatus)
         if (liveStatus) {
             console.log('开启页面刷新的定时器')
@@ -147,8 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('准备连接socket')
     setTimeout(() => {
         getDyAccountNo()
-        const subMenuEle = document.querySelector(SELECTORS.submenu)
+        subMenuEle = document.querySelector(SELECTORS.submenu)
         if (subMenuEle) {
+            subMenuObserverCallback()
             const subMenuObserver = new MutationObserver(subMenuObserverCallback)
             console.log('准备subMenuEle监听')
             const subMenuObserverConfig = {

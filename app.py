@@ -79,13 +79,13 @@ class BrowserManager:
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
 
-        if platform.system() == 'Windows':
-            import ctypes
-            # 禁用最大化按钮
-            hwnd = ctypes.windll.user32.GetForegroundWindow()
-            style = ctypes.windll.user32.GetWindowLongPtrW(hwnd, -16)  # GWL_STYLE
-            style &= ~0x00010000  # WS_MAXIMIZEBOX
-            ctypes.windll.user32.SetWindowLongPtrW(hwnd, -16, style)
+        # if platform.system() == 'Windows':
+        #     import ctypes
+        #     # 禁用最大化按钮
+        #     hwnd = ctypes.windll.user32.GetForegroundWindow()
+        #     style = ctypes.windll.user32.GetWindowLongPtrW(hwnd, -16)  # GWL_STYLE
+        #     style &= ~0x00010000  # WS_MAXIMIZEBOX
+        #     ctypes.windll.user32.SetWindowLongPtrW(hwnd, -16, style)
 
     async def initialize(self) -> bool:
         """初始化浏览器上下文和页面"""
