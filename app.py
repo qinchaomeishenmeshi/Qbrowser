@@ -101,9 +101,9 @@ class BrowserManager:
                     '--disable-window-maximize',
                     '--disable-features=Fullscreen',
                     '--disable-fullscreen',
-                    # f"--disable-extensions-except={self.config.extension_path}",
-                    # f"--load-extension={self.config.extension_path}",
-            
+                    f"--disable-extensions-except={self.config.extension_path}",
+                    f"--load-extension={self.config.extension_path}",
+
                 ],
                 "viewport": {
                     "width": self.config.viewport_width,
