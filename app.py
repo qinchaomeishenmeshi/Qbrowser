@@ -101,17 +101,15 @@ class BrowserManager:
                     '--disable-window-maximize',
                     '--disable-features=Fullscreen',
                     '--disable-fullscreen',
-                    f"--disable-extensions-except={self.config.extension_path}",
-                    f"--load-extension={self.config.extension_path}",
-                    "--disable-blink-features=AutomationControlled",
-                    f"--window-title=浏览器ID: {self.user_id}"  # 设置窗口标题
+                    # f"--disable-extensions-except={self.config.extension_path}",
+                    # f"--load-extension={self.config.extension_path}",
+            
                 ],
                 "viewport": {
                     "width": self.config.viewport_width,
                     "height": self.config.viewport_height
                 },
                 "permissions": ["geolocation"],
-                "ignore_https_errors": True
             }
 
             self.context = await self._playwright.chromium.launch_persistent_context(**context_args)
