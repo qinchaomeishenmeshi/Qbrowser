@@ -6,20 +6,24 @@
   "permissions": [
     "storage",
     "tabs",
-    "webRequest",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
     "storage",
     "scripting",
-    "sockets",
     {
       "socket": [
         "tcp-connect"
       ]
     },
     "app.window",
+    "debugger",
     "activeTab"
   ],
   "host_permissions": [
-    "https://*.douyin.com/*"
+    "https://*.douyin.com/*",
+    "https://eos.douyin.com/*",
+    "https://*.lifecreator.cn/*",
+    "https://hj.qwang.com.cn/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -32,7 +36,9 @@
       ],
       "js": [
         "content.js",
-        "utils/dom.js"
+        "utils/dom.js",
+        "utils/request.js",
+        "utils/setting.js"
       ],
       "run_at": "document_start",
       "word": "MAIN"

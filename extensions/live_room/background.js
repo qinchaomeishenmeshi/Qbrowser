@@ -1,8 +1,30 @@
 const eosHomePage = 'https://*.douyin.com/*'
+const targetUrlPattern = /^https:\/\/eos\.douyin\.com\/data\/life\/live\/shelves\/anchor\//
+// 存储请求ID和标签页ID的映射
+const requestTabMap = {}
 
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   console.log('插件加载完成', reason)
 })
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'SHELVES_ANCHOR_DATA') {
+    console.log('接收货架主播数据:', request.data)
+    // 统一数据处理逻辑
+    handleShelvesData(request.data)
+  }
+  return true // 保持通道开放用于异步响应
+})
+
+// 新增数据处理函数
+function handleShelvesData(data) {
+  // 这里添加数据存储或转发逻辑
+  console.log('处理货架数据:', {
+    timestamp: data.timestamp,
+    url: data.url,
+    payload: data.payload
+  })
+}
 
 function getDouyinTab() {
   return new Promise((resolve, reject) => {
@@ -70,7 +92,7 @@ function injectContentScript(tabId) {
     chrome.scripting.executeScript(
       {
         target: { tabId: tabId },
-        files: ['utils/dom.js']
+        files: ['utils/dom.js', 'utils/request.js', 'utils/setting.js']
       },
       () => {
         if (chrome.runtime.lastError) {
