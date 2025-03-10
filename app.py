@@ -101,7 +101,6 @@ class BrowserManager:
                     '--disable-window-maximize',
                     '--disable-features=Fullscreen',
                     '--disable-fullscreen',
-                    f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
 
                 ],
@@ -142,24 +141,23 @@ class BrowserManager:
             return False
 
     async def cleanup(self):
-        """清理资源"""
         try:
             if self.page:
                 await self.page.close()
                 self.page = None
-                logger.info(f"已关闭页面: {self.user_id}")
-
             if self.context:
                 await self.context.close()
                 self.context = None
-                logger.info(f"已关闭上下文: {self.user_id}")
-
             if self._playwright:
                 await self._playwright.stop()
                 self._playwright = None
-                logger.info(f"已停止 playwright 浏览器: {self.user_id}")
         except Exception as e:
             logger.error(f"清理资源时出错: {str(e)}", exc_info=True)
+        finally:
+            # 强制清除引用，帮助GC回收
+            self.page = None
+            self.context = None
+            self._playwright = None
 
     @property
     def is_running(self) -> bool:
@@ -178,10 +176,18 @@ class BrowserManager:
 
 
 class BrowserPool:
-    def __init__(self, max_concurrent_instances: int = 10):
+    def __init__(self, max_concurrent_instances: int = 10, idle_timeout: int = 3600):
         self.browser_managers: Dict[str, BrowserManager] = {}
+        self.idle_timeout = idle_timeout
         self._local = threading.local()
         self._semaphore = Semaphore(max_concurrent_instances)  # 限制最大并发实例数
+
+    async def cleanup_old_instances(self):
+        """定期清理闲置实例（可配合定时任务调用）"""
+        now = time.time()
+        for user_id, manager in list(self.browser_managers.items()):
+            if manager.uptime and now - (manager.uptime or 0) > self.idle_timeout:
+                await self.cleanup_user(user_id)
 
     async def initialize_user(self, user_id: str) -> bool:
         """初始化用户浏览器，使用信号量限制并发"""
@@ -200,9 +206,10 @@ class BrowserPool:
                 return False
 
     async def cleanup_user(self, user_id: str):
-        """清理用户浏览器"""
-        if manager := self.browser_managers.pop(user_id, None):
+        manager = self.browser_managers.pop(user_id, None)
+        if manager:
             await manager.cleanup()
+            del manager  # 显式删除引用
 
     async def cleanup_all(self):
         """清理所有浏览器"""
