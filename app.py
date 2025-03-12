@@ -79,18 +79,20 @@ class BrowserManager:
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
 
-        # if platform.system() == 'Windows':
-        #     import ctypes
-        #     # 禁用最大化按钮
-        #     hwnd = ctypes.windll.user32.GetForegroundWindow()
-        #     style = ctypes.windll.user32.GetWindowLongPtrW(hwnd, -16)  # GWL_STYLE
-        #     style &= ~0x00010000  # WS_MAXIMIZEBOX
-        #     ctypes.windll.user32.SetWindowLongPtrW(hwnd, -16, style)
-
     async def initialize(self) -> bool:
         """初始化浏览器上下文和页面"""
         try:
-            self.user_data_dir.mkdir(parents=True, exist_ok=True)
+            # 新增：检查目录是否可用
+            lock_file = self.user_data_dir / "SingletonLock"
+            retry_count = 0
+            while lock_file.exists():
+                if retry_count >= 5:  # 最多重试5次
+                    logger.error(f"用户目录 {self.user_data_dir} 被占用，放弃启动")
+                    return False
+                logger.warning(f"检测到目录 {self.user_data_dir} 被占用，等待释放...")
+                await asyncio.sleep(2)
+                retry_count += 1
+
             self._playwright = await async_playwright().start()
             print(f"扩展路径: {self.config.extension_path}")
             context_args = {
@@ -98,11 +100,8 @@ class BrowserManager:
                 "headless": False,
                 "channel": "chrome",
                 "args": [
-                    '--disable-window-maximize',
-                    '--disable-features=Fullscreen',
-                    '--disable-fullscreen',
+                    f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
-
                 ],
                 "viewport": {
                     "width": self.config.viewport_width,
@@ -154,7 +153,8 @@ class BrowserManager:
         except Exception as e:
             logger.error(f"清理资源时出错: {str(e)}", exc_info=True)
         finally:
-            # 强制清除引用，帮助GC回收
+            # 强制等待浏览器进程退出（避免残留）
+            await asyncio.sleep(2)
             self.page = None
             self.context = None
             self._playwright = None

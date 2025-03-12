@@ -10,11 +10,6 @@
     "declarativeNetRequestFeedback",
     "storage",
     "scripting",
-    {
-      "socket": [
-        "tcp-connect"
-      ]
-    },
     "app.window",
     "debugger",
     "activeTab"
