@@ -482,5 +482,26 @@ async def main(user_ids: list):
 
 if __name__ == "__main__":
     # 传入多个用户 ID
-    user_ids = ["123", "456", "789"]
+    user_ids = [
+        "wh001",
+        "wh002",
+        "wh003",
+        "wh004",
+        "wh005",
+        "wh006",
+        "wh007",
+        "wh008",
+        "wh009",
+        "wh010",
+        "wh011",
+        "wh012",
+        "wh013",
+        "wh014",
+        "wh015",
+        "wh016",
+        "wh017",
+        "wh018",
+        "wh019",
+        "wh020"
+    ]
     asyncio.run(main(user_ids))
