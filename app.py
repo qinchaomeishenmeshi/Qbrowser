@@ -95,22 +95,29 @@ class BrowserManager:
 
             self._playwright = await async_playwright().start()
             print(f"扩展路径: {self.config.extension_path}")
-            context_args = {
-                "user_data_dir": str(self.user_data_dir),
-                "headless": False,
-                "channel": "chrome",
-                "args": [
+            # context_args = {
+            #     "user_data_dir": str(self.user_data_dir),
+            #     "headless": False,
+            #     "channel": "chrome",
+            #     "args": [
+            #         f"--disable-extensions-except={self.config.extension_path}",
+            #         f"--load-extension={self.config.extension_path}",
+            #     ],
+            #     "viewport": {
+            #         "width": self.config.viewport_width,
+            #         "height": self.config.viewport_height
+            #     },
+            #     "permissions": ["geolocation"],
+            # }
+
+            self.context = await self._playwright.chromium.launch_persistent_context(
+                user_data_dir=str(self.user_data_dir),
+                headless=False,
+                channel="chrome",
+                args=[
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
-                ],
-                "viewport": {
-                    "width": self.config.viewport_width,
-                    "height": self.config.viewport_height
-                },
-                "permissions": ["geolocation"],
-            }
-
-            self.context = await self._playwright.chromium.launch_persistent_context(**context_args)
+                ], )
             # 增加一个空页作为浏览器标识
             empty_page = self.context.pages[0] if self.context.pages[0] else await self.context.new_page()
             # 设置浏览器标题为 user_id
