@@ -325,7 +325,7 @@ function startTimer() {
         getActiveCommentData().then(data => {
             console.log('定时任务执行成功:', data)
             const commentReply = data?.commentReply || ''
-            console.log('评论区回复消息:', commentReply)
+            createTopTips('评论区回复消息:', commentReply)
             if (commentReply) {
                 // 评论区回复消息
                 sendMessage(window.location.href, commentReply, data, (result) => {

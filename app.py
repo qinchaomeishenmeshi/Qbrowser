@@ -117,17 +117,6 @@ class BrowserManager:
             await empty_page.evaluate(f"document.title = '浏览器ID: {self.user_id}'")
             # 新打开一个页面
             self.page = await self.context.new_page()
-            self.page.set_default_timeout(30000)
-            await self.page.add_init_script("""
-                                Object.defineProperty(window, 'resizeTo', {
-                                    value: function() {},
-                                    writable: false
-                                });
-                                window.addEventListener('resize', function(e) {
-                                    e.preventDefault();
-                                }, { passive: false });
-                            """)
-
             await self.page.goto(self.config.base_url)
             self._startup_time = asyncio.get_running_loop().time()
 
