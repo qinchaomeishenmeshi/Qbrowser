@@ -1,16 +1,12 @@
 import asyncio
 import logging
 import platform
-import threading
 import time
-from asyncio import Semaphore
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Optional
 
-from flask import Flask, request, render_template_string, jsonify
 from playwright.async_api import async_playwright, BrowserContext, Page, Playwright
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 # 配置日志
 logging.basicConfig(
@@ -20,8 +16,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# app = Flask(__name__)
+# app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 def get_absolute_extension_path(relative_path: str) -> str:
@@ -171,277 +168,319 @@ class BrowserManager:
         return None
 
 
-class BrowserPool:
-    def __init__(self, max_concurrent_instances: int = 10, idle_timeout: int = 3600):
-        self.browser_managers: Dict[str, BrowserManager] = {}
-        self.idle_timeout = idle_timeout
-        self._local = threading.local()
-        self._semaphore = Semaphore(max_concurrent_instances)  # 限制最大并发实例数
-
-    async def cleanup_old_instances(self):
-        """定期清理闲置实例（可配合定时任务调用）"""
-        now = time.time()
-        for user_id, manager in list(self.browser_managers.items()):
-            if manager.uptime and now - (manager.uptime or 0) > self.idle_timeout:
-                await self.cleanup_user(user_id)
-
-    async def initialize_user(self, user_id: str) -> bool:
-        """初始化用户浏览器，使用信号量限制并发"""
-        async with self._semaphore:
-            try:
-                if manager := self.browser_managers.pop(user_id, None):
-                    await manager.cleanup()
-
-                manager = BrowserManager(user_id)
-                success = await manager.initialize()
-                if success:
-                    self.browser_managers[user_id] = manager
-                return success
-            except Exception as e:
-                logger.error(f"初始化用户 {user_id} 失败: {str(e)}", exc_info=True)
-                return False
-
-    async def cleanup_user(self, user_id: str):
-        manager = self.browser_managers.pop(user_id, None)
-        if manager:
-            await manager.cleanup()
-            del manager  # 显式删除引用
-
-    async def cleanup_all(self):
-        """清理所有浏览器"""
-        for user_id in list(self.browser_managers.keys()):
-            await self.cleanup_user(user_id)
-
-    def get_instance_status(self) -> List[Dict]:
-        """获取浏览器状态"""
-        return [
-            {
-                "user_id": user_id,
-                "running": manager.is_running,
-                "uptime": manager.uptime
-            }
-            for user_id, manager in self.browser_managers.copy().items()
-        ]
-
-
-browser_pool = BrowserPool()
-
-
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    """API端点：获取状态"""
-    return jsonify({"instances": browser_pool.get_instance_status()})
+# class BrowserPool:
+#     def __init__(self, max_concurrent_instances: int = 10, idle_timeout: int = 3600):
+#         self.browser_managers: Dict[str, BrowserManager] = {}
+#         self.idle_timeout = idle_timeout
+#         self._local = threading.local()
+#         self._semaphore = Semaphore(max_concurrent_instances)  # 限制最大并发实例数
+#
+#     async def cleanup_old_instances(self):
+#         """定期清理闲置实例（可配合定时任务调用）"""
+#         now = time.time()
+#         for user_id, manager in list(self.browser_managers.items()):
+#             if manager.uptime and now - (manager.uptime or 0) > self.idle_timeout:
+#                 await self.cleanup_user(user_id)
+#
+#     async def initialize_user(self, user_id: str) -> bool:
+#         """初始化用户浏览器，使用信号量限制并发"""
+#         async with self._semaphore:
+#             try:
+#                 if manager := self.browser_managers.pop(user_id, None):
+#                     await manager.cleanup()
+#
+#                 manager = BrowserManager(user_id)
+#                 success = await manager.initialize()
+#                 if success:
+#                     self.browser_managers[user_id] = manager
+#                 return success
+#             except Exception as e:
+#                 logger.error(f"初始化用户 {user_id} 失败: {str(e)}", exc_info=True)
+#                 return False
+#
+#     async def cleanup_user(self, user_id: str):
+#         manager = self.browser_managers.pop(user_id, None)
+#         if manager:
+#             await manager.cleanup()
+#             del manager  # 显式删除引用
+#
+#     async def cleanup_all(self):
+#         """清理所有浏览器"""
+#         for user_id in list(self.browser_managers.keys()):
+#             await self.cleanup_user(user_id)
+#
+#     def get_instance_status(self) -> List[Dict]:
+#         """获取浏览器状态"""
+#         return [
+#             {
+#                 "user_id": user_id,
+#                 "running": manager.is_running,
+#                 "uptime": manager.uptime
+#             }
+#             for user_id, manager in self.browser_managers.copy().items()
+#         ]
+#
+#
+# browser_pool = BrowserPool()
 
 
-@app.route('/api/start', methods=['POST'])
-def start_instance():
-    """API端点：启动浏览器"""
-    user_id = request.json.get('user_id')
-    if not user_id:
-        return jsonify({"error": "Missing user_id"}), 400
+# @app.route('/api/status', methods=['GET'])
+# def get_status():
+#     """API端点：获取状态"""
+#     return jsonify({"instances": browser_pool.get_instance_status()})
+#
 
-    success = asyncio.run(browser_pool.initialize_user(user_id))
-    return jsonify({"success": success})
-
-
-@app.route('/api/stop', methods=['POST'])
-def stop_instance():
-    """API端点：停止浏览器"""
-    user_id = request.json.get('user_id')
-    if not user_id:
-        return jsonify({"error": "Missing user_id"}), 400
-
-    asyncio.run(browser_pool.cleanup_user(user_id))
-    return jsonify({"success": True})
-
-
-@app.route('/')
-def index():
-    """Web界面"""
-    instances = browser_pool.get_instance_status()
-    return render_template_string('''
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <title>Browser Manager</title>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    .container { 
-                        max-width: 800px; 
-                        margin: 20px auto; 
-                        padding: 20px;
-                        font-family: system-ui, -apple-system, sans-serif;
-                    }
-                    .instance-list { margin-top: 20px; }
-                    .instance-item { 
-                        display: flex; 
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 15px;
-                        border-bottom: 1px solid #eee;
-                        background: #f9f9f9;
-                        border-radius: 4px;
-                        margin-bottom: 10px;
-                    }
-                    .instance-info {
-                        display: flex;
-                        flex-direction: column;
-                        gap: 5px;
-                    }
-                    .status-badge {
-                        padding: 3px 8px;
-                        border-radius: 12px;
-                        font-size: 12px;
-                    }
-                    .status-running { background: #e6ffe6; color: #006600; }
-                    .status-stopped { background: #ffe6e6; color: #660000; }
-                    button {
-                        padding: 8px 16px;
-                        border-radius: 4px;
-                        border: none;
-                        cursor: pointer;
-                        transition: opacity 0.2s;
-                    }
-                    button:disabled { opacity: 0.5; cursor: not-allowed; }
-                    .btn-start { background: #4CAF50; color: white; }
-                    .btn-stop { background: #f44336; color: white; }
-                    .input-group {
-                        display: flex;
-                        gap: 10px;
-                        margin-bottom: 20px;
-                    }
-                    input[type="text"] {
-                        flex: 1;
-                        padding: 8px;
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                    }
-                    .refresh-notice {
-                        color: #666;
-                        font-size: 0.9em;
-                        margin-top: 10px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>浏览器管理器</h1>
-
-                    <!-- 启动表单 -->
-                    <div class="input-group">
-                        <input type="text" id="userIds" 
-                               placeholder="输入用户ID（逗号分隔）" 
-                               required>
-                        <button onclick="startInstances()" class="btn-start">
-                            启动新浏览器
-                        </button>
-                    </div>
-
-                    <!-- 浏览器列表 -->
-                    <div class="instance-list">
-                        <h3>运行中的浏览器（{{ instances|length }}）</h3>
-                        {% if instances %}
-                            {% for instance in instances %}
-                                <div class="instance-item">
-                                    <div class="instance-info">
-                                        <div>
-                                            <strong>用户ID:</strong> {{ instance.user_id }}
-                                            <span class="status-badge {{ 'status-running' if instance.running else 'status-stopped' }}">
-                                                {{ "运行中" if instance.running else "已停止" }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p>当前没有运行中的浏览器</p>
-                        {% endif %}
-                    </div>
-                    <div class="refresh-notice">
-                        ※ 页面加载时自动获取最新状态
-                    </div>
-                </div>
-
-                <script>
-                    async function startInstances() {
-                        const input = document.getElementById('userIds');
-                        const userIds = input.value.split(',').map(id => id.trim()).filter(Boolean);
-
-                        for (const userId of userIds) {
-                            try {
-                                const response = await fetch('/api/start', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({user_id: userId})
-                                });
-                                if (!response.ok) throw new Error('启动失败');
-                            } catch (error) {
-                                console.error(`启动浏览器失败: ${userId}`, error);
-                            }
-                        }
-                        location.reload();
-                    }
-
-                    async function stopInstance(userId) {
-                        try {
-                            const response = await fetch('/api/stop', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({user_id: userId})
-                            });
-                            if (!response.ok) throw new Error('停止失败');
-                            location.reload();
-                        } catch (error) {
-                            console.error(`停止浏览器失败: ${userId}`, error);
-                        }
-                    }
-                </script>
-            </body>
-        </html>
-    ''', instances=instances)
+# @app.route('/api/start', methods=['POST'])
+# def start_instance():
+#     """API端点：启动浏览器"""
+#     user_id = request.json.get('user_id')
+#     if not user_id:
+#         return jsonify({"error": "Missing user_id"}), 400
+#
+#     success = asyncio.run(browser_pool.initialize_user(user_id))
+#     return jsonify({"success": success})
+#
+#
+# @app.route('/api/stop', methods=['POST'])
+# def stop_instance():
+#     """API端点：停止浏览器"""
+#     user_id = request.json.get('user_id')
+#     if not user_id:
+#         return jsonify({"error": "Missing user_id"}), 400
+#
+#     asyncio.run(browser_pool.cleanup_user(user_id))
+#     return jsonify({"success": True})
 
 
-async def main():
+# @app.route('/')
+# def index():
+#     """Web界面"""
+#     instances = browser_pool.get_instance_status()
+#     return render_template_string('''
+#         <!DOCTYPE html>
+#         <html>
+#             <head>
+#                 <title>Browser Manager</title>
+#                 <meta charset="UTF-8">
+#                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+#                 <style>
+#                     .container {
+#                         max-width: 800px;
+#                         margin: 20px auto;
+#                         padding: 20px;
+#                         font-family: system-ui, -apple-system, sans-serif;
+#                     }
+#                     .instance-list { margin-top: 20px; }
+#                     .instance-item {
+#                         display: flex;
+#                         justify-content: space-between;
+#                         align-items: center;
+#                         padding: 15px;
+#                         border-bottom: 1px solid #eee;
+#                         background: #f9f9f9;
+#                         border-radius: 4px;
+#                         margin-bottom: 10px;
+#                     }
+#                     .instance-info {
+#                         display: flex;
+#                         flex-direction: column;
+#                         gap: 5px;
+#                     }
+#                     .status-badge {
+#                         padding: 3px 8px;
+#                         border-radius: 12px;
+#                         font-size: 12px;
+#                     }
+#                     .status-running { background: #e6ffe6; color: #006600; }
+#                     .status-stopped { background: #ffe6e6; color: #660000; }
+#                     button {
+#                         padding: 8px 16px;
+#                         border-radius: 4px;
+#                         border: none;
+#                         cursor: pointer;
+#                         transition: opacity 0.2s;
+#                     }
+#                     button:disabled { opacity: 0.5; cursor: not-allowed; }
+#                     .btn-start { background: #4CAF50; color: white; }
+#                     .btn-stop { background: #f44336; color: white; }
+#                     .input-group {
+#                         display: flex;
+#                         gap: 10px;
+#                         margin-bottom: 20px;
+#                     }
+#                     input[type="text"] {
+#                         flex: 1;
+#                         padding: 8px;
+#                         border: 1px solid #ddd;
+#                         border-radius: 4px;
+#                     }
+#                     .refresh-notice {
+#                         color: #666;
+#                         font-size: 0.9em;
+#                         margin-top: 10px;
+#                     }
+#                 </style>
+#             </head>
+#             <body>
+#                 <div class="container">
+#                     <h1>浏览器管理器</h1>
+#
+#                     <!-- 启动表单 -->
+#                     <div class="input-group">
+#                         <input type="text" id="userIds"
+#                                placeholder="输入用户ID（逗号分隔）"
+#                                required>
+#                         <button onclick="startInstances()" class="btn-start">
+#                             启动新浏览器
+#                         </button>
+#                     </div>
+#
+#                     <!-- 浏览器列表 -->
+#                     <div class="instance-list">
+#                         <h3>运行中的浏览器（{{ instances|length }}）</h3>
+#                         {% if instances %}
+#                             {% for instance in instances %}
+#                                 <div class="instance-item">
+#                                     <div class="instance-info">
+#                                         <div>
+#                                             <strong>用户ID:</strong> {{ instance.user_id }}
+#                                             <span class="status-badge {{ 'status-running' if instance.running else 'status-stopped' }}">
+#                                                 {{ "运行中" if instance.running else "已停止" }}
+#                                             </span>
+#                                         </div>
+#                                     </div>
+#
+#                                 </div>
+#                             {% endfor %}
+#                         {% else %}
+#                             <p>当前没有运行中的浏览器</p>
+#                         {% endif %}
+#                     </div>
+#                     <div class="refresh-notice">
+#                         ※ 页面加载时自动获取最新状态
+#                     </div>
+#                 </div>
+#
+#                 <script>
+#                     async function startInstances() {
+#                         const input = document.getElementById('userIds');
+#                         const userIds = input.value.split(',').map(id => id.trim()).filter(Boolean);
+#
+#                         for (const userId of userIds) {
+#                             try {
+#                                 const response = await fetch('/api/start', {
+#                                     method: 'POST',
+#                                     headers: {'Content-Type': 'application/json'},
+#                                     body: JSON.stringify({user_id: userId})
+#                                 });
+#                                 if (!response.ok) throw new Error('启动失败');
+#                             } catch (error) {
+#                                 console.error(`启动浏览器失败: ${userId}`, error);
+#                             }
+#                         }
+#                         location.reload();
+#                     }
+#
+#                     async function stopInstance(userId) {
+#                         try {
+#                             const response = await fetch('/api/stop', {
+#                                 method: 'POST',
+#                                 headers: {'Content-Type': 'application/json'},
+#                                 body: JSON.stringify({user_id: userId})
+#                             });
+#                             if (!response.ok) throw new Error('停止失败');
+#                             location.reload();
+#                         } catch (error) {
+#                             console.error(`停止浏览器失败: ${userId}`, error);
+#                         }
+#                     }
+#                 </script>
+#             </body>
+#         </html>
+#     ''', instances=instances)
+
+
+# async def main():
+#     """主函数"""
+#     logger.info("启动程序")
+#     browser_manager = BrowserManager("123")
+#
+#     try:
+#         if await browser_manager.initialize():
+#             try:
+#                 # 创建一个永久运行的任务
+#                 logger.info("浏览器已启动，按 Ctrl+C 可以安全退出程序")
+#                 # 等待直到程序被中断
+#                 await asyncio.Event().wait()
+#             except KeyboardInterrupt:
+#                 logger.info("检测到退出信号，正在安全关闭浏览器...")
+#             except Exception as e:
+#                 logger.error(f"程序异常: {str(e)}")
+#         else:
+#             logger.error("浏览器初始化失败")
+#             return
+#
+#     except Exception as e:
+#         logger.error(f"程序运行出错: {str(e)}")
+#
+#     finally:
+#         await browser_manager.cleanup()
+#
+#
+# if __name__ == "__main__":
+#     # import sys
+#     #
+#     # if len(sys.argv) != 2:
+#     #     print("Usage: python app.py <port>")
+#     #     sys.exit(1)
+#     #
+#     # try:
+#     #     port = int(sys.argv[1])
+#     #     app.run(port=port, threaded=True)
+#     # except ValueError:
+#     #     print("端口号必须是整数")
+#     #     sys.exit(1)
+#
+#     asyncio.run(main())
+
+
+async def main(user_ids: list):
     """主函数"""
     logger.info("启动程序")
-    browser_manager = BrowserManager("123")
+    browser_managers = [BrowserManager(user_id) for user_id in user_ids]
 
     try:
-        if await browser_manager.initialize():
-            try:
-                # 创建一个永久运行的任务
-                logger.info("浏览器已启动，按 Ctrl+C 可以安全退出程序")
-                # 等待直到程序被中断
-                await asyncio.Event().wait()
-            except KeyboardInterrupt:
-                logger.info("检测到退出信号，正在安全关闭浏览器...")
-            except Exception as e:
-                logger.error(f"程序异常: {str(e)}")
-        else:
-            logger.error("浏览器初始化失败")
-            return
+        # 并发初始化所有浏览器实例
+        initialization_results = await asyncio.gather(
+            *(browser_manager.initialize() for browser_manager in browser_managers),
+            return_exceptions=True
+        )
 
+        # 检查初始化结果
+        for browser_manager, result in zip(browser_managers, initialization_results):
+            if isinstance(result, Exception):
+                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败: {str(result)}")
+            elif not result:
+                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败")
+
+        # 创建一个永久运行的任务
+        logger.info("所有浏览器已启动，按 Ctrl+C 可以安全退出程序")
+        # 等待直到程序被中断
+        await asyncio.Event().wait()
+
+    except KeyboardInterrupt:
+        logger.info("检测到退出信号，正在安全关闭所有浏览器...")
     except Exception as e:
-        logger.error(f"程序运行出错: {str(e)}")
+        logger.error(f"程序异常: {str(e)}")
 
     finally:
-        await browser_manager.cleanup()
+        # 并发清理所有浏览器资源
+        await asyncio.gather(
+            *(browser_manager.cleanup() for browser_manager in browser_managers)
+        )
 
 
 if __name__ == "__main__":
-    # import sys
-    #
-    # if len(sys.argv) != 2:
-    #     print("Usage: python app.py <port>")
-    #     sys.exit(1)
-    #
-    # try:
-    #     port = int(sys.argv[1])
-    #     app.run(port=port, threaded=True)
-    # except ValueError:
-    #     print("端口号必须是整数")
-    #     sys.exit(1)
-
-    asyncio.run(main())
+    # 传入多个用户 ID
+    user_ids = ["123", "456", "789"]
+    asyncio.run(main(user_ids))
