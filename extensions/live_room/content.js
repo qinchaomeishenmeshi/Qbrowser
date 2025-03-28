@@ -301,6 +301,7 @@ async function getProductDetail(productId) {
 // 将组装好的productsList数据发送到后台
 async function sendProductsListToBackground() {
     const params = {
+        attr: '1',
         dyAccountNo: dyAccountNo,
         products: productsList.map((product, index) => {
             return {
