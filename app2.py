@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import platform
 import time
@@ -444,24 +443,29 @@ class BrowserManager:
 #     asyncio.run(main())
 
 
+import asyncio
+import logging
+
+# 假设 logger 已经被正确配置
+logger = logging.getLogger(__name__)
+
+
 async def main(user_ids: list):
     """主函数"""
     logger.info("启动程序")
     browser_managers = [BrowserManager(user_id) for user_id in user_ids]
 
     try:
-        # 并发初始化所有浏览器实例
-        initialization_results = await asyncio.gather(
-            *(browser_manager.initialize() for browser_manager in browser_managers),
-            return_exceptions=True
-        )
-
-        # 检查初始化结果
-        for browser_manager, result in zip(browser_managers, initialization_results):
-            if isinstance(result, Exception):
-                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败: {str(result)}")
-            elif not result:
-                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败")
+        # 依次初始化每个浏览器实例
+        for browser_manager in browser_managers:
+            try:
+                result = await browser_manager.initialize()
+                if not result:
+                    logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败")
+            except Exception as e:
+                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败: {str(e)}")
+            else:
+                logger.info(f"用户 {browser_manager.user_id} 的浏览器初始化成功")
 
         # 创建一个永久运行的任务
         logger.info("所有浏览器已启动，按 Ctrl+C 可以安全退出程序")
