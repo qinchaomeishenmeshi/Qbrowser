@@ -57,8 +57,8 @@ def get_absolute_extension_path(relative_path: str) -> str:
 @dataclass
 class BrowserConfig:
     """浏览器配置数据类"""
-    viewport_width: int = 1280
-    viewport_height: int = 720
+    viewport_width: Optional[int] = None  # 不限制宽度
+    viewport_height: Optional[int] = None  # 不限制高度
     base_url: str = "https://eos.douyin.com"
     extension_path = get_absolute_extension_path("extensions/live_room")
 
@@ -91,25 +91,12 @@ class BrowserManager:
 
             self._playwright = await async_playwright().start()
             print(f"扩展路径: {self.config.extension_path}")
-            # context_args = {
-            #     "user_data_dir": str(self.user_data_dir),
-            #     "headless": False,
-            #     "channel": "chrome",
-            #     "args": [
-            #         f"--disable-extensions-except={self.config.extension_path}",
-            #         f"--load-extension={self.config.extension_path}",
-            #     ],
-            #     "viewport": {
-            #         "width": self.config.viewport_width,
-            #         "height": self.config.viewport_height
-            #     },
-            #     "permissions": ["geolocation"],
-            # }
 
             self.context = await self._playwright.chromium.launch_persistent_context(
                 user_data_dir=str(self.user_data_dir),
                 headless=False,
                 channel="chrome",
+                no_viewport=True,
                 args=[
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
@@ -489,23 +476,5 @@ if __name__ == "__main__":
     user_ids = [
         "wh001",
         "wh002",
-        "wh003",
-        "wh004",
-        "wh005",
-        "wh006",
-        "wh007",
-        "wh008",
-        "wh009",
-        "wh010",
-        "wh011",
-        "wh012",
-        "wh013",
-        "wh014",
-        "wh015",
-        "wh016",
-        "wh017",
-        "wh018",
-        "wh019",
-        "wh020"
     ]
     asyncio.run(main(user_ids))
