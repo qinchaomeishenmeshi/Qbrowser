@@ -96,6 +96,7 @@ class BrowserManager:
                 user_data_dir=str(self.user_data_dir),
                 headless=False,
                 channel="chrome",
+                no_viewport=True,
                 args=[
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
