@@ -96,7 +96,6 @@ class BrowserManager:
                 user_data_dir=str(self.user_data_dir),
                 headless=False,
                 channel="chrome",
-                no_viewport=True,
                 args=[
                     f"--disable-extensions-except={self.config.extension_path}",
                     f"--load-extension={self.config.extension_path}",
@@ -476,5 +475,23 @@ if __name__ == "__main__":
     user_ids = [
         "wh001",
         "wh002",
+        "wh003",
+        "wh004",
+        "wh005",
+        "wh006",
+        "wh007",
+        "wh008",
+        "wh009",
+        "wh010",
+        "wh011",
+        "wh012",
+        "wh013",
+        "wh014",
+        "wh015",
+        "wh016",
+        "wh017",
+        "wh018",
+        "wh019",
+        "wh020"
     ]
     asyncio.run(main(user_ids))
