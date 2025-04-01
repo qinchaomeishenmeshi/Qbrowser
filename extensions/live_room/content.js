@@ -121,7 +121,7 @@ function createSyncContainer() {
 
     // 查找父容器
     const tabGuide = document.querySelector(
-        "div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-last-child(1)"
+        "div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-child(1)"
     );
     if (!tabGuide || !tabGuide.parentElement) {
         console.error('未找到目标容器，无法创建同步按钮');
@@ -133,18 +133,20 @@ function createSyncContainer() {
     const syncButton = document.createElement('button');
     syncContainer.classList.add('sync_wj');
     // syncButton 添加样式
-    syncButton.style.background = 'border-box linear-gradient(to bottom right, #ff4fa3, #fe2c55)'
+    syncButton.style.background = 'linear-gradient(to right bottom, #7db1ff, #004EFE) border-box border-box'
     syncButton.style.border = '1px solid transparent'
-    syncButton.style.borderRadius = '4px'
+    syncButton.style.borderRadius = '6px'
     syncButton.style.color = '#fff'
-    syncButton.style.fontSize = '12px'
-    syncButton.style.height = '28px'
-    syncButton.style.lineHeight = '18px'
+    syncButton.style.fontSize = '14px'
+    syncButton.style.height = '36px'
+    syncButton.style.lineHeight = '22px'
     syncButton.style.minWidth = '80px'
-    syncButton.style.padding = '4px 16px'
+    syncButton.style.padding = '6px 16px'
     syncButton.style.textAlign = 'center'
+    syncButton.style.marginLeft = '10px'
     syncButton.style.cursor = 'pointer'
     syncButton.textContent = syncBtnText
+    //
     tabGuide.parentElement.appendChild(syncContainer)
     syncContainer.appendChild(syncButton)
 
@@ -234,7 +236,7 @@ async function handleShelvesData(data) {
                 setTimeout(() => {
                     processProduct(productId).finally(async () => {
                         currentIndex++
-                        console.log(`商品 ${productName}处理完成 ...`)
+                        createTopTips(`商品 ${productName}处理完成 ...`)
                         if (currentIndex >= productsList.length) {
                             const res = await sendProductsListToBackground()
                             console.log('发送商品数据到后台', res)
