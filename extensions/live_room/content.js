@@ -92,11 +92,13 @@ function injectFetchInterceptor() {
 // 优化事件监听处理
 window.addEventListener('fetchResponse', (event) => {
     const {url, status, body} = event.detail
-    if (url.includes('/data/life/live/shelves/anchor/') && status === 200) {
+    console.log('接口监听-test:', url, status, body)
+    // if (url.includes('/data/life/live/shelves/anchor/') && status === 200) {
+    if (url.includes('/data/life/live/plan/detail/') && status === 200) {
         try {
             const data = JSON.parse(body)
-            console.log('直播商品列表数据:', data)
-            cacheData = JSON.stringify(data)
+            console.log('直播商品列表数据:', data.data)
+            cacheData = JSON.stringify(data.data)
             if (cacheData) {
                 console.log('缓存数据:', cacheData)
                 setTimeout(() => {
@@ -119,7 +121,7 @@ function createSyncContainer() {
 
     // 查找父容器
     const tabGuide = document.querySelector(
-        'div.okee-current-live-loading.okee-current-live-loading-block div#tab-guide span'
+        "div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-last-child(1)"
     );
     if (!tabGuide || !tabGuide.parentElement) {
         console.error('未找到目标容器，无法创建同步按钮');
@@ -201,7 +203,8 @@ async function handleShelvesData(data) {
             // 生成随机延时
             const getRandomDelay = () => Math.floor(Math.random() * 10000) + 10000
 
-            productsList = data.card_list
+            // productsList = data.card_list
+            productsList = data.info || []
             console.log('待处理商品数量:', productsList.length)
 
             // 创建带延时的请求任务链
@@ -303,6 +306,7 @@ async function sendProductsListToBackground() {
     const params = {
         attr: '1',
         dyAccountNo: dyAccountNo,
+        planContent: cacheData,
         products: productsList.map((product, index) => {
             return {
                 ...product,
