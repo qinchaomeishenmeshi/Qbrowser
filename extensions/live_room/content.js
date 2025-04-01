@@ -203,7 +203,7 @@ async function handleShelvesData(data) {
             // 新增延时函数
             const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
             // 生成随机延时
-            const getRandomDelay = () => Math.floor(Math.random() * 10000) + 10000
+            const getRandomDelay = () => Math.floor(Math.random() * 2000) + 3000
 
             // productsList = data.card_list
             productsList = data.info || []
@@ -236,7 +236,7 @@ async function handleShelvesData(data) {
                 setTimeout(() => {
                     processProduct(productId).finally(async () => {
                         currentIndex++
-                        createTopTips(`商品 ${productName}处理完成 ...`)
+                        console.log(`商品 ${productName}处理完成 ...`)
                         if (currentIndex >= productsList.length) {
                             const res = await sendProductsListToBackground()
                             console.log('发送商品数据到后台', res)
