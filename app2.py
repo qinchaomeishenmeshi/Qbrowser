@@ -7,8 +7,6 @@ from typing import Optional
 
 from playwright.async_api import async_playwright, BrowserContext, Page, Playwright
 
-from user_ids import USER_ID_LIST
-
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -474,6 +472,6 @@ async def main(user_ids: list):
 
 
 if __name__ == "__main__":
-    # 传入多个用户 ID
-    user_ids = USER_ID_LIST
+    user_ids = [line.strip() for line in open('user_ids.txt', 'r')]
+    print(user_ids)
     asyncio.run(main(user_ids))
