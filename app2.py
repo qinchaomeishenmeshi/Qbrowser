@@ -16,8 +16,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-import sys
-
 
 def get_absolute_extension_path(relative_path: str) -> str:
     """跨平台安全的绝对路径获取，兼容 PyInstaller"""
@@ -180,8 +178,21 @@ async def main(user_ids: list):
         )
 
 
+import sys
+import os
+
+
+def get_resource_path(filename):
+    if hasattr(sys, '_MEIPASS'):
+        # 打包后的临时目录
+        return os.path.join(sys._MEIPASS, filename)
+    return os.path.join(os.path.abspath("."), filename)
+
+
 if __name__ == "__main__":
-    user_ids = [line.strip() for line in open('user_ids.txt', 'r')]
+    user_ids_path = get_resource_path('user_ids.txt')
+    with open(user_ids_path, 'r', encoding='utf-8') as f:
+        user_ids = [line.strip() for line in f]
     print(user_ids)
     asyncio.run(main(user_ids))
 
