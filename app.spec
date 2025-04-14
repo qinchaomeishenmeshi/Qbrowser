@@ -18,7 +18,7 @@ datas = [
 # 打包选项
 a = Analysis(
     [script_path],
-    pathex=[str(Path(__file__).parent)],
+    pathex=[str(Path.cwd())],  # 使用当前工作目录
     binaries=[],
     datas=datas,
     hiddenimports=[],
