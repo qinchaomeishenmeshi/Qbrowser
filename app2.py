@@ -16,27 +16,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import sys
+
 
 def get_absolute_extension_path(relative_path: str) -> str:
-    """跨平台安全的绝对路径获取"""
-    base_dir = Path(__file__).parent
+    """跨平台安全的绝对路径获取，兼容 PyInstaller"""
+    if getattr(sys, 'frozen', False):
+        # PyInstaller 打包后的临时目录路径
+        base_dir = Path(sys._MEIPASS)
+    else:
+        base_dir = Path(__file__).parent
 
-    # 构建完整路径对象
     extension_path = base_dir / relative_path
-
-    # 转换为绝对路径并解析符号链接
     absolute_path = extension_path.resolve(strict=True)
 
-    # Windows特殊处理
     if platform.system() == 'Windows':
-        # 转换为Windows原生路径格式
         win_path = str(absolute_path)
-
-        # 处理空格和特殊字符
         if any(c in win_path for c in (' ', '&', '^')):
             win_path = f'"{win_path}"'
-
-        # 可选：转换为短路径格式（8.3格式）
         try:
             from ctypes import windll, create_unicode_buffer
             buffer = create_unicode_buffer(256)
@@ -44,10 +41,8 @@ def get_absolute_extension_path(relative_path: str) -> str:
                 win_path = buffer.value
         except Exception:
             pass
-
         return win_path
 
-    # 非Windows系统处理
     return str(absolute_path)
 
 
@@ -189,3 +184,9 @@ if __name__ == "__main__":
     user_ids = [line.strip() for line in open('user_ids.txt', 'r')]
     print(user_ids)
     asyncio.run(main(user_ids))
+
+#     pyinstaller app2.py \
+#   --onefile \
+#   --add-data "extensions/live_room:extensions/live_room"
+
+# pyinstaller app2.py --onefile --add-data "extensions/live_room"
