@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import platform
 import time
 from dataclasses import dataclass
@@ -179,18 +180,35 @@ async def main(user_ids: list):
 
 
 import sys
-import os
 
 
-def get_resource_path(filename):
-    if hasattr(sys, '_MEIPASS'):
-        # 打包后的临时目录
-        return os.path.join(sys._MEIPASS, filename)
-    return os.path.join(os.path.abspath("."), filename)
+# def get_resource_path(filename):
+#     if hasattr(sys, '_MEIPASS'):
+#         # 打包后的临时目录
+#         return os.path.join(sys._MEIPASS, filename)
+#     return os.path.join(os.path.abspath("."), filename)
+#
+#
+# if __name__ == "__main__":
+#     user_ids_path = get_resource_path('user_ids.txt')
+#     with open(user_ids_path, 'r', encoding='utf-8') as f:
+#         user_ids = [line.strip() for line in f]
+#     print(user_ids)
+#     asyncio.run(main(user_ids))
+
+
+def get_user_ids_path():
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的可执行文件
+        exe_dir = os.path.dirname(sys.executable)
+    else:
+        # 正常 Python 运行
+        exe_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(exe_dir, 'user_ids.txt')
 
 
 if __name__ == "__main__":
-    user_ids_path = get_resource_path('user_ids.txt')
+    user_ids_path = get_user_ids_path()
     with open(user_ids_path, 'r', encoding='utf-8') as f:
         user_ids = [line.strip() for line in f]
     print(user_ids)

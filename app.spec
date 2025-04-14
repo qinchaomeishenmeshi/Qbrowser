@@ -9,7 +9,6 @@ script_path = 'app2.py'
 
 # 插件路径（源路径 -> 打包后路径）
 datas = [
-    ('user_ids.txt', '.'),
     ('extensions/live_room', 'extensions/live_room')
 ]
 
