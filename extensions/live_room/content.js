@@ -35,6 +35,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     } else if (request.action === 'send_comment') {
         // 发送评论
         sendMessage(url, word, {}, sendResponse)
+    } else if (request.action === 'DO_DAILY_TASK') {
+        console.log('DO_DAILY_TASK___执行每日任务')
+        get_punish_list().then((res) => {
+            console.log('punish_list', res)
+        })
+
     } else {
         console.log('其他消息', request)
     }
@@ -71,6 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10000)
     // 立即注入拦截器
     injectFetchInterceptor()
+    get_punish_list().then((res) => {
+        console.log('punish_list', res)
+    })
+
 })
 
 
@@ -361,6 +371,11 @@ function stopTimer() {
 setInterval(() => {
     const currentUrl = new URL(window.location.href);
     const pathName = currentUrl.pathname;
+    const modal_wrapper = document.querySelector('.okee-main-modal-wrapper .okee-main-modal-body .okee-main-content-container .okee-main-content-header.okee-main-modal-content-header');
+    console.log(modal_wrapper, '弹窗存在')
+    if (modal_wrapper) {
+        getModalText()
+    }
     let isLiving = false;
     try {
         const liveMenus = document.querySelectorAll('.okee-main-menu-line-title');
@@ -384,6 +399,73 @@ setInterval(() => {
 
 // 获取主动评论数据
 let debounceTimeout = null;
+
+function getModalText() {
+    // 找到弹窗内容
+    const spans = document.querySelectorAll('span');
+
+    // 2. 过滤出文本里包含 “违规原因” 的元素
+    const targetSpans = Array.from(spans).filter(span =>
+        span.textContent.includes('处罚原因')
+    );
+
+    // 3. 如果只需要第一个匹配项，可以：
+    const firstSpan = targetSpans[0] || null;
+
+    if (firstSpan) {
+        const modal_span_text = firstSpan.textContent
+        console.log(modal_span_text, '弹窗内容')
+        const pattern = /处罚原因：(.+?)\s*违规时间：([\d-]+\s[\d:]+)\s*处罚方式：(.+?)(?:\s|$)/s;
+
+        const match = modal_span_text.match(pattern);
+
+        const result = match
+            ? {
+                violationReason: match[1].trim(),
+                violationTime: match[2].trim(),
+                punishmentType: match[3].trim(),
+                dyAccountNo: localStorage.getItem('dyAccountNo')
+            }
+            : {};
+
+        console.log(result);
+
+    }
+
+}
+
+async function get_punish_list() {
+    console.log('每天执行一次')
+    // 模拟post请求https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list 并保存数据到后台
+    const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            "user_id": "1258293549605997",
+            "begin_date": "2025-03-26",
+            "end_date": "2025-04-24",
+            "compare_begin_date": "2025-02-24",
+            "compare_end_date": "2025-03-25"
+        })
+    })
+    const response_json = await res.json()
+    response_json.data.map(async (item) => {
+        const params = {
+            violationReason: item['violation_reason'],
+            violationTime: item['time'],
+            punishmentType: item['punish_result'],
+            "dyAccountNo": localStorage.getItem('dyAccountNo')
+        }
+        console.log('params', params)
+        const result = await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        console.log('result', result)
+    })
+
+
+}
+
 
 function getActiveCommentData() {
     return new Promise(async (resolve, reject) => {
@@ -476,46 +558,6 @@ function sendMessage(url, word, data, sendResponse) {
     }
 }
 
-// 回复评论
-function replyEosMessage(targetNode, word, _data, _sendResponse) {
-    console.log('replyEosMessage', targetNode, word)
-    if (targetNode) {
-        // 模拟鼠标移入显示评论按钮
-        targetNode.addEventListener('mouseenter', function () {
-            targetNode.classList.add('hover')
-            console.log('鼠标移入该区域内了')
-            // 创建一个 mouseclick 事件
-            const mouseEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                button: 0 // 左键点击
-            })
-            const hover_btn = targetNode.querySelector('div[class*="hover-button-"]')
-            if (!hover_btn) {
-                return
-            }
-            const reply_btn = hover_btn.childNodes[1]
-            console.log('回复按钮', reply_btn)
-            reply_btn.dispatchEvent(mouseEvent)
-
-            const reply_list_ele = targetNode.querySelector('div[class*="reply-list-"]')
-            if (!reply_list_ele) {
-                return
-            }
-            const reply_nick_btn = reply_list_ele.childNodes[0]
-            console.log('回复昵称按钮', reply_list_ele, reply_nick_btn)
-            reply_nick_btn.dispatchEvent(mouseEvent)
-        })
-
-        const targetNodeRect = targetNode.getBoundingClientRect()
-        simulateMouseMoveWithElement(
-            targetNodeRect.x + targetNodeRect.width / 2,
-            targetNodeRect.y + targetNodeRect.height / 2,
-            targetNode
-        )
-    }
-}
 
 // 获取抖音账号信息
 function getDyAccountNo() {
@@ -533,247 +575,7 @@ function getDyAccountNo() {
     localStorage.setItem('dyAccountNo', dyAccountNo)
     localStorage.setItem('dyRoomName', accountName)
 
-    // 链接socket
-    // connectSocket()
-}
 
-// 连接socket
-function connectSocket() {
-    if (socketWs) {
-        createTopTips('socket--已链接，无需重复链接')
-        return
-    }
-
-    // 初始化重连起始时间
-    if (!reconnectStartTime) {
-        reconnectStartTime = Date.now()
-    }
-
-    // 检查是否超出 5 分钟
-    const elapsedTime = Date.now() - reconnectStartTime
-    if (elapsedTime > 300000) {
-        // 300,000 毫秒 = 5 分钟
-        createTopTips('socket--重连时间超过5分钟，停止重连', true)
-        reconnectStartTime = null // 重置时间计数
-        return
-    }
-
-    const SOCKET_URL =
-        'wss://hj.qwang.com.cn/websocket/livestreamingcomment/COMMENT_PLUGIN/' + dyAccountNo
-    const ws = new WebSocket(SOCKET_URL)
-    let heartbeatInterval
-
-    ws.onopen = function () {
-        createTopTips('socket--链接已打开')
-        socketWs = ws
-        reconnectStartTime = null // 重置重连时间计数，因为连接成功了
-
-        // 心跳检测
-        heartbeatInterval = setInterval(() => {
-            createTopTips('直播监控中...', 9000)
-            if (socketWs.readyState === WebSocket.OPEN) {
-                socketWs.send(
-                    JSON.stringify({
-                        type: 'ping',
-                        roomName: localStorage.getItem('dyRoomName'),
-                        roomNo: localStorage.getItem('dyAccountNo'),
-                        terminal: "pc"
-                    })
-                )
-            }
-        }, 10000) // 每10秒发送心跳
-    }
-
-    ws.onmessage = function (event) {
-        console.log('socket接收消息', event)
-        try {
-            let reply_obj = JSON.parse(event.data)
-            comment = reply_obj
-            console.log('socket onmessage', reply_obj)
-            console.log('回复内容为：', reply_obj['commentReply'])
-
-            if (reply_obj.type === 'reply' && reply_obj['commentReply']) {
-                // 匹配消息标签
-                // let replyNode = null
-                // const chatWrap = document.querySelector("div[class*='comment-wrap-']");
-                // if (!chatWrap) return; // 如果未找到目标节点，继续监听
-                // const chatListEle = chatWrap.querySelector("div[class*='list-']");
-                // if (!chatListEle) return; // 如果未找到目标节点，继续监听
-                // const chatroomItems = chatListEle.querySelectorAll('div[class*="item-"]');
-                // // 获取最近20个评论
-                // const sliceChatRoomItems = Array.from(chatroomItems).slice(-20)
-                // for (let i = 0; i < sliceChatRoomItems.length; i++) {
-                //     let targetNode = sliceChatRoomItems[i];
-                //     let auther = targetNode.querySelector("div[class*='item-name-']")?.textContent.trim();
-                //     let content = targetNode.querySelector("div[class*='item-content-']")?.textContent.trim();
-                //     if (auther === reply_obj["accountName"] && content === reply_obj["commentContent"]) {
-                //         // 找到匹配的评论，执行操作
-                //         replyNode = targetNode;
-                //         break;
-                //     }
-                // }
-                // if (!replyNode) {
-                //     console.log('未匹配到了评论信息')
-                // 未匹配到消息标签，直接回复
-                sendMessage(
-                    window.location.href,
-                    reply_obj['commentReply'],
-                    {id: reply_obj.id},
-                    (res) => {
-                        if (res.status !== 1) {
-                            console.log('socket--回复评论消息发送失败', res)
-                        } else {
-                            console.log('socket--回复评论消息发送成功', res)
-                            let reply_result = {
-                                type: 'replyOk',
-                                id: res.data.id.toString()
-                            }
-                            console.log('socket--回复评论成功，发送回执', JSON.stringify(reply_result))
-                            socketWs.send(JSON.stringify(reply_result))
-                        }
-                    }
-                )
-                // } else {
-                //     console.log('匹配到了评论信息', replyNode)
-                //     // 匹配到标签就按照@进行回复
-                //     replyEosMessage(replyNode, reply_obj["commentReply"], {id: reply_obj.id}, (res) => {
-                //         if (res.status !== 1) {
-                //             console.log("socket--回复评论消息发送失败", res);
-                //         } else {
-                //             console.log("socket--回复评论消息发送成功", res);
-                //             let reply_result = {
-                //                 type: "replyOk",
-                //                 id: res.data.id.toString(),
-                //             };
-                //             console.log("socket--回复评论成功，发送回执", JSON.stringify(reply_result));
-                //             socketWs.send(JSON.stringify(reply_result));
-                //         }
-                //     });
-                // }
-            } else {
-                console.log('socket--未匹配到回复规则，不回复')
-            }
-        } catch (error) {
-            if (event.data === 'success') {
-                console.log('socket--接收心跳消息回执')
-                return
-            }
-            console.log('socket--JSON 解析错误:', error, event.data)
-        }
-    }
-
-    ws.onerror = function (error) {
-        console.error('socket--WebSocket 错误:', error)
-    }
-
-    ws.onclose = function () {
-        console.log('socket--连接已关闭，尝试重新连接...')
-        clearInterval(heartbeatInterval) // 停止心跳检测
-        socketWs = null
-
-        // 设置 5 秒后重新连接
-        setTimeout(connectSocket, 5000)
-    }
-}
-
-// 监听评论
-
-function observeComments(chatroomItems) {
-    const config = {childList: true, subtree: false, attributes: false}
-    const observer = new MutationObserver((mutationsList) => {
-        mutationsList.forEach((mutation) => {
-            // 监听子节点的新增
-            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1) {
-                        // 确保是元素节点
-                        // 防止重复处理，给处理过的节点添加标记
-                        console.log('新增评论节点1:', node.dataset.processed)
-                        if (node.dataset.processed === 'true') {
-                            return
-                        }
-                        handleComment(node, chatroomItems.childNodes[chatroomItems.childNodes.length - 1]) // 处理新增节点
-                    }
-                })
-            }
-        })
-    })
-    observer.observe(chatroomItems, config)
-}
-
-// 处理评论
-async function handleComment(commentItem, commentItemNode) {
-    // 从本地存储中读取关键词规则
-    const result = await chrome.storage.local.get('liveroom_comments_rule')
-    if (!result) {
-        console.warn('未设置回复规则')
-        return
-    }
-    const rules = result.liveroom_comments_rule?.keywords || []
-    const ignoreNicks = result.liveroom_comments_rule?.ignoreNick.split('\n') || []
-    let auther = commentItemNode.querySelector("div[class*='item-name-']")?.textContent.trim()
-    let content = commentItemNode.querySelector("div[class*='item-content-']")?.textContent.trim()
-    let login_nick_name = document
-        .querySelector("div[class*='panel-profile-name-']")
-        .textContent.trim()
-    console.log('当前登录账号:', login_nick_name)
-    if (content) {
-        console.log('评论内容:', content, comment)
-        if (content === comment['commentReply']) {
-            console.log('回复信息跳过')
-            return
-        }
-        // if (auther === login_nick_name + '：') {
-        //   console.log('当前登录账号发出的评论不做采集')
-        //   return
-        // }
-
-        // 将采集的评论数据发送至混剪系统
-        if (socketWs && dyAccountNo) {
-            if (commentItem.dataset.processed === 'true') {
-                return // 避免重复处理
-            }
-            // 标记该节点已处理状态
-            commentItem.dataset.processed = 'true'
-            console.log('新增评论节点2:', commentItem)
-            let socket_message = JSON.stringify({
-                type: 'comment',
-                commentContent: content,
-                accountName: auther,
-                roomNo: localStorage.getItem('dyAccountNo'),
-                roomName: localStorage.getItem('dyRoomName')
-            })
-            console.log('评论信息已发送', socket_message)
-            socketWs.send(socket_message)
-        }
-
-        let isIgnore = false
-        // 匹配用户昵称
-        for (const nickname of ignoreNicks) {
-            if (nickname.length > 0 && auther && auther.includes(nickname)) {
-                console.log(`匹配到忽略昵称: ${nickname}`)
-                isIgnore = true
-                return // 匹配后退出
-            }
-        }
-        if (isIgnore) {
-            return
-        }
-
-        rules.forEach((rule) => {
-            if (content && content.includes(rule.keyword)) {
-                console.log(`匹配到关键词: ${rule.keyword}, 准备发送回复: ${rule.reply}`)
-                replyEosMessage(commentItemNode, rule.reply, {}, () => {
-                    console.log('自动回复发送成功:', rule.reply)
-                })
-                // sendMessage(window.location.href, rule.reply, {}, () => {
-                //     console.log('自动回复发送成功:', rule.reply);
-                // });
-            } else {
-                console.log('未匹配到回复内容')
-            }
-        })
-    }
 }
 
 
@@ -816,105 +618,3 @@ function createTopTips(text, timeOut = 5000) {
     // 返回定时器 ID，便于外部操作（如取消自动移除）
     return {fixedTipBox, autoRemoveTimer}
 }
-
-// function listenLivePlanPage() {
-//     console.log('监听直播计划页面----livesite/live/plan/edit?')
-//     const saveBtn = document.querySelector(
-//         'okee-current-live-loading.okee-current-live-loading-block button.okee-current-live-btn.okee-current-live-btn-type-primary'
-//     )
-//     if (saveBtn) {
-//         saveBtn.addEventListener('click', () => {
-//             console.log('保存按钮被点击，开始监听接口请求')
-//             // 注入重写 fetch 的代码
-//             const script = `
-//                 (function() {
-//                     const originalFetch = window.fetch;
-//                     const whiteList = ['life/live/user/info/v1', 'life/live/shelves/anchor', 'life/live/status'];
-//                     window.fetch = function(url, options) {
-//                         if (whiteList.some(keyword => url.includes(keyword))) {
-//                             return originalFetch(url, options).then(response => {
-//                                 response.clone().text().then(body => {
-//                                     // 触发自定义事件来传递数据
-//                                     const event = new CustomEvent('fetchResponse', {
-//                                         detail: {
-//                                             url: url,
-//                                             body: body
-//                                         }
-//                                     });
-//                                     window.dispatchEvent(event);
-//                                 });
-//                                 return response;
-//                             });
-//                         } else {
-//                             return originalFetch(url, options);
-//                         }
-//                     };
-//                 })();
-//             `
-//             const scriptElement = document.createElement('script')
-//             scriptElement.textContent = script
-//             document.head.appendChild(scriptElement)
-//         })
-//     } else {
-//         console.log('未找到保存按钮')
-//     }
-//
-//     // 监听自定义事件来获取拦截的数据
-//     window.addEventListener('fetchResponse', (event) => {
-//         const {url, body} = event.detail
-//         console.log('拦截到接口请求:', url)
-//
-//         if (url.includes('life/live/shelves/anchor')) {
-//             console.log('拦截到直播货架主播数据:', body)
-//             const data = JSON.parse(body)
-//             const params = {
-//                 dyAccountNo,
-//                 products: []
-//             }
-//             // 可以将拦截的数据合并到 params 中，根据实际需求调整
-//             params.shelvesAnchorData = data
-//             console.log('发送数据到混剪系统:', params)
-//             // 调用接口传递给后台
-//             // const result = await $Request(API.createPlan, {
-//             //   params
-//             // });
-//             // console.log('createPlan的res:', result);
-//         }
-//     })
-// }
-//
-// async function getLivePlanData() {
-//     try {
-//         // https://eos.douyin.com/data/life/live/shelves/anchor/
-//         // ?agg_card_id=0
-//         // &room_id=0
-//         // &req_source=pc_current&
-//         // with_promotion_price_type=true
-//         // &verifyFp=
-//         // verify_m7o73xbx_1eRklkey_pPsb_48nq_9fGr_asmzoi8y99V2
-//         // &fp=verify_m7o73xbx_1eRklkey_pPsb_48nq_9fGr_asmzoi8y99V2
-//         // &msToken=Rgp7ZlZPgigzJFE9BxTtrOtNythGpbVfWtnvdkwH1znC8s5V515NKiBGtwMJZdVrc9lNUqVq5SWUiwv4rn-xCayBqOUo2wT_Ixo-vzxSo9_1iIs_cS1M7T9nu3yRyAfA1Io-V_ThjHNvlLAkYe2JVBWryPIc_JEagrllmYFkvA5h-6C1qQvesn0%3D&a_bogus=YjUfDwWLQ25VOd-n8OOQt4H4e69%2FNP8yRrT%2FSy3o9Fq2GHzGKWBqEdCxJoqGsbJFu8m5Eeq7rxzMOjxbOBi0Z2rkLmkfSLtfO4V9V0XLhqNXGt4mEN8NCLvzKw0e0Qvw-5C7N1D5AsMn2fVAnHViWBBaC5zHQRDdSNMSD%2FLy9EAXfSSkk9-0OHkZOyiqRD%3D%3D
-//         const searchParams = new URLSearchParams(window.location.search).get('id')
-//         const url = `https://eos.douyin.com/data/life/live/plan/detail/?plan_id=${searchParams}`
-//         console.log('searchParams:', searchParams)
-//         const response = await fetch(url, {
-//             credentials: 'include' // 携带cookie
-//         })
-//
-//         const responseData = await response.json()
-//         console.log('获取直播计划数据成功:', responseData)
-//         return responseData
-//     } catch (e) {
-//         console.error('获取直播计划数据失败:', e)
-//     }
-//     return null
-// }
-//
-// // 新增独立事件绑定函数
-// function bindButtonEvent(button) {
-//     console.log('绑定保存按钮点击事件')
-//     button.addEventListener('click', () => {
-//         console.log('保存按钮被点击，开始监听接口请求')
-//         injectFetchInterceptor()
-//     })
-// }

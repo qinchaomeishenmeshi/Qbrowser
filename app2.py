@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import platform
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -177,9 +178,6 @@ async def main(user_ids: list):
         await asyncio.gather(
             *(browser_manager.cleanup() for browser_manager in browser_managers)
         )
-
-
-import sys
 
 
 # def get_resource_path(filename):

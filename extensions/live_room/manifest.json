@@ -12,6 +12,7 @@
     "scripting",
     "app.window",
     "debugger",
+    "alarms",
     "activeTab"
   ],
   "host_permissions": [

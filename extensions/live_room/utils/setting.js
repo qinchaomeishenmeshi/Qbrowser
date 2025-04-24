@@ -22,8 +22,9 @@ const taskTypeEnums = {
 // 接口API
 const API = {
     // basicURL
-    // BaseUrl: 'https://wujie.top/dev-api',
-    BaseUrl: 'https://hj.qwang.com.cn/dev-api',
+    BaseUrl: 'http://113.57.110.35:20379/dev-api',
+    // BaseUrl: 'https://hj.qwang.com.cn/dev-api',
+
     // 获取任务task的api
     getTaskApi: '/videoclip/admin/autopublishtask/getNoPublicData',
     // 同步账号的api
@@ -43,7 +44,10 @@ const API = {
     // 直播计划同步回混剪系统
     saveProductListApi: '/aiplay/ai/interaction/saveProductList',
     // 定时获取主动评论的数据
-    pullAdminComment: '/vediows/admin/livestreamingcomments/pullAdminComment'
+    pullAdminComment: '/vediows/admin/livestreamingcomments/pullAdminComment',
+    // 保存违规信息
+    liveviolationrecordsdealSaveApi: '/aiplay/admin/liveviolationrecordsdeal/save'
+
 }
 
 // 页面地址

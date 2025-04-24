@@ -3,107 +3,107 @@ const targetUrlPattern = /^https:\/\/eos\.douyin\.com\/data\/life\/live\/shelves
 // 存储请求ID和标签页ID的映射
 const requestTabMap = {}
 
-chrome.runtime.onInstalled.addListener(({ reason }) => {
-  console.log('插件加载完成', reason)
+chrome.runtime.onInstalled.addListener(({reason}) => {
+    console.log('插件加载完成', reason)
 })
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'SHELVES_ANCHOR_DATA') {
-    console.log('接收货架主播数据:', request.data)
-    // 统一数据处理逻辑
-    handleShelvesData(request.data)
-  }
-  return true // 保持通道开放用于异步响应
+    if (request.action === 'SHELVES_ANCHOR_DATA') {
+        console.log('接收货架主播数据:', request.data)
+        // 统一数据处理逻辑
+        handleShelvesData(request.data)
+    }
+    return true // 保持通道开放用于异步响应
 })
 
 // 新增数据处理函数
 function handleShelvesData(data) {
-  // 这里添加数据存储或转发逻辑
-  console.log('处理货架数据:', {
-    timestamp: data.timestamp,
-    url: data.url,
-    payload: data.payload
-  })
+    // 这里添加数据存储或转发逻辑
+    console.log('处理货架数据:', {
+        timestamp: data.timestamp,
+        url: data.url,
+        payload: data.payload
+    })
 }
 
 function getDouyinTab() {
-  return new Promise((resolve, reject) => {
-    chrome.tabs.query({ url: eosHomePage }, async (tabs) => {
-      console.log(tabs, 'tabs')
-      if (tabs.length > 0) {
-        const tab = tabs[0]
-        try {
-          await ensureScriptInjected(tab.id)
-          if (!tab.active) {
-            chrome.tabs.update(tab.id, { active: true })
-          }
-          resolve(tab)
-        } catch (error) {
-          console.log('检测脚本状态时出错:', error)
-          reject(error.message)
-        }
-      } else {
-        reject('未找到抖音tab')
-      }
+    return new Promise((resolve, reject) => {
+        chrome.tabs.query({url: eosHomePage}, async (tabs) => {
+            console.log(tabs, 'tabs')
+            if (tabs.length > 0) {
+                const tab = tabs[0]
+                try {
+                    await ensureScriptInjected(tab.id)
+                    if (!tab.active) {
+                        chrome.tabs.update(tab.id, {active: true})
+                    }
+                    resolve(tab)
+                } catch (error) {
+                    console.log('检测脚本状态时出错:', error)
+                    reject(error.message)
+                }
+            } else {
+                reject('未找到抖音tab')
+            }
+        })
     })
-  })
 }
 
 // 确保脚本注入逻辑的优化版
 async function ensureScriptInjected(tabId) {
-  try {
-    const isInjected = await isScriptInjected(tabId)
-    if (!isInjected) {
-      console.log('脚本未注入，正在注入...')
-      await injectContentScript(tabId)
-    } else {
-      console.log('脚本已注入')
+    try {
+        const isInjected = await isScriptInjected(tabId)
+        if (!isInjected) {
+            console.log('脚本未注入，正在注入...')
+            await injectContentScript(tabId)
+        } else {
+            console.log('脚本已注入')
+        }
+    } catch (error) {
+        console.log('确保脚本注入时出错:', error)
+        throw error
     }
-  } catch (error) {
-    console.log('确保脚本注入时出错:', error)
-    throw error
-  }
 }
 
 // 检查脚本是否已注入
 function isScriptInjected(tabId) {
-  return new Promise((resolve, reject) => {
-    chrome.scripting.executeScript(
-      {
-        target: { tabId: tabId },
-        func: () => !!window.__scriptInjected // 检查标志变量
-      },
-      (results) => {
-        if (chrome.runtime.lastError || !results || results.length === 0) {
-          reject(chrome.runtime.lastError || '无法执行脚本')
-        } else {
-          resolve(results[0].result) // 返回标志变量的状态
-        }
-      }
-    )
-  })
+    return new Promise((resolve, reject) => {
+        chrome.scripting.executeScript(
+            {
+                target: {tabId: tabId},
+                func: () => !!window.__scriptInjected // 检查标志变量
+            },
+            (results) => {
+                if (chrome.runtime.lastError || !results || results.length === 0) {
+                    reject(chrome.runtime.lastError || '无法执行脚本')
+                } else {
+                    resolve(results[0].result) // 返回标志变量的状态
+                }
+            }
+        )
+    })
 }
 
 // 注入内容脚本并返回一个Promise
 function injectContentScript(tabId) {
-  console.log(tabId, 'tabId')
-  console.log('injectContentScript 脚本注入')
-  return new Promise((resolve, reject) => {
-    chrome.scripting.executeScript(
-      {
-        target: { tabId: tabId },
-        files: ['utils/dom.js', 'utils/request.js', 'utils/setting.js']
-      },
-      () => {
-        if (chrome.runtime.lastError) {
-          console.log(chrome.runtime.lastError.message)
-          reject(chrome.runtime.lastError.message)
-        } else {
-          resolve()
-        }
-      }
-    )
-  })
+    console.log(tabId, 'tabId')
+    console.log('injectContentScript 脚本注入')
+    return new Promise((resolve, reject) => {
+        chrome.scripting.executeScript(
+            {
+                target: {tabId: tabId},
+                files: ['utils/dom.js', 'utils/request.js', 'utils/setting.js']
+            },
+            () => {
+                if (chrome.runtime.lastError) {
+                    console.log(chrome.runtime.lastError.message)
+                    reject(chrome.runtime.lastError.message)
+                } else {
+                    resolve()
+                }
+            }
+        )
+    })
 }
 
 //监听所有请求
@@ -122,5 +122,53 @@ function injectContentScript(tabId) {
 //     {urls: ["<all_urls>"]},
 //     ["blocking"]
 // )
+
+// background.js
+
+// 业务函数：每天早上 9:30 要执行的逻辑
+function doDailyTask() {
+    console.log('执行每日 9:30 任务');
+//    发送消息给content.js 执行任务
+    chrome.tabs.query({url: eosHomePage}, (tabs) => {
+        if (tabs.length > 0) {
+            const tab = tabs[0]
+            chrome.tabs.sendMessage(tab.id, {action: 'DO_DAILY_TASK', data: {}, url: ''}, (response) => {
+                console.log('发送消息给content.js执行任务', response)
+            })
+        }
+    })
+}
+
+// 在插件安装或更新时，创建一个每天 9:30 触发的 Alarm
+chrome.runtime.onInstalled.addListener(() => {
+    // 清掉已有的同名 Alarm（可选，防止重复注册）
+    chrome.alarms.clear('daily930', () => {
+        // 创建一个新的定时器
+        chrome.alarms.create('daily930', {
+            when: computeNext930(),      // 下次的触发时间
+            periodInMinutes: 24 * 60     // 每 24 小时重复一次
+        });
+    });
+});
+
+// 计算下一个“今天 9:30”或“明天 9:30”的时间戳（毫秒）
+function computeNext930() {
+    const now = new Date();
+    const next = new Date();
+    next.setHours(17, 13, 0, 0);      // 设置为今天 9:30:00.000
+    if (next.getTime() <= now.getTime()) {
+        // 如果已经过了今天的 9:30，则改为明天
+        next.setDate(next.getDate() + 1);
+    }
+    return next.getTime();
+}
+
+// 监听 Alarm 触发事件
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'daily930') {
+        doDailyTask();
+    }
+});
+
 
 getDouyinTab()
