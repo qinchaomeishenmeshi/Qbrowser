@@ -430,10 +430,12 @@ async function getModalText() {
 
         console.log(result);
         const dyAccountNo = localStorage.getItem('dyAccountNo')
+        const roomName = localStorage.getItem('dyRoomName')
         const params = {
             violationReason: result['violationReason'],
             violationTime: result['violationTime'],
             punishmentType: result['punishmentType'],
+            name: roomName,
             dyAccountNo
         }
         if (!result['violationTime']) {
@@ -469,7 +471,8 @@ async function get_punish_list() {
             violationReason: item['violation_reason'],
             violationTime: item['time'],
             punishmentType: item['punish_result'],
-            "dyAccountNo": localStorage.getItem('dyAccountNo')
+            "dyAccountNo": localStorage.getItem('dyAccountNo'),
+            "name": localStorage.getItem('dyRoomName')
         }
 
         console.log('params', params)
