@@ -77,9 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10000)
     // 立即注入拦截器
     injectFetchInterceptor()
-    // get_punish_list().then((res) => {
-    //     console.log('punish_list', res)
-    // })
+    get_punish_list().then((res) => {
+        console.log('punish_list', res)
+    })
 
 })
 
@@ -451,6 +451,7 @@ async function getModalText() {
 
 async function get_punish_list() {
     console.log('每天执行一次')
+    createTopTips('同步违规记录')
     // 模拟post请求https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list 并保存数据到后台
     const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
         method: 'POST',
