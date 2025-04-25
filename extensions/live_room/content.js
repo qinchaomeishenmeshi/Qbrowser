@@ -77,9 +77,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10000)
     // 立即注入拦截器
     injectFetchInterceptor()
-    get_punish_list().then((res) => {
-        console.log('punish_list', res)
-    })
+    // get_punish_list().then((res) => {
+    //     console.log('punish_list', res)
+    // })
 
 })
 
@@ -400,7 +400,7 @@ setInterval(() => {
 // 获取主动评论数据
 let debounceTimeout = null;
 
-function getModalText() {
+async function getModalText() {
     // 找到弹窗内容
     const spans = document.querySelectorAll('span');
 
@@ -429,7 +429,20 @@ function getModalText() {
             : {};
 
         console.log(result);
-
+        const dyAccountNo = localStorage.getItem('dyAccountNo')
+        const params = {
+            violationReason: result['violationReason'],
+            violationTime: result['violationTime'],
+            punishmentType: result['punishmentType'],
+            dyAccountNo
+        }
+        if (!result['violationTime']) {
+            createTopTips('弹窗内容获取失败')
+            return
+        }
+        console.log('params', params)
+        const res = await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        createTopTips(`账号：${dyAccountNo},违规记录保存成功--${res.code}`)
     }
 
 }
@@ -458,8 +471,10 @@ async function get_punish_list() {
             punishmentType: item['punish_result'],
             "dyAccountNo": localStorage.getItem('dyAccountNo')
         }
+
         console.log('params', params)
         const result = await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        createTopTips('保存数据到后台')
         console.log('result', result)
     })
 

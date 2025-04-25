@@ -22,8 +22,8 @@ const taskTypeEnums = {
 // 接口API
 const API = {
     // basicURL
-    BaseUrl: 'http://113.57.110.35:20379/dev-api',
-    // BaseUrl: 'https://hj.qwang.com.cn/dev-api',
+    // BaseUrl: 'http://113.57.110.35:20379/dev-api',
+    BaseUrl: 'https://hj.qwang.com.cn/dev-api',
 
     // 获取任务task的api
     getTaskApi: '/videoclip/admin/autopublishtask/getNoPublicData',
