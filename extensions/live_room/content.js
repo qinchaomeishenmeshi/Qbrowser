@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10000)
     // 立即注入拦截器
     injectFetchInterceptor()
+    // 立即同步一次
+    syncPunishList();
 
 
 })
@@ -396,21 +398,19 @@ setInterval(() => {
 
 // 每个小时同步一次违规记录
 async function syncPunishList() {
+    console.log('每个小时同步一次违规记录')
     try {
         const res = await get_punish_list();
-        console.log('每个小时同步一次违规记录', res);
     } catch (error) {
         console.error('Error syncing punish list:', error);
     }
 }
 
 
-// 立即同步一次
-await syncPunishList();
-
 // 设置定时器，每小时同步一次
-setInterval(async () => {
-    await syncPunishList();
+setInterval(() => {
+    console.log('定时器执行')
+    syncPunishList();
 }, 3600000);
 
 
