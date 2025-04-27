@@ -77,9 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 10000)
     // 立即注入拦截器
     injectFetchInterceptor()
-    get_punish_list().then((res) => {
-        console.log('punish_list', res)
-    })
+
 
 })
 
@@ -395,6 +393,25 @@ setInterval(() => {
         stopTimer();
     }
 }, 3000);
+
+// 每个小时同步一次违规记录
+async function syncPunishList() {
+    try {
+        const res = await get_punish_list();
+        console.log('每个小时同步一次违规记录', res);
+    } catch (error) {
+        console.error('Error syncing punish list:', error);
+    }
+}
+
+
+// 立即同步一次
+await syncPunishList();
+
+// 设置定时器，每小时同步一次
+setInterval(async () => {
+    await syncPunishList();
+}, 3600000);
 
 
 // 获取主动评论数据

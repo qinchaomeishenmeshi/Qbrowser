@@ -155,7 +155,7 @@ chrome.runtime.onInstalled.addListener(() => {
 function computeNext930() {
     const now = new Date();
     const next = new Date();
-    next.setHours(17, 13, 0, 0);      // 设置为今天 9:30:00.000
+    next.setHours(9, 30, 0, 0);      // 设置为今天 9:30:00.000
     if (next.getTime() <= now.getTime()) {
         // 如果已经过了今天的 9:30，则改为明天
         next.setDate(next.getDate() + 1);
