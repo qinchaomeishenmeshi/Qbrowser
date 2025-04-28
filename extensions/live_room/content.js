@@ -511,12 +511,12 @@ async function get_punish_list() {
     // compare_end_date = begin_date 的前一天
     const cmpEnd = new Date(begin);
     cmpEnd.setDate(cmpEnd.getDate() - 1);
-    const compare_end_date = fmt(cmpEnd);
+    const compare_end_date = end_date;
 
     // compare_begin_date = compare_end_date 再往前推 (periodDays - 1) 天
     const cmpBegin = new Date(cmpEnd);
     cmpBegin.setDate(cmpBegin.getDate() - (periodDays - 1));
-    const compare_begin_date = fmt(cmpBegin);
+    const compare_begin_date = begin_date;
 
     try {
         const res = await fetch(
