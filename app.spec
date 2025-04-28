@@ -53,6 +53,7 @@ exe = EXE(
     console=False,  # 设置为 False 来避免显示终端窗口
     icon='logo.ico',  # 确保替换为你的图标文件路径
     winmanifest='app.manifest',  # 添加 manifest 文件来请求管理员权限
+    uac_admin=True,
 )
 
 coll = COLLECT(
