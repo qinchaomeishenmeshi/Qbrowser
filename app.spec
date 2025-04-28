@@ -12,8 +12,8 @@ datas = [
     ('extensions/live_room', 'extensions/live_room')
 ]
 
-# 如果未来还有其他资源，如配置文件：
-# datas.append(('config.yaml', '.'))
+# 自动收集 playwright 相关模块，避免打包后找不到
+hiddenimports = collect_submodules('playwright') + ['tkinter']
 
 # 打包选项
 a = Analysis(
@@ -21,7 +21,7 @@ a = Analysis(
     pathex=[str(Path.cwd())],  # 使用当前工作目录
     binaries=[],
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -44,7 +44,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,  # False 表示不显示黑框控制台
+    console=True,  # 保持显示黑框控制台
     icon='logo.ico',
 )
 

@@ -5,8 +5,10 @@ import os
 import platform
 import sys
 import time
+import tkinter as tk
 from dataclasses import dataclass
 from pathlib import Path
+from tkinter import filedialog, messagebox, scrolledtext, ttk
 from typing import Optional
 
 from playwright.async_api import async_playwright, BrowserContext, Page, Playwright
@@ -18,6 +20,8 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+CACHE_FILE = "user_ids_cache.json"
 
 
 def get_absolute_extension_path(relative_path: str) -> str:
@@ -66,7 +70,7 @@ class BrowserManager:
         await page.evaluate(f"""
             (() => {{
                 const div = document.createElement('div');
-                div.innerText = '浏览器ID: {self.user_id}';
+                div.innerText = 'Browser ID: {self.user_id}';
                 div.style.position = 'fixed';
                 div.style.top = '10px';
                 div.style.left = '10px';
@@ -87,14 +91,14 @@ class BrowserManager:
             retry_count = 0
             while lock_file.exists():
                 if retry_count >= 5:
-                    logger.error(f"用户目录 {self.user_data_dir} 被占用，放弃启动")
+                    logger.error(f"User data dir {self.user_data_dir} is occupied, aborting.")
                     return False
-                logger.warning(f"检测到目录 {self.user_data_dir} 被占用，等待释放...")
+                logger.warning(f"User data dir {self.user_data_dir} is occupied, waiting...")
                 await asyncio.sleep(2)
                 retry_count += 1
 
             self._playwright = await async_playwright().start()
-            logger.info(f"扩展路径: {self.config.extension_path}")
+            logger.info(f"Extension path: {self.config.extension_path}")
 
             self.context = await self._playwright.chromium.launch_persistent_context(
                 user_data_dir=str(self.user_data_dir),
@@ -107,7 +111,6 @@ class BrowserManager:
                 ],
             )
 
-            # 关闭除一个about:blank页面以外的所有页面
             blank_page = None
             for page in self.context.pages:
                 if page.url == "about:blank" and blank_page is None:
@@ -128,15 +131,16 @@ class BrowserManager:
                             page = await self.context.new_page()
                             await page.goto(url)
                             await self.inject_user_tag(page)
-                        logger.info(f"恢复上次打开的 {len(urls)} 个页面")
+                        logger.info(f"Restored {len(urls)} pages.")
                 except Exception as e:
-                    logger.warning(f"恢复 URL 失败：{str(e)}")
+                    logger.warning(f"Failed to restore URLs: {str(e)}")
+
             self._startup_time = time.time()
-            logger.info(f"浏览器已启动，用户: {self.user_id}")
+            logger.info(f"Browser started for user: {self.user_id}")
             return True
 
         except Exception as e:
-            logger.error(f"初始化失败: {str(e)}", exc_info=True)
+            logger.error(f"Initialization failed: {str(e)}", exc_info=True)
             await self.cleanup()
             return False
 
@@ -149,7 +153,7 @@ class BrowserManager:
                     self.user_data_dir.mkdir(parents=True, exist_ok=True)
                     with open(self.last_urls_file, 'w', encoding='utf-8') as f:
                         json.dump(urls, f, ensure_ascii=False, indent=2)
-                    logger.info(f"已保存 {len(urls)} 个打开页面 URL")
+                    logger.info(f"Saved {len(urls)} open page URLs.")
 
             if self.page:
                 await self.page.close()
@@ -161,7 +165,7 @@ class BrowserManager:
                 await self._playwright.stop()
                 self._playwright = None
         except Exception as e:
-            logger.error(f"清理资源时出错: {str(e)}", exc_info=True)
+            logger.error(f"Cleanup error: {str(e)}", exc_info=True)
         finally:
             await asyncio.sleep(2)
             self.page = None
@@ -170,10 +174,7 @@ class BrowserManager:
 
     @property
     def is_running(self) -> bool:
-        try:
-            return bool(self.context)
-        except Exception:
-            return False
+        return bool(self.context)
 
     @property
     def uptime(self) -> Optional[float]:
@@ -182,44 +183,140 @@ class BrowserManager:
         return None
 
 
-async def main(user_ids: list):
-    logger.info("启动程序")
-    browser_managers = [BrowserManager(user_id) for user_id in user_ids]
-    try:
-        for browser_manager in browser_managers:
+class App:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Browser Manager")
+        self.browser_managers = []
+
+        self.text = tk.Text(root, height=8)
+        self.text.pack(fill=tk.X, padx=10, pady=5)
+
+        frame = tk.Frame(root)
+        frame.pack(fill=tk.X, padx=10, pady=5)
+
+        self.start_button = tk.Button(frame, text="启动浏览器", width=15, command=self.start_browsers)
+        self.start_button.pack(side=tk.LEFT, padx=5)
+
+        self.stop_button = tk.Button(frame, text="一键关闭", width=15, command=self.stop_browsers)
+        self.stop_button.pack(side=tk.LEFT, padx=5)
+
+        self.load_button = tk.Button(frame, text="加载 user_ids.txt", width=20, command=self.load_user_ids)
+        self.load_button.pack(side=tk.LEFT, padx=5)
+
+        self.clear_button = tk.Button(frame, text="清除缓存", width=15, command=self.clear_cache)
+        self.clear_button.pack(side=tk.LEFT, padx=5)
+
+        self.progress = ttk.Progressbar(root, orient="horizontal", mode="determinate")
+        self.progress.pack(fill=tk.X, padx=10, pady=5)
+
+        self.log = scrolledtext.ScrolledText(root, height=15, state='disabled')
+        self.log.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.load_cache()
+
+    def log_message(self, message):
+        self.log.configure(state='normal')
+        self.log.insert(tk.END, message + '\n')
+        self.log.configure(state='disabled')
+        self.log.yview(tk.END)
+
+    def load_user_ids(self):
+        path = filedialog.askopenfilename(title="Select user_ids.txt", filetypes=[("Text Files", "*.txt")])
+        if path:
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.text.delete('1.0', tk.END)
+            self.text.insert(tk.END, content)
+            self.save_cache()
+
+    def start_browsers(self):
+        user_ids = [line.strip() for line in self.text.get('1.0', tk.END).splitlines() if line.strip()]
+        if not user_ids:
+            messagebox.showerror("Error", "Please enter at least one user_id.")
+            return
+
+        if len(user_ids) != len(set(user_ids)):
+            messagebox.showerror("Error", "Duplicate user_ids are not allowed.")
+            return
+
+        self.save_cache()
+
+        self.start_button.config(state=tk.DISABLED)
+        self.stop_button.config(state=tk.DISABLED)
+        asyncio.create_task(self.launch(user_ids))
+
+    async def launch(self, user_ids):
+        self.log_message("Starting browsers...")
+        self.browser_managers = [BrowserManager(user_id) for user_id in user_ids]
+
+        self.progress['maximum'] = len(user_ids)
+        self.progress['value'] = 0
+
+        for idx, manager in enumerate(self.browser_managers, start=1):
             try:
-                result = await browser_manager.initialize()
-                if not result:
-                    logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败")
+                result = await manager.initialize()
+                if result:
+                    self.log_message(f"[{idx}/{len(user_ids)}] Browser for {manager.user_id} started successfully.")
+                else:
+                    self.log_message(f"[{idx}/{len(user_ids)}] Browser for {manager.user_id} failed to start.")
             except Exception as e:
-                logger.error(f"用户 {browser_manager.user_id} 的浏览器初始化失败: {str(e)}")
-            else:
-                logger.info(f"用户 {browser_manager.user_id} 的浏览器初始化成功")
+                self.log_message(f"[{idx}/{len(user_ids)}] Error starting {manager.user_id}: {e}")
 
-        logger.info("所有浏览器已启动，按 Ctrl+C 可以安全退出程序")
-        await asyncio.Event().wait()
+            self.progress['value'] = idx
+            self.root.update_idletasks()
 
-    except KeyboardInterrupt:
-        logger.info("检测到退出信号，正在安全关闭所有浏览器...")
-    except Exception as e:
-        logger.error(f"程序异常: {str(e)}")
-    finally:
-        await asyncio.gather(
-            *(browser_manager.cleanup() for browser_manager in browser_managers)
-        )
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.NORMAL)
+        self.log_message("All browsers started.")
+
+    def stop_browsers(self):
+        self.start_button.config(state=tk.DISABLED)
+        self.stop_button.config(state=tk.DISABLED)
+        asyncio.create_task(self.shutdown())
+
+    async def shutdown(self):
+        self.log_message("Stopping all browsers...")
+        await asyncio.gather(*(manager.cleanup() for manager in self.browser_managers if manager.is_running))
+        self.start_button.config(state=tk.NORMAL)
+        self.stop_button.config(state=tk.NORMAL)
+        self.progress['value'] = 0
+        self.log_message("All browsers closed.")
+
+    def save_cache(self):
+        user_ids = [line.strip() for line in self.text.get('1.0', tk.END).splitlines() if line.strip()]
+        with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(user_ids, f, ensure_ascii=False, indent=2)
+
+    def load_cache(self):
+        if os.path.exists(CACHE_FILE):
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    user_ids = json.load(f)
+                    if isinstance(user_ids, list):
+                        self.text.delete('1.0', tk.END)
+                        self.text.insert(tk.END, '\n'.join(user_ids))
+                except Exception:
+                    pass
+
+    def clear_cache(self):
+        if os.path.exists(CACHE_FILE):
+            os.remove(CACHE_FILE)
+        self.text.delete('1.0', tk.END)
+        self.log_message("Cache cleared.")
 
 
-def get_user_ids_path():
-    if getattr(sys, 'frozen', False):
-        exe_dir = os.path.dirname(sys.executable)
-    else:
-        exe_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(exe_dir, 'user_ids.txt')
+def main():
+    root = tk.Tk()
+    app = App(root)
+    asyncio.run(async_main(root, app))
+
+
+async def async_main(root, app):
+    while True:
+        root.update()
+        await asyncio.sleep(0.01)
 
 
 if __name__ == "__main__":
-    user_ids_path = get_user_ids_path()
-    with open(user_ids_path, 'r', encoding='utf-8') as f:
-        user_ids = [line.strip() for line in f if line.strip()]
-    print(user_ids)
-    asyncio.run(main(user_ids))
+    main()
