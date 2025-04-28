@@ -119,6 +119,21 @@ window.addEventListener('fetchResponse', (event) => {
             console.error('数据解析失败:', e)
         }
     }
+
+    if (url.includes('/data/life/live/case/agreement/get') && status === 200) {
+        try {
+            // 用浏览器自带的 URL API 解析查询参数
+            const userId = new URL(url, window.location.origin).searchParams.get('user_id');
+            if (userId) {
+                localStorage.setItem('agreement_user_id', userId);
+                console.log('✅ 已保存 user_id 到 localStorage:', userId);
+            } else {
+                console.warn('⚠️ URL 中没有找到 user_id 参数');
+            }
+        } catch (e) {
+            console.error('解析 user_id 或存储时出错:', e);
+        }
+    }
 })
 
 
@@ -467,39 +482,88 @@ async function getModalText() {
 }
 
 async function get_punish_list() {
-    console.log('每天执行一次')
-    createTopTips('同步违规记录')
-    // 模拟post请求https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list 并保存数据到后台
-    const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            "user_id": "1258293549605997",
-            "begin_date": "2025-03-26",
-            "end_date": "2025-04-24",
-            "compare_begin_date": "2025-02-24",
-            "compare_end_date": "2025-03-25"
-        })
-    })
-    const response_json = await res.json()
-    response_json.data.map(async (item) => {
-        const params = {
-            violationReason: item['violation_reason'],
-            violationTime: item['time'],
-            punishmentType: item['punish_result'],
-            "dyAccountNo": localStorage.getItem('dyAccountNo'),
-            "name": localStorage.getItem('dyRoomName')
+    console.log('每天执行一次');
+    createTopTips('同步违规记录——开始');
+
+    const agreementUserId = localStorage.getItem('agreement_user_id');
+    const dyAccountNo = localStorage.getItem('dyAccountNo');
+    const dyRoomName = localStorage.getItem('dyRoomName');
+
+    if (!agreementUserId) {
+        console.warn('❌ 未找到 agreement_user_id，终止同步');
+        createTopTips('同步失败：缺少 user_id');
+        return;
+    }
+
+    // —— 动态计算四个日期 ——
+    const today = new Date();
+    const periodDays = 30;             // 周期天数
+    const fmt = d => d.toISOString().slice(0, 10);
+
+    // end_date = 今天
+    const end_date = fmt(today);
+
+    // begin_date = 今天往前推 (periodDays - 1) 天
+    const begin = new Date(today);
+    begin.setDate(begin.getDate() - (periodDays - 1));
+    const begin_date = fmt(begin);
+
+    // compare_end_date = begin_date 的前一天
+    const cmpEnd = new Date(begin);
+    cmpEnd.setDate(cmpEnd.getDate() - 1);
+    const compare_end_date = fmt(cmpEnd);
+
+    // compare_begin_date = compare_end_date 再往前推 (periodDays - 1) 天
+    const cmpBegin = new Date(cmpEnd);
+    cmpBegin.setDate(cmpBegin.getDate() - (periodDays - 1));
+    const compare_begin_date = fmt(cmpBegin);
+
+    try {
+        const res = await fetch(
+            'https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list',
+            {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: agreementUserId,
+                    begin_date,
+                    end_date,
+                    compare_begin_date,
+                    compare_end_date
+                })
+            }
+        );
+        console.log(`接口状态 ${res.status}`);
+        const {data: list = []} = await res.json();
+
+        if (list.length === 0) {
+            createTopTips('同步完成：无违规记录');
+            console.log('ℹ️ 当天无违规记录');
+            return;
         }
 
-        console.log('params', params)
-        const result = await $Request(API.liveviolationrecordsdealSaveApi, {params});
-        createTopTips('保存数据到后台')
-        console.log('result', result)
-    })
+        for (const item of list) {
+            try {
+                const params = {
+                    violationReason: item.violation_reason,
+                    violationTime: item.time,
+                    punishmentType: item.punish_result,
+                    dyAccountNo,
+                    name: dyRoomName
+                };
+                console.log('保存参数：', params);
+                await $Request(API.liveviolationrecordsdealSaveApi, {params});
+            } catch (e) {
+                console.error('⚠️ 单条保存失败：', e, item);
+            }
+        }
 
-
+        createTopTips('同步违规记录——完成');
+        console.log('✅ 全部记录已处理完毕');
+    } catch (err) {
+        console.error('❌ 同步过程出错：', err);
+        createTopTips(`同步失败：${err.message || '未知错误'}`);
+    }
 }
 
 
