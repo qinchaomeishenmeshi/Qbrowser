@@ -5,15 +5,20 @@ from PyInstaller.utils.hooks import collect_submodules
 from pathlib import Path
 
 # 脚本路径
-script_path = 'app2.py'
+script_path = 'app.py'  # 主脚本文件 app.py
 
 # 插件路径（源路径 -> 打包后路径）
 datas = [
-    ('extensions/live_room', 'extensions/live_room')
+    ('extensions/live_room', 'extensions/live_room'),
+    # 如果有其他需要打包的资源，如字体或图片文件，可以在这里添加
+    # ('resources/fonts/*', 'resources/fonts'),
+    # ('resources/images/*', 'resources/images')
 ]
 
-# 自动收集 playwright 相关模块，避免打包后找不到
-hiddenimports = collect_submodules('playwright') + ['tkinter']
+# 添加 PyQt6 相关模块
+hiddenimports = collect_submodules('playwright') + [
+    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets'
+]
 
 # 打包选项
 a = Analysis(
@@ -32,8 +37,9 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # 或者使用 AES 加密：cipher=AES
 
+# 设置为不显示控制台窗口
 exe = EXE(
     pyz,
     a.scripts,
@@ -44,8 +50,8 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,  # 保持显示黑框控制台
-    icon='logo.ico',
+    console=False,  # 设置为 False 来避免显示终端窗口
+    icon='logo.ico',  # 确保替换为你的图标文件路径
 )
 
 coll = COLLECT(
@@ -55,6 +61,6 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    name='app2',
+    upx_exclude=[],  # 如果有需要排除的库，请在这里列出
+    name='全网直播浏览器',
 )
