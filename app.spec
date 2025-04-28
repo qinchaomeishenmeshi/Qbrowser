@@ -45,13 +45,14 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='qw_browser',
+    name='全网直播浏览器',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     console=False,  # 设置为 False 来避免显示终端窗口
     icon='logo.ico',  # 确保替换为你的图标文件路径
+    winmanifest='app.manifest',  # 添加 manifest 文件来请求管理员权限
 )
 
 coll = COLLECT(
