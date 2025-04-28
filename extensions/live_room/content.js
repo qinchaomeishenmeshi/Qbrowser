@@ -475,8 +475,8 @@ async function getModalText() {
             return
         }
         console.log('params', params)
-        const res = await $Request(API.liveviolationrecordsdealSaveApi, {params});
-        createTopTips(`账号：${dyAccountNo},违规记录保存成功--${res.code}`)
+        await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        createTopTips(`账号：${dyAccountNo},违规记录保存成功`)
     }
 
 }
