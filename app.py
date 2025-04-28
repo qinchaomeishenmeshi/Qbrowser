@@ -59,18 +59,44 @@ class BrowserConfig:
 
 class BrowserManager:
     def __init__(self, user_id: str, config: Optional[BrowserConfig] = None):
+        # self.user_id = user_id
+        # self.config = config or BrowserConfig()
+        # # 确保 data_dir_base 存在
+        # if not self.config.data_dir_base.exists():
+        #     logger.info(f"Creating data directory base at {self.config.data_dir_base}")
+        #     self.config.data_dir_base.mkdir(parents=True, exist_ok=True)
+        # self.context: Optional[BrowserContext] = None
+        # self.page: Optional[Page] = None
+        # self.user_data_dir = self.config.data_dir_base / user_id
+        # self._playwright: Optional[Playwright] = None
+        # self._startup_time = None
+        # self.last_urls_file = self.user_data_dir / "last_urls.json"
+
         self.user_id = user_id
         self.config = config or BrowserConfig()
+
         # 确保 data_dir_base 存在
         if not self.config.data_dir_base.exists():
             logger.info(f"Creating data directory base at {self.config.data_dir_base}")
             self.config.data_dir_base.mkdir(parents=True, exist_ok=True)
+
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self.user_data_dir = self.config.data_dir_base / user_id
+
+        # 确保 user_data_dir 存在
+        if not self.user_data_dir.exists():
+            logger.info(f"Creating user data directory at {self.user_data_dir}")
+            self.user_data_dir.mkdir(parents=True, exist_ok=True)
+
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
+
+        # 确保 last_urls_file 存在
         self.last_urls_file = self.user_data_dir / "last_urls.json"
+        if not self.last_urls_file.exists():
+            logger.info(f"Creating last_urls.json file at {self.last_urls_file}")
+            self.last_urls_file.touch(exist_ok=True)  # 创建空文件
 
     async def inject_user_tag(self, page: Page):
         await page.evaluate(f"""
