@@ -485,15 +485,15 @@ async function get_punish_list() {
     console.log('每天执行一次');
     createTopTips('同步违规记录——开始');
 
-    const agreementUserId = localStorage.getItem('agreement_user_id');
+    // const agreementUserId = localStorage.getItem('agreement_user_id');
     const dyAccountNo = localStorage.getItem('dyAccountNo');
     const dyRoomName = localStorage.getItem('dyRoomName');
 
-    if (!agreementUserId) {
-        console.warn('❌ 未找到 agreement_user_id，终止同步');
-        createTopTips('同步失败：缺少 user_id');
-        return;
-    }
+    // if (!agreementUserId) {
+    //     console.warn('❌ 未找到 agreement_user_id，终止同步');
+    //     createTopTips('同步失败：缺少 user_id');
+    //     return;
+    // }
 
     // —— 动态计算四个日期 ——
     const today = new Date();
@@ -519,13 +519,14 @@ async function get_punish_list() {
     const compare_begin_date = begin_date;
 
     try {
+        // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
         const res = await fetch(
             'https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list',
             {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
-                    user_id: agreementUserId,
+                    user_id: '1258293549605997',
                     begin_date,
                     end_date,
                     compare_begin_date,
