@@ -61,28 +61,16 @@ class BrowserManager:
     def __init__(self, user_id: str, config: Optional[BrowserConfig] = None):
         self.user_id = user_id
         self.config = config or BrowserConfig()
+        # 确保 data_dir_base 存在
+        if not self.config.data_dir_base.exists():
+            logger.info(f"Creating data directory base at {self.config.data_dir_base}")
+            self.config.data_dir_base.mkdir(parents=True, exist_ok=True)
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
         self.user_data_dir = self.config.data_dir_base / user_id
         self._playwright: Optional[Playwright] = None
         self._startup_time = None
         self.last_urls_file = self.user_data_dir / "last_urls.json"
-
-        # 确保文件夹和文件存在
-        self.ensure_directories_and_files()
-
-    def ensure_directories_and_files(self):
-        """检查并创建必要的目录和文件"""
-        # 检查并创建用户数据目录及子目录
-        if not self.user_data_dir.exists():
-            os.makedirs(self.user_data_dir)
-            logger.info(f"Created user data directory: {self.user_data_dir}")
-
-        # 检查并创建 last_urls.json 文件
-        if not self.last_urls_file.exists():
-            with open(self.last_urls_file, 'w', encoding='utf-8') as f:
-                json.dump([], f, ensure_ascii=False, indent=2)  # 创建一个空的 JSON 文件
-            logger.info(f"Created last_urls.json file: {self.last_urls_file}")
 
     async def inject_user_tag(self, page: Page):
         await page.evaluate(f"""
