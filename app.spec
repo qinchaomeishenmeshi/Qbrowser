@@ -50,7 +50,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # 设置为 False 来避免显示终端窗口
+    console=True,  # 设置为 False 来避免显示终端窗口
     icon='logo.ico',  # 确保替换为你的图标文件路径
     winmanifest='app.manifest',  # 添加 manifest 文件来请求管理员权限
 )
