@@ -18,7 +18,6 @@
   "host_permissions": [
     "https://*.douyin.com/*",
     "https://eos.douyin.com/*",
-    "https://*.lifecreator.cn/*",
     "https://hj.qwang.com.cn/*"
   ],
   "background": {
