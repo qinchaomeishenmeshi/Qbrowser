@@ -30,13 +30,25 @@ CACHE_FILE = "user_ids_cache.json"
 
 
 def get_absolute_extension_path(relative_path: str) -> str:
-    # 与原 Playwright 版一致，用于加载本地扩展（若仍需）
     if getattr(sys, 'frozen', False):
         base_dir = Path(sys._MEIPASS)
     else:
         base_dir = Path(__file__).parent
-    p = (base_dir / relative_path).resolve(strict=True)
-    return str(p) if platform.system() != 'Windows' else f'"{p}"'
+    extension_path = base_dir / relative_path
+    absolute_path = extension_path.resolve(strict=True)
+    if platform.system() == 'Windows':
+        win_path = str(absolute_path)
+        if any(c in win_path for c in (' ', '&', '^')):
+            win_path = f'"{win_path}"'
+        try:
+            from ctypes import windll, create_unicode_buffer
+            buffer = create_unicode_buffer(256)
+            if windll.kernel32.GetShortPathNameW(win_path, buffer, 256):
+                win_path = buffer.value
+        except Exception:
+            pass
+        return win_path
+    return str(absolute_path)
 
 
 @dataclass
