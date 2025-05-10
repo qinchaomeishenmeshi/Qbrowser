@@ -1,0 +1,389 @@
+{
+  "wh001": {
+    "port": 9000,
+    "cookies": [
+      {
+        "name": "buyin_account_child_type",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "buyin_app_id",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "BUYIN_SASID",
+        "value": "SID2_7501879081358131456",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "SASID",
+        "value": "SID2_7501879081358131456",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "sid_ucp_v1",
+        "value": "1.0.0-KGE0YzY2NzFjNzY0OGE5Nzc0OTI4ZWFmZDJiMTgxMzVmYWQ0YTUzNGQKGAj9wsDllIyvARCRkfDABhiPESAMOAhAJhoCbGYiIDI2OGNmZjgzZmY2ZTk0NTUxYzljZTFkODM1YTc5ZDg3",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "ucas_c0_ss_buyin",
+        "value": "CkEKBTEuMC4wELKIk_rrkYKOaBi9LyD8lfDOhazIBSiPETD9wsDllIyvAUCRkfDABkiRxazDBlCovMug0tLbhWhYfhIUCAiiWaf6A6njBV4d1IkBRomPXVc",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "uid_tt",
+        "value": "e908fe4c795b693f4b72d7b1a2379f5a",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "odin_tt",
+        "value": "5066128c53a4fe0142b4da6df84772f750821d955475289ed81ec4b09806f07049a5629518ec851b7a967c4f00e281a25c40e0924183104208c4ce918ec565b9",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "PHPSESSID_SS",
+        "value": "8a7801f6739c9dc87c5e117e699cd531",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_shop_type_v2",
+        "value": "24",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "ucas_c0_ss",
+        "value": "CkEKBTEuMC4wELOIh-jlg4KOaBjmJiDa-KC0-s2VBCiwITD9wsDllIyvAUChkPDABkihxKzDBlClvNiW66eL_WZYbhIUO4-MQjRuKaHNQkCP38ut6dsauK0",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "sessionid_ss",
+        "value": "268cff83ff6e94551c9ce1d835a79d87",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "sid_guard",
+        "value": "268cff83ff6e94551c9ce1d835a79d87%7C1746667665%7C5184000%7CMon%2C+07-Jul-2025+01%3A27%3A45+GMT",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "csrf_session_id",
+        "value": "4706938c96f10676b21cbcb4c0460d9f",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "sessionid",
+        "value": "268cff83ff6e94551c9ce1d835a79d87",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "ucas_c0",
+        "value": "CkEKBTEuMC4wELOIh-jlg4KOaBjmJiDa-KC0-s2VBCiwITD9wsDllIyvAUChkPDABkihxKzDBlClvNiW66eL_WZYbhIUO4-MQjRuKaHNQkCP38ut6dsauK0",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "scmVer",
+        "value": "1.0.1.8918",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "sid_tt",
+        "value": "268cff83ff6e94551c9ce1d835a79d87",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "_tea_utm_cache_3813",
+        "value": "undefined",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "ucas_c0_buyin",
+        "value": "CkEKBTEuMC4wELKIk_rrkYKOaBi9LyD8lfDOhazIBSiPETD9wsDllIyvAUCRkfDABkiRxazDBlCovMug0tLbhWhYfhIUCAiiWaf6A6njBV4d1IkBRomPXVc",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "uid_tt_ss",
+        "value": "e908fe4c795b693f4b72d7b1a2379f5a",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "gfkadpd",
+        "value": "2631,22740",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "ttwid",
+        "value": "1%7CLUSdAxz8HOWvdcfySHjerSV82iglCe6cM3xd6Vh3trI%7C1746667662%7Ccc094bc64d344ffb0bc87a1c9856bb447f868e2f8b1559fc62e4eca5dff9dc2f",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "passport_csrf_token",
+        "value": "a0d90f762a253beb2bc71f8d5919cc9e",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_account_child_type_v2",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "is_staff_user",
+        "value": "false",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_shop_type",
+        "value": "24",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "passport_csrf_token_default",
+        "value": "a0d90f762a253beb2bc71f8d5919cc9e",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_app_id_v2",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "ssid_ucp_v1",
+        "value": "1.0.0-KGE0YzY2NzFjNzY0OGE5Nzc0OTI4ZWFmZDJiMTgxMzVmYWQ0YTUzNGQKGAj9wsDllIyvARCRkfDABhiPESAMOAhAJhoCbGYiIDI2OGNmZjgzZmY2ZTk0NTUxYzljZTFkODM1YTc5ZDg3",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "PHPSESSID",
+        "value": "8a7801f6739c9dc87c5e117e699cd531",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "s_v_web_id",
+        "value": "verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "gf_part_2877721",
+        "value": "87",
+        "domain": "buyin.jinritemai.com"
+      }
+    ],
+    "headers": {
+      "sec-ch-ua-platform": "\"macOS\"",
+      "Referer": "https://buyin.jinritemai.com/dashboard/marketing/coupon-manager?pre_universal_page_params_id=&universal_page_params_id=8d19445a-fe2f-4e76-a3cb-5571dcc66afe",
+      "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+      "sec-ch-ua-mobile": "?0",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+      "Accept": "application/json, text/plain, */*",
+      "x-secsdk-csrf-token": "000100000001c2975a4c78366bfebef5f40a82a25298b86181909d9041095077592f06cfcf6b183e20c0f8071fe5",
+      "Content-Type": "application/json",
+      ":authority": "buyin.jinritemai.com",
+      ":method": "POST",
+      ":path": "/pc/selection/common/btm_mapping?verifyFp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&fp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&msToken=FflsMktORkmENJcFEuVJA1DtD4aM4eJO6hEJ5k7j30pKyJOnewDm9CCxv59V4sT0RtjadC_RH8vqr-c9m4XSeLyHJuxeIRKHw-po3AlmjRoChpFHyN3z3Ma35mKDQKMpPoOvje8yjqH4C5nMJR0dOsB7jwOLMEcJS24bYOyfWRZr-xz-4rLQr8w%3D&a_bogus=YJ0fh7yEOoRbP3lSmcpS9UHUzzoMrsWyJ-i2W7cT7oPYGwlPAdBb2iZFnqoQsYojjSplkoIH5DCMbDfP%2FnQa2e9pLmkDSxs69T5Vn6so0qq6GesmDHDDShfFzwMF0YiwlA9tN1kR6s0r2nxA9qViWpMaS5Fo5cfdRNZRD2wySEWhfCukix-TOehkOLNaUX%2F6",
+      ":scheme": "https",
+      "accept-encoding": "gzip, deflate, br, zstd",
+      "accept-language": "zh-CN,zh;q=0.9",
+      "content-length": "2",
+      "cookie": "s_v_web_id=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21; passport_csrf_token=a0d90f762a253beb2bc71f8d5919cc9e; passport_csrf_token_default=a0d90f762a253beb2bc71f8d5919cc9e; is_staff_user=false; scmVer=1.0.1.8918; gfkadpd=2631,22740; _tea_utm_cache_3813=undefined; uid_tt=e908fe4c795b693f4b72d7b1a2379f5a; uid_tt_ss=e908fe4c795b693f4b72d7b1a2379f5a; sid_tt=268cff83ff6e94551c9ce1d835a79d87; sessionid=268cff83ff6e94551c9ce1d835a79d87; sessionid_ss=268cff83ff6e94551c9ce1d835a79d87; ucas_c0=CkEKBTEuMC4wELOIh-jlg4KOaBjmJiDa-KC0-s2VBCiwITD9wsDllIyvAUChkPDABkihxKzDBlClvNiW66eL_WZYbhIUO4-MQjRuKaHNQkCP38ut6dsauK0; ucas_c0_ss=CkEKBTEuMC4wELOIh-jlg4KOaBjmJiDa-KC0-s2VBCiwITD9wsDllIyvAUChkPDABkihxKzDBlClvNiW66eL_WZYbhIUO4-MQjRuKaHNQkCP38ut6dsauK0; PHPSESSID=8a7801f6739c9dc87c5e117e699cd531; PHPSESSID_SS=8a7801f6739c9dc87c5e117e699cd531; ttwid=1%7CLUSdAxz8HOWvdcfySHjerSV82iglCe6cM3xd6Vh3trI%7C1746667662%7Ccc094bc64d344ffb0bc87a1c9856bb447f868e2f8b1559fc62e4eca5dff9dc2f; odin_tt=5066128c53a4fe0142b4da6df84772f750821d955475289ed81ec4b09806f07049a5629518ec851b7a967c4f00e281a25c40e0924183104208c4ce918ec565b9; sid_guard=268cff83ff6e94551c9ce1d835a79d87%7C1746667665%7C5184000%7CMon%2C+07-Jul-2025+01%3A27%3A45+GMT; ucas_c0_buyin=CkEKBTEuMC4wELKIk_rrkYKOaBi9LyD8lfDOhazIBSiPETD9wsDllIyvAUCRkfDABkiRxazDBlCovMug0tLbhWhYfhIUCAiiWaf6A6njBV4d1IkBRomPXVc; ucas_c0_ss_buyin=CkEKBTEuMC4wELKIk_rrkYKOaBi9LyD8lfDOhazIBSiPETD9wsDllIyvAUCRkfDABkiRxazDBlCovMug0tLbhWhYfhIUCAiiWaf6A6njBV4d1IkBRomPXVc; sid_ucp_v1=1.0.0-KGE0YzY2NzFjNzY0OGE5Nzc0OTI4ZWFmZDJiMTgxMzVmYWQ0YTUzNGQKGAj9wsDllIyvARCRkfDABhiPESAMOAhAJhoCbGYiIDI2OGNmZjgzZmY2ZTk0NTUxYzljZTFkODM1YTc5ZDg3; ssid_ucp_v1=1.0.0-KGE0YzY2NzFjNzY0OGE5Nzc0OTI4ZWFmZDJiMTgxMzVmYWQ0YTUzNGQKGAj9wsDllIyvARCRkfDABhiPESAMOAhAJhoCbGYiIDI2OGNmZjgzZmY2ZTk0NTUxYzljZTFkODM1YTc5ZDg3; SASID=SID2_7501879081358131456; BUYIN_SASID=SID2_7501879081358131456; buyin_shop_type=24; buyin_account_child_type=1128; buyin_app_id=1128; buyin_shop_type_v2=24; buyin_account_child_type_v2=1128; buyin_app_id_v2=1128; csrf_session_id=4706938c96f10676b21cbcb4c0460d9f",
+      "origin": "https://buyin.jinritemai.com",
+      "priority": "u=1, i",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin"
+    }
+  },
+  "wh002": {
+    "port": 9001,
+    "cookies": [
+      {
+        "name": "buyin_shop_type_v2",
+        "value": "24",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "buyin_account_child_type",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "buyin_app_id_v2",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "s_v_web_id",
+        "value": "verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "ssid_ucp_v1",
+        "value": "1.0.0-KDllMjU2NmI1OWU4M2VjNGRjMDQyYTQ3MDIxOGZhYTNmMzc0ZGNiZjYKGAjj2_DigayABRDMgvHABhiPESAMOAhAJhoCbHEiIDQ0ZGYxZjQ2ZmY1OGQzNWY4NDY3MTZlMzkxNjgxOThm",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "sid_ucp_v1",
+        "value": "1.0.0-KDllMjU2NmI1OWU4M2VjNGRjMDQyYTQ3MDIxOGZhYTNmMzc0ZGNiZjYKGAjj2_DigayABRDMgvHABhiPESAMOAhAJhoCbHEiIDQ0ZGYxZjQ2ZmY1OGQzNWY4NDY3MTZlMzkxNjgxOThm",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "ucas_c0_ss_buyin",
+        "value": "CkEKBTEuMC4wEKOIj-rWqJCOaBi9LyDTwfDfgaycAyiPETDj2_DigayABUDMgvHABkjMtq3DBlCTvLeapbrShWhYfhIUJaIpTV7dsB6ztg9oYbxY3LXynuY",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "passport_csrf_token_default",
+        "value": "f1370fa29f3092a25bffa1a70a809c13",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_shop_type",
+        "value": "24",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "uid_tt",
+        "value": "36a6d6eb707cfdab541d33f5f90fa9aa",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "odin_tt",
+        "value": "45b567f038869c001adaaeb221f496e5a128145dd35ef17e105b76dae62d6b816b204e92b7affd35348c9c4e8eff29a0291e94d40b801cfce15d8030bcf05b1b",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "buyin_app_id",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "BUYIN_SASID",
+        "value": "SID2_7501941607294730505",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "sessionid_ss",
+        "value": "44df1f46ff58d35f846716e39168198f",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "sid_guard",
+        "value": "44df1f46ff58d35f846716e39168198f%7C1746682188%7C5184000%7CMon%2C+07-Jul-2025+05%3A29%3A48+GMT",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "scmVer",
+        "value": "1.0.1.8918",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "sid_tt",
+        "value": "44df1f46ff58d35f846716e39168198f",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "csrf_session_id",
+        "value": "4706938c96f10676b21cbcb4c0460d9f",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "sessionid",
+        "value": "44df1f46ff58d35f846716e39168198f",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "SASID",
+        "value": "SID2_7501941607294730505",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "ucas_c0_buyin",
+        "value": "CkEKBTEuMC4wEKOIj-rWqJCOaBi9LyDTwfDfgaycAyiPETDj2_DigayABUDMgvHABkjMtq3DBlCTvLeapbrShWhYfhIUJaIpTV7dsB6ztg9oYbxY3LXynuY",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "uid_tt_ss",
+        "value": "36a6d6eb707cfdab541d33f5f90fa9aa",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "gfkadpd",
+        "value": "2631,22740",
+        "domain": "buyin.jinritemai.com"
+      },
+      {
+        "name": "ttwid",
+        "value": "1%7COdj4JA_vQm2-nq_5D5-v7PsZ-VYJQDQPLznp1BoadUY%7C1746682183%7C868f6a15dbe4e29096ad52d92181f229fa39dde118e284763af1ca648e942ed1",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "passport_csrf_token",
+        "value": "f1370fa29f3092a25bffa1a70a809c13",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "_tea_utm_cache_3813",
+        "value": "undefined",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "buyin_account_child_type_v2",
+        "value": "1128",
+        "domain": ".buyin.jinritemai.com"
+      },
+      {
+        "name": "is_staff_user",
+        "value": "false",
+        "domain": ".jinritemai.com"
+      },
+      {
+        "name": "gf_part_2877721",
+        "value": "62",
+        "domain": "buyin.jinritemai.com"
+      }
+    ],
+    "headers": {
+      "sec-ch-ua-platform": "\"macOS\"",
+      "Referer": "https://buyin.jinritemai.com/dashboard/marketing/coupon-manager?pre_universal_page_params_id=&universal_page_params_id=8d19445a-fe2f-4e76-a3cb-5571dcc66afe",
+      "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+      "sec-ch-ua-mobile": "?0",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+      "Accept": "application/json, text/plain, */*",
+      "x-secsdk-csrf-token": "0001000000013b2c32d4275978192659310c405477b393ad736f78ecc9245364de2878e7ae87183e20c2d36d0dc7",
+      "Content-Type": "application/json",
+      ":authority": "buyin.jinritemai.com",
+      ":method": "POST",
+      ":path": "/pc/selection/common/btm_mapping?verifyFp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz&fp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz&msToken=ri7r7nv2yRD9PTyQcQPQuWQeZo7t-BzUAlCW8bROo_dikgEb7IslizACCv7L6vbkScumB8QxUQFJGwOCK-RDoI6Qjyc6WgqBSfzjibyNLhdm7Lp4cLSlkAjJhchL8CZ8gjQw68AbJ29m6CXxKZ9iGCIIhr8guIXyBSyQ_xwXPJxQX2AypQG9NSY%3D&a_bogus=xjsVg7SEO2RRP3lG8cpW9laUxlxlNBWyvliKSeaPtKzbGhtannBS2bdFJqLQsQojySB-kFVH4DC%2FbEEPQoQ12e9pKmkfSk0yIz5InWfLZqNhGt4mEqmmSgXFzw0eUQiwe5CtNlg5Is0r2jxAVq5iWdMae5zHQRDdWqMjDMLytEWXfWWkwx3kOHDhNyTqAD%3D%3D",
+      ":scheme": "https",
+      "accept-encoding": "gzip, deflate, br, zstd",
+      "accept-language": "zh-CN,zh;q=0.9",
+      "content-length": "2",
+      "cookie": "gfkadpd=2631,22740; _tea_utm_cache_3813=undefined; scmVer=1.0.1.8918; s_v_web_id=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz; passport_csrf_token=f1370fa29f3092a25bffa1a70a809c13; passport_csrf_token_default=f1370fa29f3092a25bffa1a70a809c13; ttwid=1%7COdj4JA_vQm2-nq_5D5-v7PsZ-VYJQDQPLznp1BoadUY%7C1746682183%7C868f6a15dbe4e29096ad52d92181f229fa39dde118e284763af1ca648e942ed1; uid_tt=36a6d6eb707cfdab541d33f5f90fa9aa; uid_tt_ss=36a6d6eb707cfdab541d33f5f90fa9aa; sid_tt=44df1f46ff58d35f846716e39168198f; sessionid=44df1f46ff58d35f846716e39168198f; sessionid_ss=44df1f46ff58d35f846716e39168198f; is_staff_user=false; odin_tt=45b567f038869c001adaaeb221f496e5a128145dd35ef17e105b76dae62d6b816b204e92b7affd35348c9c4e8eff29a0291e94d40b801cfce15d8030bcf05b1b; ucas_c0_buyin=CkEKBTEuMC4wEKOIj-rWqJCOaBi9LyDTwfDfgaycAyiPETDj2_DigayABUDMgvHABkjMtq3DBlCTvLeapbrShWhYfhIUJaIpTV7dsB6ztg9oYbxY3LXynuY; ucas_c0_ss_buyin=CkEKBTEuMC4wEKOIj-rWqJCOaBi9LyDTwfDfgaycAyiPETDj2_DigayABUDMgvHABkjMtq3DBlCTvLeapbrShWhYfhIUJaIpTV7dsB6ztg9oYbxY3LXynuY; sid_guard=44df1f46ff58d35f846716e39168198f%7C1746682188%7C5184000%7CMon%2C+07-Jul-2025+05%3A29%3A48+GMT; sid_ucp_v1=1.0.0-KDllMjU2NmI1OWU4M2VjNGRjMDQyYTQ3MDIxOGZhYTNmMzc0ZGNiZjYKGAjj2_DigayABRDMgvHABhiPESAMOAhAJhoCbHEiIDQ0ZGYxZjQ2ZmY1OGQzNWY4NDY3MTZlMzkxNjgxOThm; ssid_ucp_v1=1.0.0-KDllMjU2NmI1OWU4M2VjNGRjMDQyYTQ3MDIxOGZhYTNmMzc0ZGNiZjYKGAjj2_DigayABRDMgvHABhiPESAMOAhAJhoCbHEiIDQ0ZGYxZjQ2ZmY1OGQzNWY4NDY3MTZlMzkxNjgxOThm; SASID=SID2_7501941607294730505; BUYIN_SASID=SID2_7501941607294730505; buyin_shop_type=24; buyin_account_child_type=1128; buyin_app_id=1128; buyin_shop_type_v2=24; buyin_account_child_type_v2=1128; buyin_app_id_v2=1128; csrf_session_id=4706938c96f10676b21cbcb4c0460d9f",
+      "origin": "https://buyin.jinritemai.com",
+      "priority": "u=1, i",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-site": "same-origin"
+    }
+  },
+  "wh003": {
+    "port": 9002,
+    "cookies": [
+      {
+        "name": "Hm_lpvt_ab58f05f8c8c204ac100a625845bd8aa",
+        "value": "1746869734",
+        "domain": ".douyinec.com"
+      },
+      {
+        "name": "HMACCOUNT",
+        "value": "DB08D9A7815352AF",
+        "domain": ".douyinec.com"
+      },
+      {
+        "name": "Hm_lvt_ab58f05f8c8c204ac100a625845bd8aa",
+        "value": "1746868033,1746869130,1746869355,1746869728",
+        "domain": ".douyinec.com"
+      }
+    ],
+    "headers": null
+  }
+}

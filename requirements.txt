@@ -3,3 +3,13 @@ PyQt6==6.9.0
 qasync==0.27.1
 
 DrissionPage~=4.1.0.18
+
+httpx~=0.28.1
+ujson~=5.10.0
+loguru~=0.7.3
+requests~=2.32.3
+
+uvicorn~=0.34.2
+fastapi~=0.115.12
+
+pydantic~=2.11.4
