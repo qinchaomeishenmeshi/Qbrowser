@@ -1,0 +1,25 @@
+serverAddr = "60.205.128.119"
+serverPort = 7000
+auth.method = "token"
+auth.token = "token123456"
+
+webServer.addr = "127.0.0.1"
+webServer.port = 7400
+webServer.user = "admin"
+webServer.password = "admin"
+
+[[proxies]]
+# ssh_random
+name = "ssh_random_live"
+# 代理类型
+type = "tcp"
+# 代理的ip
+localIP = "127.0.0.1"
+# 需要代理的端口
+localPort = 8000
+# 对外暴露的端口
+remotePort = 6788
+
+# cmd 执行.\frpc.exe -c .\frpc.toml
+# name和remotePort不可以重复
+#
