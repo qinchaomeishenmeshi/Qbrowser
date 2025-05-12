@@ -61,22 +61,25 @@ class BrowserManager:
             co.set_argument('--start-maximized')
             self.browser = Chromium(co)
             logger.info(f"Browser started for user: {self.user_id}")
+
             urls = json.loads(self.last_urls_file.read_text() or "[]")
+            print('urls:', urls)
             for url in urls:
-                tab = self.browser.new_tab(url=url)  # 新标签页并访问
+                tab = self.browser.new_tab(url=url)
                 # 注入用户标签
                 tab.run_js(f"""
-                    const d = document.createElement('div');
-                    d.innerText = 'Browser ID: {self.user_id}';
-                    Object.assign(d.style, {{
-                      position:'fixed',top:'10px',left:'10px',
-                      background:'rgba(0,0,0,0.6)',color:'white',
-                      padding:'5px 10px',zIndex:999999,
-                      borderRadius:'8px',fontSize:'14px'
-                    }});
-                    document.body.appendChild(d);
-                """)
-            tab = self.browser.new_tab(url="")
+                                                                                    const d = document.createElement('div');
+                                                                                    d.innerText = 'Browser ID: {self.user_id}';
+                                                                                    Object.assign(d.style, {{
+                                                                                      position:'fixed',top:'10px',left:'10px',
+                                                                                      background:'rgba(0,0,0,0.6)',color:'white',
+                                                                                      padding:'5px 10px',zIndex:999999,
+                                                                                      borderRadius:'8px',fontSize:'14px'
+                                                                                    }});
+                                                                                    document.body.appendChild(d);
+                                                                                """)
+
+            tab = self.browser.new_tab(url="about:blank")
             tab.run_js(f"""document.title='{self.user_id}'""")
 
             return True
@@ -88,16 +91,25 @@ class BrowserManager:
     def cleanup(self):
         try:
             if self.browser:
-                # 保存所有非空白标签页 URL
-                tabs = self.browser.tabs_count
-                urls = [self.browser.get_tab(i).url for i in range(tabs)
-                        if (u := self.browser.get_tab(i).url) not in ('about:blank', '')]
+                urls = []
+                seen = set()  # 用于去重
+                for i in range(self.browser.tabs_count):
+                    tab = self.browser.get_tab(i)
+                    url = tab.url
+                    if url and url != 'about:blank' and url not in seen:
+                        urls.append(url)
+                        seen.add(url)
+                        logger.debug(f"[Tab {i}] Saved URL: {url}")  # 可选调试输出
+
                 if urls:
                     self.last_urls_file.write_text(json.dumps(urls, ensure_ascii=False, indent=2))
-                    logger.info(f"Saved {len(urls)} URLs.")
+                    logger.info(f"✅ Saved {len(urls)} unique URLs.")
+                else:
+                    logger.info("ℹ️ No URLs to save.")
+
                 self.browser.quit()
         except Exception as e:
-            logger.error(f"Cleanup error: {e}", exc_info=True)
+            logger.error(f"❌ Cleanup error: {e}", exc_info=True)
 
     @property
     def is_running(self) -> bool:
