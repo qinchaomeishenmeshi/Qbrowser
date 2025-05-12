@@ -22,9 +22,11 @@ class CouponClient:
     def __init__(self, ports_file: Union[str, Path] = Path(BASE_PATH) / PORTS_FILE):
         self.ports_file = Path(__file__).parent / ports_file
         self.mapping = self._load_ports()
+        self.ab_url = 'http://113.57.110.35:13276/DouyinLiveWebFetcher/api/get_sign_buyin'
         self.check_login_url = 'https://buyin-sso.jinritemai.com/aff/check_login/'
         self.create_url = 'https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/create'
         self.basic_url = 'https://buyin.jinritemai.com/api/anchor/livepc/basic_list'
+        self.promotion_url = 'https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/promotion_list'
 
     def _load_ports(self) -> Dict[str, Any]:
         """读取并返回 ports_file 中的映射"""
@@ -90,6 +92,21 @@ class CouponClient:
 
         return filtered_headers
 
+    def get_sign_buyin(self, user_id: str):
+        """获取直播商品"""
+        cookies = self._get_cookies_for_user(user_id)
+        headers = self._get_headers_for_user(user_id)
+        ts = int(time.time() * 1000)
+        params = {
+            "source_type": "force",
+            "User-Agent": headers.get('user-agent', ''),
+        }
+
+        print(f"发送请求：{self.ab_url} params={params}")
+        resp = requests.post(self.ab_url, params=params, cookies=cookies, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
     def check_login(self, user_id: str):
         """检查登录状态"""
         return self.get_basic_list(user_id)
@@ -137,6 +154,30 @@ class CouponClient:
 
         print(f"发送请求：{self.basic_url} params={params}")
         resp = requests.get(self.basic_url, params=params, cookies=cookies, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_promotion_list(self, user_id: str):
+        """获取直播商品"""
+        cookies = self._get_cookies_for_user(user_id)
+        headers = self._get_headers_for_user(user_id)
+        ts = int(time.time() * 1000)
+        params = {
+            '_bid': 'mcenter_buyin',
+            '_': str(ts),
+            's': '244824',
+            'promotion_name_or_id': '',
+            'page': '1',
+            'size': '10',
+            'search_type': '1',
+            'verifyFp': cookies.get('s_v_web_id', ''),
+            'fp': cookies.get('s_v_web_id', ''),
+            "a_bogus": "OfmhQVhkDE6igDWX565LfY3q6AF3YD8u0trEMD2f6VV1Cy39HMY59exoXfvv8GEjxT/2IeYjy4hbT3ohrQ2y8qwf9W0L/25gsDSkKl12so0j53inCLf/E0iE5hsAtFH8svr4iKi8owICSYyhldAJ5kIlO62-zo0/96f=",
+            "ms_token": "C=PwS33coTeqpBt5y6c4ligMT97UnIGOc-_aYHtl=XlFu38qOo9ZIdNDLa92nmShlDpiS6xrQqky1R6w9aSS-6DguNfZuc8GNf8_2wcxLnMmNmQTCreas3_G"
+        }
+
+        print(f"发送请求：{self.promotion_url} params={params}")
+        resp = requests.get(self.promotion_url, params=params, cookies=cookies, headers=headers)
         resp.raise_for_status()
         return resp.json()
 
@@ -221,14 +262,55 @@ def anchor_coupon_create_main(data) -> PublicResponse:
         goods_id_list = ''
         live_promotion_ids = []
         print(f"basic_list 数据为：{basic_list}")
-        # 遍历 basic_list
+        # 如果data.get('goodsIdType', '1') 为 1 默认不操作 ， 2 指定商品，3 则过滤掉商品
+        # 1. 读取参数
+        goods_id_type = data.get('goodsIdType', '1')
+        goods_id_list_str = data.get('goodsIdList', '')
+        # 将字符串拆成列表，去掉空项和两端空白
+        goods_id_list = [gid.strip() for gid in goods_id_list_str.split(',') if gid.strip()]
+
+        # 2. 初始化要返回的列表
+        goods_id_list_out = []
+        live_promotion_ids = []
+
+        # 3. 遍历 basic_list，根据类型做过滤
         for p_ind, product in enumerate(basic_list):
+            pid = product.get('product_id', '')
+            prom_id = product.get('promotion_id', '')
+
+            # type == '1'：默认不操作，全部保留
+            if goods_id_type == '1':
+                pass
+
+            # type == '2'：只保留在 goods_id_list 中的商品
+            elif goods_id_type == '2':
+                if pid not in goods_id_list:
+                    # 不在指定列表中，跳过
+                    continue
+
+            # type == '3'：过滤掉在 goods_id_list 中的商品
+            elif goods_id_type == '3':
+                if pid in goods_id_list:
+                    # 在过滤列表中，跳过
+                    continue
+
+            else:
+                # 如果传了其它非法类型，也可以选择跳过或默认保留
+                continue
+
+            # 如果走到这里，说明这个 product 是要保留的
             print(f"商品信息：{p_ind} {product}")
-            goods_id_list += product.get('product_id', '') + ','
-            live_promotion_ids.append(product.get('promotion_id', ''))
+            goods_id_list_out.append(pid)
+            live_promotion_ids.append(prom_id)
+
+        # 4. 最后把列表拼成逗号分隔的字符串（如果需要）
+        goods_id_list_str_out = ','.join(goods_id_list_out) + ',' if goods_id_list_out else ''
+        print("最终 goodsIdList:", goods_id_list_str_out)
+        print("最终 promotionIds:", live_promotion_ids)
+
         coupon_data = format_data(
             data,
-            goods_id_list=goods_id_list.rstrip(','),  # 去掉末尾逗号
+            goods_id_list=goods_id_list_str_out.rstrip(','),  # 去掉末尾逗号
             live_promotion_ids=live_promotion_ids
         )
         result = client.create_coupon(user_id, coupon_data)
@@ -241,8 +323,15 @@ def anchor_coupon_create_main(data) -> PublicResponse:
     return PublicResponse(status='success', message='操作成功', data=response_json_data)
 
 
+def test():
+    client = CouponClient()
+    resp = client.get_promotion_list('wh002')
+    print(resp)
+
+
 # 示例使用
 if __name__ == '__main__':
+    # test()
     def to_timestamp(dt_str: str) -> int:
         """将字符串时间转为时间戳（秒）"""
         dt_obj = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
@@ -250,22 +339,27 @@ if __name__ == '__main__':
 
 
     anchor_coupon_create_main({
-        "id": "1921095057415344129",
-        "anchorCouponScene": "0",
-        "couponName": "提交后3小时可领/6小时可用",
-        "applyTimeType": "1",
-        "applyTime": "3",
-        "startApplyTime": to_timestamp("2025-05-10 15:03:50"),
-        "endApplyTime": to_timestamp("2025-05-10 18:03:50"),
-        "kolUserTag": "0",
+        "id": "1921119979076325378",
+        "status": "0",
+        "createBy": "1897092900773171202",
+        "createTime": "2025-05-10 16:27:50",
+        "couponName": "固定时间可用",
         "maxApplyTimes": "1",
         "type": "53",
-        "threshold": "10",
         "credit": "1",
-        "totalAmount": "5",
-        "useTimeType": "1",
-        "useTime": "6",
-        "startUseTime": to_timestamp("2025-05-10 15:03:51"),
-        "endUseTime": to_timestamp("2025-05-10 21:03:51"),
+        "totalAmount": "50",
+        "threshold": "10",
+        "anchorCouponScene": "0",
+        "startApplyTime": "2025-05-13 16:27:08",
+        "endApplyTime": "2025-05-13 17:27:13",
+        "startUseTime": "2025-05-14 16:27:33",
+        "endUseTime": "2025-05-14 20:27:42",
+        "kolUserTag": "0",
+        "applyTimeType": "2",
+        "applyTime": "",
+        "useTimeType": "3",
+        "useTime": "",
+        "goodsIdType": "1",
+        "goodsIdList": "3740185954082750838,3736891222183247936,3731302879173148771",
         "deviceNoList": "wh001,wh002,wh003"
     })

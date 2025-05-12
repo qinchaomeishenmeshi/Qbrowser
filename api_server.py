@@ -36,6 +36,8 @@ class CouponRequest(BaseModel):
     maxApplyTimes: str
     type: str
     threshold: Optional[str] = ""
+    goodsIdList: Optional[str] = ""
+    goodsIdType: Optional[str] = ""
     credit: str
     totalAmount: str
     useTimeType: str
