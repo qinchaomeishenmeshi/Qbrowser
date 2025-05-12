@@ -236,6 +236,61 @@ def format_data(data, goods_id_list='', live_promotion_ids=None):
     }
 
 
+def process_products(data, basic_list):
+    # 1. 读取并转换参数
+    try:
+        goods_id_type = int(data.get('goodsIdType', 1))
+    except ValueError:
+        goods_id_type = 1
+
+    goods_id_list_str = data.get('goodsIdList', '')
+    goods_id_list = [gid.strip() for gid in goods_id_list_str.split(',') if gid.strip()]
+
+    # 2. 初始化输出列表
+    goods_id_list_out = []
+    live_promotion_ids = []
+
+    # 3. 抽取过滤判断函数
+    def keep_product(pid: str) -> bool:
+        if goods_id_type == 1:
+            return True
+        if goods_id_type == 2:
+            return pid in goods_id_list
+        if goods_id_type == 3:
+            return pid not in goods_id_list
+        return False  # 非法类型一律丢弃
+
+    # 4. 遍历 basic_list，收集符合条件的商品
+    for p_ind, product in enumerate(basic_list):
+        pid = product.get('product_id', '')
+        prom_id = product.get('promotion_id', '')
+
+        if not keep_product(pid):
+            continue
+
+        # 收集
+        goods_id_list_out.append(pid)
+        live_promotion_ids.append(prom_id)
+
+    # 6. 拼成字符串（无尾逗号）
+    goods_id_list_str_out = ','.join(goods_id_list_out)
+
+    # 7. 返回结果
+    return {
+        'goodsIdList': goods_id_list_str_out,
+        'promotionIds': live_promotion_ids,
+    }
+
+
+# —— 调用示例 ——
+# data = {
+#     'goodsIdType': '2',
+#     'goodsIdList': '3740185954082750838,3736891222183247936,3731302879173148771'
+# }
+# result = process_products(data, basic_list)
+# print(result)
+
+
 def anchor_coupon_create_main(data) -> PublicResponse:
     """ 批量创建达人券入口 """
     client = CouponClient()
@@ -263,55 +318,15 @@ def anchor_coupon_create_main(data) -> PublicResponse:
         live_promotion_ids = []
         print(f"basic_list 数据为：{basic_list}")
         # 如果data.get('goodsIdType', '1') 为 1 默认不操作 ， 2 指定商品，3 则过滤掉商品
-        # 1. 读取参数
-        goods_id_type = data.get('goodsIdType', '1')
-        goods_id_list_str = data.get('goodsIdList', '')
-        # 将字符串拆成列表，去掉空项和两端空白
-        goods_id_list = [gid.strip() for gid in goods_id_list_str.split(',') if gid.strip()]
 
-        # 2. 初始化要返回的列表
-        goods_id_list_out = []
-        live_promotion_ids = []
-
-        # 3. 遍历 basic_list，根据类型做过滤
-        for p_ind, product in enumerate(basic_list):
-            pid = product.get('product_id', '')
-            prom_id = product.get('promotion_id', '')
-
-            # type == '1'：默认不操作，全部保留
-            if goods_id_type == '1':
-                pass
-
-            # type == '2'：只保留在 goods_id_list 中的商品
-            elif goods_id_type == '2':
-                if pid not in goods_id_list:
-                    # 不在指定列表中，跳过
-                    continue
-
-            # type == '3'：过滤掉在 goods_id_list 中的商品
-            elif goods_id_type == '3':
-                if pid in goods_id_list:
-                    # 在过滤列表中，跳过
-                    continue
-
-            else:
-                # 如果传了其它非法类型，也可以选择跳过或默认保留
-                continue
-
-            # 如果走到这里，说明这个 product 是要保留的
-            print(f"商品信息：{p_ind} {product}")
-            goods_id_list_out.append(pid)
-            live_promotion_ids.append(prom_id)
-
-        # 4. 最后把列表拼成逗号分隔的字符串（如果需要）
-        goods_id_list_str_out = ','.join(goods_id_list_out) + ',' if goods_id_list_out else ''
-        print("最终 goodsIdList:", goods_id_list_str_out)
-        print("最终 promotionIds:", live_promotion_ids)
+        process_products_resp = process_products({
+            "goodsIdType": data.get('goodsIdType', '1'), 'goodsIdList': data.get('goodsIdList', '')
+        }, basic_list=basic_list)
 
         coupon_data = format_data(
             data,
-            goods_id_list=goods_id_list_str_out.rstrip(','),  # 去掉末尾逗号
-            live_promotion_ids=live_promotion_ids
+            goods_id_list=process_products_resp['goodsIdList'].rstrip(','),  # 去掉末尾逗号
+            live_promotion_ids=process_products_resp['promotionIds'],
         )
         result = client.create_coupon(user_id, coupon_data)
         response_json_data.append({**result, 'user_id': user_id})
@@ -360,6 +375,6 @@ if __name__ == '__main__':
         "useTimeType": "3",
         "useTime": "",
         "goodsIdType": "1",
-        "goodsIdList": "3740185954082750838,3736891222183247936,3731302879173148771",
+        "goodsIdList": "3740185954082750838,3734249967804612830,3736891222183247936,3731302879173148771",
         "deviceNoList": "wh001,wh002,wh003"
     })
