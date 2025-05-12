@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        body {
+            font-family: sans-serif;
+            min-width: 250px;
+            padding: 10px;
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-top: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 6px;
+            margin-top: 6px;
+        }
+
+        small {
+            color: #555;
+            display: block;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+<h2>当前网站屏蔽状态</h2>
+<label for="domain"></label><input id="domain" disabled/>
+<button id="toggle">切换屏蔽</button>
+<p id="status">加载中...</p>
+
+<h3>已屏蔽网站列表</h3>
+<ul id="blocked-list"></ul>
+
+<script src="popup.js"></script>
+</body>
+
+</html>
