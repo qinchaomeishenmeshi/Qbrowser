@@ -12,9 +12,9 @@ datas = [
     ('extensions/live_room', 'extensions/live_room'),
     ('frp_client/frpc.exe', 'frp_client/frpc.exe'),
     ('frp_client/frpc.toml', 'frp_client/frpc.toml'),
-    # 如果有其他需要打包的资源，如字体或图片文件，可以在这里添加
-    # ('resources/fonts/*', 'resources/fonts'),
-    # ('resources/images/*', 'resources/images')
+    ('conf.py', '.'),
+    ('user_ids_cache.json', '.'),
+    ('user_ports_cache.json', '.'),
 ]
 
 # 添加 PyQt6 相关模块
