@@ -55,7 +55,8 @@ class BrowserManager:
     def initialize(self) -> bool:
         try:
             # 配置并启动 Chromium（持久化用户数据）
-            co = ChromiumOptions().set_local_port(self.port).set_user_data_path(str(self.user_data_dir))
+            co = ChromiumOptions().set_local_port(self.port).set_user_data_path(str(self.user_data_dir)).set_argument(
+                '--disable-features=MediaSource')
             co.add_extension(self.config.extension_path)
             # 如需加载扩展，可用 co.set_args([...])
             co.set_argument('--start-maximized')

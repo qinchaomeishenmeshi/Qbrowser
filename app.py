@@ -32,7 +32,7 @@ class App(QMainWindow):
         self.load_cache()
         self.load_ports()
         # 启动 FastAPI（独立类管理）
-        run_server(host="127.0.0.1", port=8000)
+        run_server(host="127.0.0.1", port=6001)
         # self.api_server = ApiServer()
         # self.api_server.start()
         logger.info("FastAPI started")
