@@ -165,11 +165,11 @@
       "sec-ch-ua-mobile": "?0",
       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
       "Accept": "application/json, text/plain, */*",
-      "x-secsdk-csrf-token": "00010000000168a5d1ac38a09c2a0965468bf7f9053a41152a1e93ab6142d7bb3538cd82f3c8183ea684fb29a768",
+      "x-secsdk-csrf-token": "000100000001401765ad60d76023c34d4cd7d53e5fd640266d4c89db28cacc2ffcb5fcb0bd5a183eaa56f7f1949d",
       "Content-Type": "application/json",
       ":authority": "buyin.jinritemai.com",
       ":method": "POST",
-      ":path": "/pc/selection/common/btm_mapping?verifyFp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&fp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&msToken=wV6ZSpuDvvKfvm3tuHG3y5cjD-FX3fgm7fZuyYFvxZ0yKEfRDxyRKYA3XapFARsqmumbvIEWt-Nkz6KKrPr5gPo2DGdJNxGKF9eEn5ZCA0ic7QpGPwo3CZ3tMdx6rxrub4Wh9zWNnSzG5DntHx1CfdsTksPZHL2Ghm1m01X6Z49C0OM865pGbpk%3D&a_bogus=xj05DF7im2R5FpASmckmSv5lGtdMNsuy5aTKW9xTyqKPGwlc8xBR2GhrjNoGshoSORBahC37JduAbEDPQ9QH2CnkwmpfuhhRm4VC9gfo8qihGe4mDNmDSgvzFwMKUYJwaACJNAg5UsMrIfdAVqVTWpMay5FH5RfdSNZWD2i9SEAgDAWkin-iO9kgPyJqiD%3D%3D",
+      ":path": "/pc/selection/common/btm_mapping?verifyFp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&fp=verify_ma296x94_cN9qKS1u_Ge77_4GH1_9dKm_CDKfqxgt3h21&msToken=-Y7gvkbw9bfFRHOQ0X4pTrZfC7C3YgZuLXiSf7E5eMHTxmJI401M7pMfZ9-_3Q7z7Bj_0QxbdawhVAtqVYIrjVtLya6NO-wJphUgmt8ufrfd8SqvrTM9k96SWJ-mkkeTJb7kLJlZNVo7l3VXvi8Pp3QYZNOSAirBamMw9Mg6VA87kBWR4J2cnFQ%3D&a_bogus=EJUfDzt7YNAVKpAGmOkmS4CUZSy%2FrB8yDBi2SwVT9FO3ThzaQxBydTdJJqLYsP2SK8pahC17rdK%2FbdDPQnQr2eHpKmkkuTXWms5A9g8oZqwhGlTmDHDgSgvFFwMF0YvweA9tNIDRWsMN2fVAIrVTWQQa75Fo5cDdSqZyD%2FE99EWhDA8khx-iOehdNgGY05O7",
       ":scheme": "https",
       "accept-encoding": "gzip, deflate, br, zstd",
       "accept-language": "zh-CN,zh;q=0.9",
@@ -338,11 +338,11 @@
       "sec-ch-ua-mobile": "?0",
       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
       "Accept": "application/json, text/plain, */*",
-      "x-secsdk-csrf-token": "000100000001e4cccdcec864cf653355032ce5b899204bc3f2b883053a8f787c03d93feed74f183ea686b7bd3450",
+      "x-secsdk-csrf-token": "0001000000018f37ff3da26a6ea3bd6947052ac3c7a3fd2918ea92dbe12ff433fcf9520e4c32183eaa58b5f0c2c4",
       "Content-Type": "application/json",
       ":authority": "buyin.jinritemai.com",
       ":method": "POST",
-      ":path": "/pc/selection/common/btm_mapping?msToken=ciXzXi-yybybC2hMynJsxkzbnEag9uYWp0uGCWhRDlCjJC9pfjbboO5_NOvQeEgX5A4lBaaH7uCvZUiAN8eQ5NICav9Bp0nRK1VRz4uYpXtlCx3Vs8YIaCYOzlWLdnDM0AAHpUMfSOT1pJi1ClAZDE0m5Xz9c15pkS_HW8S5qoz8jciKl04Sbro%3D&a_bogus=Qvs5gtXjxxmcPpAGmcsgS-dlqe6Ars8yuFTQRENPtqKiTwzck2py2ihrcNoGsqoSOWB1he1HndK%2FYDfP%2Fnda29npKmpfuxwyY05n9h6LhqNXTtsmgrDES06Fzw0e0Qkwl%2FCGNAhRUsMr2fxA9N5iWQQG95FH5cjdbrZ6DMi9tEWgDCWkwn-iOHgsx6iqHf%3D%3D&verifyFp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz&fp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz",
+      ":path": "/pc/selection/common/btm_mapping?verifyFp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz&fp=verify_maexee5d_dBRXbPb4_v043_4HR0_AyKD_itJMhKSGzkIz&msToken=aznU2KJek1HoTRaKVQfbyqeD7Wwknj0zKVuTIdgb5FZmoUIbA9PfhvVQPS_WAyOf31iNDV1Bt5NWa59Iqmmc1mYFUQaWOJpQkzOMS_P7dhWWm5B3B3jm0y8KHwva1AFBh4cJaqc0kjKGPaA2eJFqr_Mpz0TYspS7kknWeltw-W3Gfv-xVsB8pHg%3D&a_bogus=YX0RDqXiYZWVc3Cb8Os8S-xUT8yArs8yYlidSbOTSKPgGhlaqVBfdY2JrqoYsT9SQmB-hH37GdK%2FbdDPQod32HHpLmkkSivfY0V998sL8qqXTe4mLNmESgvzuwMK0Yvwe59vN1DRIsMxIfdAVH5kWBMaH5zqQ5jdSHZWDZw9eEWhDWWkin-TOCDpNgNb0n2y",
       ":scheme": "https",
       "accept-encoding": "gzip, deflate, br, zstd",
       "accept-language": "zh-CN,zh;q=0.9",
@@ -360,7 +360,7 @@
     "cookies": [
       {
         "name": "Hm_lpvt_ab58f05f8c8c204ac100a625845bd8aa",
-        "value": "1747016810",
+        "value": "1747021011",
         "domain": ".douyinec.com"
       },
       {
