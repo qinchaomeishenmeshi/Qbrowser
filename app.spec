@@ -10,6 +10,7 @@ script_path = 'app.py'  # 主脚本文件 app.py
 # 插件路径（源路径 -> 打包后路径）
 datas = [
     ('extensions/live_room', 'extensions/live_room'),
+    ('extensions/block_videos', 'extensions/block_videos'),
     ('frp_client/frpc.exe', 'frp_client'),
     ('frp_client/frpc.toml', 'frp_client'),
     ('conf.py', '.'),
