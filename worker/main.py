@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 BAIYING_LOGIN_PAGE_URL = 'https://buyin.jinritemai.com/mpa/account/login'
 COUPON_MANAGER_URL = (
     "https://buyin.jinritemai.com/dashboard/marketing/coupon-manager?pre_universal_page_params_id=&universal_page_params_id=8d19445a-fe2f-4e76-a3cb-5571dcc66afe"
-    )
+)
 BUTTON_TEXT = "新建达人券"
 
 
@@ -104,7 +104,7 @@ class BrowserOperator:
             tab.get(COUPON_MANAGER_URL)
             # 等待页面加载完成或第一个请求返回
             packet = tab.listen.wait(timeout=10)
-            print(f"packet:{packet}")
+            print(f"等待页面btm_mapping请求返回数据:{packet}")
             if packet:
                 # 获取该请求的请求头
                 request_headers = dict(packet.request.headers)
