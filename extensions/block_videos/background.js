@@ -1,7 +1,16 @@
+const DEFAULT_DOMAINS = ['douyinec.com']; // 在此添加默认屏蔽网站
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'getStats') {
         chrome.storage.local.get(['blockDomains'], async (result) => {
-            const domainList = result.blockDomains || [];
+            let domainList = result.blockDomains;
+
+            // 如果是首次加载，设置默认屏蔽列表
+            if (!Array.isArray(domainList)) {
+                domainList = [...DEFAULT_DOMAINS];
+                chrome.storage.local.set({blockDomains: domainList});
+            }
+
             const isBlocked = domainList.includes(message.domain);
 
             // 从 content script 获取当前页 video 数量
@@ -10,10 +19,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 try {
                     const results = await chrome.scripting.executeScript({
                         target: {tabId: sender.tab.id},
-                        func: () => document.querySelectorAll('video').length
+                        func: () => document.querySelectorAll('video, img').length
                     });
                     videoCount = results[0]?.result ?? 0;
                 } catch (e) {
+                    console.error('获取视频数量失败:', e);
                 }
             }
 
@@ -24,7 +34,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'toggleDomain') {
         chrome.storage.local.get(['blockDomains'], (res) => {
-            const list = res.blockDomains || [];
+            let list = res.blockDomains || [];
             const domain = message.domain;
             const index = list.indexOf(domain);
 
@@ -33,6 +43,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             } else {
                 list.push(domain);
             }
+
             chrome.storage.local.set({blockDomains: list});
         });
     }

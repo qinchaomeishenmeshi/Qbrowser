@@ -1,5 +1,5 @@
 function countAllVideos(root = document) {
-    let count = root.querySelectorAll('video').length;
+    let count = root.querySelectorAll('video, img').length;
 
     const iframes = root.querySelectorAll('iframe');
     for (const iframe of iframes) {
@@ -18,7 +18,9 @@ function countAllVideos(root = document) {
 
 function applyBlock(enabled) {
     const blockVideos = (root = document) => {
-        root.querySelectorAll('video').forEach(v => v.style.display = enabled ? 'none' : '');
+        if (enabled) {
+            root.querySelectorAll('video, img').forEach(v => v.remove());
+        }
 
         const iframes = root.querySelectorAll('iframe');
         for (const iframe of iframes) {

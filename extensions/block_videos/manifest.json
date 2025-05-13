@@ -1,18 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "视频屏蔽插件",
+  "name": "视频屏蔽器",
   "version": "1.0",
-  "description": "屏蔽指定网站上的所有视频，可点击切换是否屏蔽。",
   "permissions": [
-    "scripting",
     "storage",
+    "scripting",
     "tabs"
   ],
-  "action": {
-    "default_popup": "popup.html"
-  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
   },
   "content_scripts": [
     {
@@ -21,7 +23,8 @@
       ],
       "js": [
         "content.js"
-      ]
+      ],
+      "run_at": "document_idle"
     }
   ]
 }
