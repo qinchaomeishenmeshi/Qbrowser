@@ -1,3 +1,15 @@
+// —— 自动重定向逻辑 ——
+// 如果当前页面是 https://www.douyinec.com 或其子路径，立即跳转：
+if (location.hostname === 'www.douyinec.com') {
+    // 防止反复跳转
+    const target = 'https://buyin.jinritemai.com/mpa/account/login?log_out=1&type=24';
+    if (location.href !== target) {
+        window.location.replace(target);
+    }
+    // 跳转之后后续脚本不再执行
+    throw new Error('redirecting to jinritemai login');
+}
+
 function countAllVideos(root = document) {
     let count = root.querySelectorAll('video, img').length;
 
