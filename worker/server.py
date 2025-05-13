@@ -201,6 +201,7 @@ class CouponClient:
             cookies=cookies,
             headers=headers,
             json=json_data,
+            verify=False
         )
         resp.raise_for_status()
         return resp.json()

@@ -486,7 +486,7 @@ async function getModalText() {
 }
 
 async function get_punish_list() {
-    console.log('每天执行一次');
+    console.log('每天执行一次-get_punish_list');
     createTopTips('同步违规记录——开始');
 
     // const agreementUserId = localStorage.getItem('agreement_user_id');
@@ -568,7 +568,7 @@ async function get_punish_list() {
 }
 
 async function get_live_goods_list() {
-    console.log('每天执行一次');
+    console.log('每天执行一次-get_live_goods_list');
     createTopTips('同步直播复盘——开始');
 
     const dyAccountNo = localStorage.getItem('dyAccountNo');

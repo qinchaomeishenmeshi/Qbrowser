@@ -3,18 +3,25 @@ const targetUrlPattern = /^https:\/\/eos\.douyin\.com\/data\/life\/live\/shelves
 // 存储请求ID和标签页ID的映射
 const requestTabMap = {}
 
-chrome.runtime.onInstalled.addListener(({reason}) => {
-    console.log('插件加载完成', reason)
-})
+//监听所有请求
+// chrome.webRequest.onBeforeRequest.addListener(
+//     function (details) {
+//         if (ws.readyState != ws.OPEN) {
+//             return;
+//         }
+//         chrome.tabs.getSelected(null, function (tab) {
+//             var tabUrl = tab.url;
+//             var message = {"cmd": "url", "message": details.url, "tabUrl": tabUrl};
+//             ws.send(JSON.stringify(message));
+//             console.log(JSON.stringify(message));
+//         });
+//     },
+//     {urls: ["<all_urls>"]},
+//     ["blocking"]
+// )
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'SHELVES_ANCHOR_DATA') {
-        console.log('接收货架主播数据:', request.data)
-        // 统一数据处理逻辑
-        handleShelvesData(request.data)
-    }
-    return true // 保持通道开放用于异步响应
-})
+// background.js
+
 
 // 新增数据处理函数
 function handleShelvesData(data) {
@@ -48,6 +55,8 @@ function getDouyinTab() {
         })
     })
 }
+
+getDouyinTab()
 
 // 确保脚本注入逻辑的优化版
 async function ensureScriptInjected(tabId) {
@@ -106,28 +115,33 @@ function injectContentScript(tabId) {
     })
 }
 
-//监听所有请求
-// chrome.webRequest.onBeforeRequest.addListener(
-//     function (details) {
-//         if (ws.readyState != ws.OPEN) {
-//             return;
-//         }
-//         chrome.tabs.getSelected(null, function (tab) {
-//             var tabUrl = tab.url;
-//             var message = {"cmd": "url", "message": details.url, "tabUrl": tabUrl};
-//             ws.send(JSON.stringify(message));
-//             console.log(JSON.stringify(message));
-//         });
-//     },
-//     {urls: ["<all_urls>"]},
-//     ["blocking"]
-// )
 
-// background.js
+// 计算下一个“今天 9:30”或“明天 9:30”的时间戳（毫秒）
+function computeNext930() {
+    const now = new Date();
+    const next = new Date();
+    next.setHours(9, 30, 0, 0);
+    if (next.getTime() <= now.getTime()) {
+        next.setDate(next.getDate() + 1);
+    }
+    return next.getTime();
+}
+
+// 计算下一个“下个整点”的时间戳（毫秒）
+// 例如当前 9:17 → 返回今天 10:00；当前 10:00:00.100 → 返回 11:00
+function computeNextHour() {
+    const now = new Date();
+    const next = new Date(now);
+    next.setMinutes(0, 0, 0);       // 先设置到本小时的 0 分 0 秒 0 毫秒
+    if (next.getTime() <= now.getTime()) {
+        next.setHours(next.getHours() + 1);
+    }
+    return next.getTime();
+}
 
 // 业务函数：每天早上 9:30 要执行的逻辑
 function doDailyTask() {
-    console.log('执行每日 9:30 任务');
+    console.log('执行每日任务');
 //    发送消息给content.js 执行任务
     chrome.tabs.query({url: eosHomePage}, (tabs) => {
         if (tabs.length > 0) {
@@ -139,36 +153,52 @@ function doDailyTask() {
     })
 }
 
-// 在插件安装或更新时，创建一个每天 9:30 触发的 Alarm
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'SHELVES_ANCHOR_DATA') {
+        console.log('接收货架主播数据:', request.data)
+        // 统一数据处理逻辑
+        handleShelvesData(request.data)
+    }
+    return true // 保持通道开放用于异步响应
+})
+
+
+// 安装或更新时注册两个 Alarm
 chrome.runtime.onInstalled.addListener(() => {
-    // 清掉已有的同名 Alarm（可选，防止重复注册）
-    chrome.alarms.clear('daily930', () => {
-        // 创建一个新的定时器
+    // 清除已有的 alarm
+    chrome.alarms.clearAll(() => {
+        // 每天 9:30
         chrome.alarms.create('daily930', {
-            when: computeNext930(),      // 下次的触发时间
-            periodInMinutes: 24 * 60     // 每 24 小时重复一次
+            when: computeNext930(),
+            periodInMinutes: 24 * 60
         });
+        // 每个整点
+        chrome.alarms.create('hourlyTop', {
+            when: computeNextHour(),
+            periodInMinutes: 60
+        });
+        console.log('Alarm 已注册：daily930, hourlyTop');
     });
 });
 
-// 计算下一个“今天 9:30”或“明天 9:30”的时间戳（毫秒）
-function computeNext930() {
-    const now = new Date();
-    const next = new Date();
-    next.setHours(9, 30, 0, 0);      // 设置为今天 9:30:00.000
-    if (next.getTime() <= now.getTime()) {
-        // 如果已经过了今天的 9:30，则改为明天
-        next.setDate(next.getDate() + 1);
-    }
-    return next.getTime();
-}
+// 当扩展启动（例如浏览器重启）时，同步注册（可选，保证不会漏掉）
+chrome.runtime.onStartup.addListener(() => {
+    chrome.alarms.create('daily930', {
+        when: computeNext930(),
+        periodInMinutes: 24 * 60
+    });
+    chrome.alarms.create('hourlyTop', {
+        when: computeNextHour(),
+        periodInMinutes: 60
+    });
+    console.log('onStartup 同步 Alarm：daily930, hourlyTop');
+});
 
-// 监听 Alarm 触发事件
+// 监听 Alarm 触发
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'daily930') {
         doDailyTask();
+    } else if (alarm.name === 'hourlyTop') {
+        doDailyTask();
     }
 });
-
-
-getDouyinTab()
