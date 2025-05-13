@@ -70,11 +70,11 @@ class BrowserOperator:
             self.browsers[user_id] = browser
             logger.info(f"Attached to browser {user_id} on port {port}")
 
-    def get_tab(self, user_id: str):
+    def get_tab(self, user_id: str, url=""):
         browser = self.browsers.get(user_id)
         if not browser:
             raise RuntimeError(f"Browser for {user_id} not attached.")
-        return browser.get_tab(browser.tabs_count - 1)
+        return browser.get_tab(browser.tabs_count - 1, url=url)
 
     def open_url(self, user_id: str, url: str):
         browser = self.browsers.get(user_id)
@@ -85,23 +85,34 @@ class BrowserOperator:
         tab.wait(5)
         return tab
 
-    def attach_get_cookies(self):
+    def attach_get_cookies(self, eos=False):
         """
         连接浏览器，打开页面，获取 cookies 并写入到 ports_file 中
         """
         self.attach_browsers()
         for user_id in list(self.browsers.keys()):
-            tab = self.open_url(user_id, COUPON_MANAGER_URL)
+            uri = COUPON_MANAGER_URL
+            if eos:
+                uri = 'https://eos.douyin.com/livesite/live/history?tab=diagnosis'
+            else:
+                uri = COUPON_MANAGER_URL
+            tab = self.get_tab(user_id, uri)
+            print(f"tab:{tab}")
             request_headers = None
             if not tab:
                 continue
 
-            tab.get(BAIYING_LOGIN_PAGE_URL)
+            tab.get(uri)
             # 开始监听所有请求
-            tab.listen.start('/selection/common/btm_mapping')
+            api_uri = '/selection/common/btm_mapping'
+            if eos:
+                api_uri = '/life/api/live_screen/v4/replay/goods_list'
+            else:
+                api_uri = '/selection/common/btm_mapping'
+            tab.listen.start(api_uri)
             # tab.listen.start(True)
 
-            tab.get(COUPON_MANAGER_URL)
+            tab.get(uri)
             # 等待页面加载完成或第一个请求返回
             packet = tab.listen.wait(timeout=10)
             print(f"等待页面btm_mapping请求返回数据:{packet}")

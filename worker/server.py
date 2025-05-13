@@ -165,19 +165,43 @@ class CouponClient:
         params = {
             '_bid': 'mcenter_buyin',
             '_': str(ts),
-            's': '244824',
             'promotion_name_or_id': '',
             'page': '1',
             'size': '10',
             'search_type': '1',
             'verifyFp': cookies.get('s_v_web_id', ''),
             'fp': cookies.get('s_v_web_id', ''),
-            "a_bogus": "OfmhQVhkDE6igDWX565LfY3q6AF3YD8u0trEMD2f6VV1Cy39HMY59exoXfvv8GEjxT/2IeYjy4hbT3ohrQ2y8qwf9W0L/25gsDSkKl12so0j53inCLf/E0iE5hsAtFH8svr4iKi8owICSYyhldAJ5kIlO62-zo0/96f=",
-            "ms_token": "C=PwS33coTeqpBt5y6c4ligMT97UnIGOc-_aYHtl=XlFu38qOo9ZIdNDLa92nmShlDpiS6xrQqky1R6w9aSS-6DguNfZuc8GNf8_2wcxLnMmNmQTCreas3_G"
+            'msToken': 'XClFOeYbnwfwQiJ9QJGaB8P_hx2Igey4ruBcZZ3XVjOmywqGjw8HKhLGNntvN0lHf-zM1RJC7Y2ApdckYZfo3NU1Jjz9zNVDeVKbFpkk6ym_Md5feytr4tTtOyDlTMzrN3vzVicfeT6sZwscGzvml4zBhN-rRdvBiWZIIC7QIvO67uJ08lU45jv2',
+            'a_bogus': 'Dv0jketLY28cC3lt8csLSX9lK92MrTSy3HioWPaTtqF/GqMP5IpbxOGQJxuGU2c6YYBehHp7apTMufxbO9swZCKpFmhDud7bOtVA906Lgqi6GeTmgqgOCwWzzwMF0OJweACUNIhRWsMN2nxAVq5kWQBGy5Fo55jdbHZyDMLyeEWgDAukin3sOHkBE6JqqD==',
+
         }
 
         print(f"发送请求：{self.promotion_url} params={params}")
         resp = requests.get(self.promotion_url, params=params, cookies=cookies, headers=headers)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_eos_goods_list(self, user_id: str):
+        """获取直播商品"""
+
+        cookies = self._get_cookies_for_user(user_id)
+        headers = self._get_headers_for_user(user_id)
+
+        json_data = {
+            # 'user_id': '1258293549605997',
+            'begin_date': '2025-04-14',
+            'end_date': '2025-05-13',
+            'compare_begin_date': '2025-03-15',
+            'compare_end_date': '2025-04-13',
+            'indicator_set_key': 'replay_goods_card_indicator',
+        }
+
+        resp = requests.post(
+            'https://eos.douyin.com/life/api/live_screen/v4/replay/goods_list',
+            cookies=cookies,
+            headers=headers,
+            json=json_data,
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -339,42 +363,47 @@ def anchor_coupon_create_main(data) -> PublicResponse:
 
 
 def test():
+    # operator = BrowserOperator()
+    # operator.attach_get_cookies(eos=True)
+    # asyncio.sleep(10)
     client = CouponClient()
-    resp = client.get_promotion_list('wh002')
-    print(resp)
+    # resp = client.get_promotion_list('wh001')
+    resp = client.get_eos_goods_list('wh001')
+    print('resp:', resp)
 
 
 # 示例使用
 if __name__ == '__main__':
-    # test()
+    test()
+
+
     def to_timestamp(dt_str: str) -> int:
         """将字符串时间转为时间戳（秒）"""
         dt_obj = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
         return int(time.mktime(dt_obj.timetuple()))
 
-
-    anchor_coupon_create_main({
-        "id": "1921119979076325378",
-        "status": "0",
-        "createBy": "1897092900773171202",
-        "createTime": "2025-05-10 16:27:50",
-        "couponName": "固定时间可用",
-        "maxApplyTimes": "1",
-        "type": "53",
-        "credit": "1",
-        "totalAmount": "50",
-        "threshold": "10",
-        "anchorCouponScene": "0",
-        "startApplyTime": "2025-05-13 16:27:08",
-        "endApplyTime": "2025-05-13 17:27:13",
-        "startUseTime": "2025-05-14 16:27:33",
-        "endUseTime": "2025-05-14 20:27:42",
-        "kolUserTag": "0",
-        "applyTimeType": "2",
-        "applyTime": "",
-        "useTimeType": "3",
-        "useTime": "",
-        "goodsIdType": "1",
-        "goodsIdList": "3740185954082750838,3734249967804612830,3736891222183247936,3731302879173148771",
-        "deviceNoList": "wh001,wh002,wh003"
-    })
+    # anchor_coupon_create_main({
+    #     "id": "1921119979076325378",
+    #     "status": "0",
+    #     "createBy": "1897092900773171202",
+    #     "createTime": "2025-05-10 16:27:50",
+    #     "couponName": "固定时间可用",
+    #     "maxApplyTimes": "1",
+    #     "type": "53",
+    #     "credit": "1",
+    #     "totalAmount": "50",
+    #     "threshold": "10",
+    #     "anchorCouponScene": "0",
+    #     "startApplyTime": "2025-05-13 16:27:08",
+    #     "endApplyTime": "2025-05-13 17:27:13",
+    #     "startUseTime": "2025-05-14 16:27:33",
+    #     "endUseTime": "2025-05-14 20:27:42",
+    #     "kolUserTag": "0",
+    #     "applyTimeType": "2",
+    #     "applyTime": "",
+    #     "useTimeType": "3",
+    #     "useTime": "",
+    #     "goodsIdType": "1",
+    #     "goodsIdList": "3740185954082750838,3734249967804612830,3736891222183247936,3731302879173148771",
+    #     "deviceNoList": "wh001,wh002,wh003"
+    # })

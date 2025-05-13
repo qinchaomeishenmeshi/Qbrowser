@@ -40,6 +40,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         get_punish_list().then((res) => {
             console.log('punish_list', res)
         })
+        get_live_goods_list().then((res) => {
+            console.log('live_goods_list', res)
+        })
 
     } else {
         console.log('其他消息', request)
@@ -416,6 +419,7 @@ async function syncPunishList() {
     console.log('每个小时同步一次违规记录')
     try {
         const res = await get_punish_list();
+        const res_goods_list = await get_live_goods_list();
     } catch (error) {
         console.error('Error syncing punish list:', error);
     }
@@ -489,11 +493,6 @@ async function get_punish_list() {
     const dyAccountNo = localStorage.getItem('dyAccountNo');
     const dyRoomName = localStorage.getItem('dyRoomName');
 
-    // if (!agreementUserId) {
-    //     console.warn('❌ 未找到 agreement_user_id，终止同步');
-    //     createTopTips('同步失败：缺少 user_id');
-    //     return;
-    // }
 
     // —— 动态计算四个日期 ——
     const today = new Date();
@@ -535,11 +534,12 @@ async function get_punish_list() {
             }
         );
         console.log(`接口状态 ${res.status}`);
+        console.log(`接口resp `, res);
         const {data: list = []} = await res.json();
 
-        if (list.length === 0) {
+        if (!list || list.length === 0) {
             createTopTips('同步完成：无违规记录');
-            console.log('ℹ️ 当天无违规记录');
+            console.log('ℹ️ 当前无违规记录');
             return;
         }
 
@@ -560,6 +560,95 @@ async function get_punish_list() {
         }
 
         createTopTips('同步违规记录——完成');
+        console.log('✅ 全部记录已处理完毕');
+    } catch (err) {
+        console.error('❌ 同步过程出错：', err);
+        createTopTips(`同步失败：${err.message || '未知错误'}`);
+    }
+}
+
+async function get_live_goods_list() {
+    console.log('每天执行一次');
+    createTopTips('同步直播复盘——开始');
+
+    const dyAccountNo = localStorage.getItem('dyAccountNo');
+    const dyRoomName = localStorage.getItem('dyRoomName');
+
+
+    // —— 动态计算四个日期 ——
+    const today = new Date();
+    const periodDays = 30;             // 周期天数
+    const fmt = d => d.toISOString().slice(0, 10);
+
+    // end_date = 今天
+    const end_date = fmt(today);
+
+    // begin_date = 今天往前推 (periodDays - 1) 天
+    const begin = new Date(today);
+    begin.setDate(begin.getDate() - (periodDays - 1));
+    const begin_date = fmt(begin);
+
+    // compare_end_date = begin_date 的前一天
+    const cmpEnd = new Date(begin);
+    cmpEnd.setDate(cmpEnd.getDate() - 1);
+    const compare_end_date = end_date;
+
+    // compare_begin_date = compare_end_date 再往前推 (periodDays - 1) 天
+    const cmpBegin = new Date(cmpEnd);
+    cmpBegin.setDate(cmpBegin.getDate() - (periodDays - 1));
+    const compare_begin_date = begin_date;
+
+    try {
+        // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
+        const res = await fetch(
+            'https://eos.douyin.com/life/api/live_screen/v4/replay/live_room_list',
+            {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: '1258293549605997',
+                    begin_date,
+                    end_date,
+                    compare_begin_date,
+                    compare_end_date
+                })
+            }
+        );
+        console.log(`接口状态 ${res.status}`);
+        console.log(`接口resp `, res);
+        const {data: list = []} = await res.json();
+
+        if (!list || list.length === 0) {
+            createTopTips('无复盘记录');
+            console.log('ℹ️ 当前无复盘记录');
+            return;
+        }
+        console.log('复盘记录：', list)
+        const params = []
+
+        for (const item of list) {
+            try {
+                const param = {
+                    roomTitle: item.room_title,// 直播名称
+                    liveStartTime: item.live_start_time,// 直播开始时间
+                    liveEndTime: item.live_end_time,// 直播结束时间
+                    liveDurationTime: item.live_duration_time,// 直播时长
+                    orderMoney: item.order_money,// 成交金额
+                    orderCnt: item.order_cnt,// 成交订单数
+                    watchUv: item.watch_uv,// 累计观看人数
+                    dyAccountNo,
+                    dyRoomName: dyRoomName
+                };
+                params.push(param)
+
+                // await $Request(API.liveviolationrecordsdealSaveApi, {params});
+            } catch (e) {
+                console.error('⚠️ 单条保存失败：', e, item);
+            }
+        }
+        console.log('保存参数：', params);
+
+        createTopTips('同步复盘记录——完成');
         console.log('✅ 全部记录已处理完毕');
     } catch (err) {
         console.error('❌ 同步过程出错：', err);

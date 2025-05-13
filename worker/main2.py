@@ -7,7 +7,7 @@ from typing import Optional, Dict, Union
 from DrissionPage import Chromium, ChromiumOptions
 from DrissionPage.errors import ElementNotFoundError
 
-from app import PORTS_FILE
+from conf import PORTS_FILE
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 print(BASE_PATH)
@@ -191,10 +191,27 @@ class BrowserOperator:
             cookies = tab.cookies()
             print(cookies)
 
+    def attach_get_promotion_list(self):
+        self.attach_browsers()
+        for user_id in self.browsers:
+            tab = self.open_url(user_id, COUPON_MANAGER_URL)
+            marketing_ele = self.find(user_id, "#marketing")
+            self.click(user_id, "xpath=//button[contains(@class,'auxo-btn') and .//span[text()='新建达人券']]",
+                       ele=marketing_ele)
+
+            form_ele = self.find(user_id, "css=form.auxo-form.auxo-form-horizontal")
+            radio_locator = (
+                "xpath=//div[contains(@class,'index-RadioCardContainer') "
+                "and .//div[contains(@class,'index-title') and text()='直播间推广']]"
+            )
+            self.click(user_id, radio_locator)
+
+            self.click(user_id, "text:选择商品", ele=form_ele)
+
 
 def main():
     operator = BrowserOperator()
-    operator.attach_get_cookies()
+    operator.attach_get_promotion_list()
 
 
 if __name__ == "__main__":
