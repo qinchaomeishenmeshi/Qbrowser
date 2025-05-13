@@ -37,6 +37,7 @@ def get_absolute_extension_path(relative_path: str) -> str:
 @dataclass
 class BrowserConfig:
     extension_path: str = get_absolute_extension_path("extensions/live_room")
+    block_videos_extension_path: str = get_absolute_extension_path("extensions/block_videos")
     data_dir_base: Path = Path("browser_data") / "douyin"
 
 
@@ -58,6 +59,7 @@ class BrowserManager:
             co = ChromiumOptions().set_local_port(self.port).set_user_data_path(str(self.user_data_dir)).set_argument(
                 '--disable-features=MediaSource')
             co.add_extension(self.config.extension_path)
+            co.add_extension(self.config.block_videos_extension_path)
             # 如需加载扩展，可用 co.set_args([...])
             co.set_argument('--start-maximized')
             self.browser = Chromium(co)
