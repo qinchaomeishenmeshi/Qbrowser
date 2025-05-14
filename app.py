@@ -279,21 +279,44 @@ class App(QMainWindow):
 
     # 在 App 类中添加
     def start_frpc(self):
-        """启动 frpc 服务，使用固定配置文件"""
+        """启动 frpc 服务，使用固定配置文件，并确保可执行文件与配置文件存在"""
         frpc_path = os.path.join(BASE_DIR, "frp_client", "frpc.exe")
         toml_path = os.path.join(BASE_DIR, "frp_client", "frpc.toml")
+
+        # 检查 frpc 和 配置文件是否存在
+        if not os.path.exists(frpc_path):
+            logger.error("frpc executable not found at %s", frpc_path)
+            return None
+
+        if not os.path.exists(toml_path):
+            logger.error("Config file not found at %s", toml_path)
+            return None
 
         try:
             process = subprocess.Popen(
                 [frpc_path, "-c", toml_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                bufsize=1,
+                universal_newlines=True
             )
-            logger.info("Started frpc with default config.")
+
+            logger.info("Started frpc with default config: PID=%d", process.pid)
+
+            # 异步读取 stderr 输出
+            def read_stderr():
+                for line in process.stderr:
+                    logger.debug("frpc stderr: %s", line.strip())
+
+            import threading
+            thread = threading.Thread(target=read_stderr, daemon=True)
+            thread.start()
+
             return process
+
         except Exception as e:
-            logger.error(f"Failed to start frpc: {e}")
+            logger.error(f"Failed to start frpc: {e}", exc_info=True)
             return None
 
     def save_cache(self):
