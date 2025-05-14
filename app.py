@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 
 from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QFont
@@ -298,9 +299,9 @@ class App(QMainWindow):
 
             t1 = threading.Thread(target=reader, args=(proc.stdout, "输出"))
             t2 = threading.Thread(target=reader, args=(proc.stderr, "错误"))
-            t1.daemon = True;
+            t1.daemon = True
             t2.daemon = True
-            t1.start();
+            t1.start()
             t2.start()
 
             exit_code = proc.wait()
