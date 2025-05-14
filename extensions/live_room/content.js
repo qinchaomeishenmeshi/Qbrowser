@@ -1,3 +1,5 @@
+const cur_time = new Date().getHours() * 100 + new Date().getMinutes()
+console.log('当前时间：' + cur_time)
 // 获取抖音账号信息
 let dyAccountNo = null
 
@@ -36,7 +38,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         // 发送评论
         sendMessage(url, word, {}, sendResponse)
     } else if (request.action === 'DO_DAILY_TASK') {
-        console.log('DO_DAILY_TASK___执行每日任务')
+        // 执行每日任务，当前时间
+
+        console.log('DO_DAILY_TASK___执行每日任务：' + cur_time)
         get_punish_list().then((res) => {
             console.log('punish_list', res)
         })
@@ -623,7 +627,6 @@ async function get_live_goods_list() {
             console.log('ℹ️ 当前无复盘记录');
             return;
         }
-        console.log('复盘记录：', list)
         const params = []
 
         for (const item of list) {
