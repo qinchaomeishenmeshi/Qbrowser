@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import subprocess
 import sys
 
 from PyQt6.QtCore import QObject, pyqtSignal
@@ -13,7 +14,7 @@ from qasync import QEventLoop, asyncSlot
 
 from api_server import run_server
 from browser_manager import BrowserManager
-from conf import CACHE_FILE, PORTS_FILE
+from conf import CACHE_FILE, PORTS_FILE, BASE_DIR
 from log.logger import logger
 from worker.main import BrowserOperator
 
@@ -244,10 +245,11 @@ class App(QMainWindow):
 
         self.save_ports()  # 启动后保存端口映射
         # 并行启动 frpc 服务
-         # 启动 frpc 服务（仅一次）
-        self.frpc_process = self.start_frpc()
-
-        self.log_signal.log_updated.emit("All browsers and frpc services started.")
+        # 启动 frpc 服务（仅一次）
+        # 如果是mac系统不执行
+        if not sys.platform.startswith('darwin'):
+            self.frpc_process = self.start_frpc()
+            self.log_signal.log_updated.emit("All browsers and frpc services started.")
 
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
@@ -278,8 +280,8 @@ class App(QMainWindow):
     # 在 App 类中添加
     def start_frpc(self):
         """启动 frpc 服务，使用固定配置文件"""
-        frpc_path = os.path.join(BASE_PATH, "frp_client", "frpc.exe")
-        toml_path = os.path.join(BASE_PATH, "frp_client", "frpc.toml")
+        frpc_path = os.path.join(BASE_DIR, "frp_client", "frpc.exe")
+        toml_path = os.path.join(BASE_DIR, "frp_client", "frpc.toml")
 
         try:
             process = subprocess.Popen(
@@ -293,6 +295,7 @@ class App(QMainWindow):
         except Exception as e:
             logger.error(f"Failed to start frpc: {e}")
             return None
+
     def save_cache(self):
         json.dump(
             [l for l in self.text_edit.toPlainText().splitlines() if l.strip()],
