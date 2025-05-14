@@ -267,29 +267,21 @@ class App(QMainWindow):
         self.start_btn.setEnabled(True);
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers closed.")
-        # 停止 frpc 服务（如果存在）
-        if hasattr(self, 'frpc_process') and self.frpc_process:
-            try:
-                self.frpc_process.terminate()
-                logger.info("Stopped frpc service.")
-            except Exception as e:
-                logger.error(f"Error stopping frpc: {e}")
-            finally:
-                self.frpc_process = None
 
     # 在 App 类中添加
     def start_frpc(self):
         """启动 frpc 服务，使用固定配置文件，并确保可执行文件与配置文件存在"""
         frpc_path = os.path.join(BASE_DIR, "frp_client", "frpc.exe")
         toml_path = os.path.join(BASE_DIR, "frp_client", "frpc.toml")
+        print(f'frpc_path:{frpc_path}')
 
         # 检查 frpc 和 配置文件是否存在
         if not os.path.exists(frpc_path):
-            logger.error("frpc executable not found at %s", frpc_path)
+            logger.error("frpc.exe 文件未找到 at %s", frpc_path)
             return None
 
         if not os.path.exists(toml_path):
-            logger.error("Config file not found at %s", toml_path)
+            logger.error("frpc.toml 文件未找到 at %s", toml_path)
             return None
 
         try:
@@ -303,15 +295,9 @@ class App(QMainWindow):
             )
 
             logger.info("Started frpc with default config: PID=%d", process.pid)
-
-            # 异步读取 stderr 输出
-            def read_stderr():
-                for line in process.stderr:
-                    logger.debug("frpc stderr: %s", line.strip())
-
-            import threading
-            thread = threading.Thread(target=read_stderr, daemon=True)
-            thread.start()
+            for line in process.stdout:
+                print("FRP 输出：", line.strip())
+            process.wait()
 
             return process
 
