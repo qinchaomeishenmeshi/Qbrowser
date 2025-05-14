@@ -94,32 +94,28 @@ class BrowserOperator:
             uri = COUPON_MANAGER_URL
             if eos:
                 uri = 'https://eos.douyin.com/livesite/live/history?tab=diagnosis'
-            else:
-                uri = COUPON_MANAGER_URL
+
             tab = self.get_tab(user_id, uri)
             print(f"tab:{tab}")
             request_headers = None
             if not tab:
                 continue
+            # 开始监听所有请求
+            api_uri = '/selection/common/btm_mapping'
+            if eos:
+                api_uri = '/life/api/live_screen/v4/replay/goods_list'
+            tab.listen.start(api_uri)
 
             tab.get(uri)
-            # 开始监听所有请求
-            # api_uri = '/selection/common/btm_mapping'
-            # if eos:
-            #     api_uri = '/life/api/live_screen/v4/replay/goods_list'
-            # else:
-            #     api_uri = '/selection/common/btm_mapping'
-            # tab.listen.start(api_uri)
-            # tab.listen.start(True)
-
-            # tab.get(uri)
             # 等待页面加载完成或第一个请求返回
-            # packet = tab.listen.wait(timeout=10)
-            # print(f"等待页面btm_mapping请求返回数据:{packet}")
-            # if packet:
-            #     # 获取该请求的请求头
-            #     request_headers = dict(packet.request.headers)
-            #     print(f"request_headers:{request_headers}")
+            packet = tab.listen.wait(timeout=5)
+            print(f"等待页面btm_mapping请求返回数据:{packet}")
+            if packet:
+                # 获取该请求的请求头
+                request_headers = dict(packet.request.headers)
+                print(f"request_headers:{request_headers}")
+
+            tab.listen.stop()
 
             cookies = tab.cookies()
             # 更新 mapping，将 cookies 信息写入
