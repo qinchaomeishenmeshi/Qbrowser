@@ -287,6 +287,8 @@ class App(QMainWindow):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
+                encoding='utf-8',  # ← 指定 UTF-8
+                errors='replace',  # ← 出错时替换
                 bufsize=1
             )
             logger.info("Started frpc with default config: PID=%d", proc.pid)
