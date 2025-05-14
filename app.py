@@ -273,33 +273,40 @@ class App(QMainWindow):
         """启动 frpc 服务，使用固定配置文件，并确保可执行文件与配置文件存在"""
         frpc_path = os.path.join(BASE_DIR, "frp_client", "frpc.exe")
         toml_path = os.path.join(BASE_DIR, "frp_client", "frpc.toml")
-        print(f'frpc_path:{frpc_path}')
+        print(f'frpc_path: {frpc_path}')
 
-        # 检查 frpc 和 配置文件是否存在
-        if not os.path.exists(frpc_path):
-            logger.error("frpc.exe 文件未找到 at %s", frpc_path)
-            return None
-
-        if not os.path.exists(toml_path):
-            logger.error("frpc.toml 文件未找到 at %s", toml_path)
-            return None
+        for path, name in [(frpc_path, "frpc.exe"), (toml_path, "frpc.toml")]:
+            if not os.path.exists(path):
+                logger.error("%s 文件未找到 at %s", name, path)
+                return None
 
         try:
-            process = subprocess.Popen(
+            proc = subprocess.Popen(
                 [frpc_path, "-c", toml_path],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                bufsize=1,
-                universal_newlines=True
+                bufsize=1
             )
+            logger.info("Started frpc with default config: PID=%d", proc.pid)
 
-            logger.info("Started frpc with default config: PID=%d", process.pid)
-            for line in process.stdout:
-                print("FRP 输出：", line.strip())
-            process.wait()
+            # 并行读取 stdout / stderr
+            def reader(stream, name):
+                for line in stream:
+                    line = line.rstrip()
+                    print(f"FRP {name}：{line}")
 
-            return process
+            t1 = threading.Thread(target=reader, args=(proc.stdout, "输出"))
+            t2 = threading.Thread(target=reader, args=(proc.stderr, "错误"))
+            t1.daemon = True;
+            t2.daemon = True
+            t1.start();
+            t2.start()
+
+            exit_code = proc.wait()
+            if exit_code != 0:
+                logger.warning("frpc 进程非正常退出，exit_code=%d", exit_code)
+            return proc
 
         except Exception as e:
             logger.error(f"Failed to start frpc: {e}", exc_info=True)
