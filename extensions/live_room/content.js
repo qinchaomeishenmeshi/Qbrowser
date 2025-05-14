@@ -632,7 +632,7 @@ async function get_live_goods_list() {
         for (const item of list) {
             try {
                 const param = {
-                    eosLiveId:item.room_id,
+                    eosLiveId: item.room_id,
                     roomTitle: item.room_title,// 直播名称
                     liveStartTime: item.live_start_time,// 直播开始时间
                     liveEndTime: item.live_end_time,// 直播结束时间
@@ -645,15 +645,15 @@ async function get_live_goods_list() {
                 };
                 params.push(param)
 
-                // await $Request(API.liveviolationrecordsdealSaveApi, {params});
+
             } catch (e) {
                 console.error('⚠️ 单条保存失败：', e, item);
             }
         }
         console.log('保存参数：', params);
-
+        const result = await $Request(API.livebroadcastreviewSaveApi, {params});
+        console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步复盘记录——完成');
-        console.log('✅ 全部记录已处理完毕');
     } catch (err) {
         console.error('❌ 同步过程出错：', err);
         createTopTips(`同步失败：${err.message || '未知错误'}`);

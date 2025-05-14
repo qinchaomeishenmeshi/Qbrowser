@@ -46,7 +46,9 @@ const API = {
     // 定时获取主动评论的数据
     pullAdminComment: '/vediows/admin/livestreamingcomments/pullAdminComment',
     // 保存违规信息
-    liveviolationrecordsdealSaveApi: '/aiplay/admin/liveviolationrecordsdeal/save'
+    liveviolationrecordsdealSaveApi: '/aiplay/admin/liveviolationrecordsdeal/save',
+    // 保存直播复盘记录
+    livebroadcastreviewSaveApi: '/admin/livebroadcastreview/batchSave'
 
 }
 

@@ -1,11 +1,9 @@
 import asyncio
 import json
 import os
-import subprocess
 import sys
-import threading
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QObject, pyqtSignal, QProcess, pyqtSlot
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -27,6 +25,7 @@ class LogSignal(QObject):
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.frpc = None
         self.browser_managers = []
         self.log_signal = LogSignal()
         self.log_signal.log_updated.connect(self.update_log)
@@ -282,38 +281,43 @@ class App(QMainWindow):
                 return None
 
         try:
-            proc = subprocess.Popen(
-                [frpc_path, "-c", toml_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding='utf-8',  # ← 指定 UTF-8
-                errors='replace',  # ← 出错时替换
-                bufsize=1
-            )
-            logger.info("Started frpc with default config: PID=%d", proc.pid)
+            # 创建 QProcess 实例，父对象设为 self 以便随界面销毁
+            self.frpc = QProcess(self)
+            print(type(self.frpc), dir(self.frpc))
 
-            # 并行读取 stdout / stderr
-            def reader(stream, name):
-                for line in stream:
-                    line = line.rstrip()
-                    print(f"FRP {name}：{line}")
+            # 当有标准输出可读时，触发 on_frp_stdout
+            self.frpc.readyReadStandardOutput.connect(self.on_frp_stdout)
+            # 当有标准错误可读时，触发 on_frp_stderr
+            self.frpc.readyReadStandardError.connect(self.on_frp_stderr)
 
-            t1 = threading.Thread(target=reader, args=(proc.stdout, "输出"))
-            t2 = threading.Thread(target=reader, args=(proc.stderr, "错误"))
-            t1.daemon = True
-            t2.daemon = True
-            t1.start()
-            t2.start()
+            # 启动进程
+            # 注意，这里用 start(program, arguments) 而不是 Popen
+            self.frpc.start(frpc_path, ['-c', toml_path])
 
-            exit_code = proc.wait()
-            if exit_code != 0:
-                logger.warning("frpc 进程非正常退出，exit_code=%d", exit_code)
-            return proc
+            if not self.frpc.waitForStarted(3000):
+                # 3 秒内没启动算失败
+                self.log_signal.log_updated.emit("❌ frpc 启动失败")
+            else:
+                pid = self.frpc.processId()
+                self.log_signal.log_updated.emit(f"✅ Started frpc: PID={pid}")
 
         except Exception as e:
             logger.error(f"Failed to start frpc: {e}", exc_info=True)
             return None
+
+    @pyqtSlot()
+    def on_frp_stdout(self):
+        data = self.frpc.readAllStandardOutput()
+        text = bytes(data).decode('utf-8', errors='replace')
+        for line in text.splitlines():
+            self.log_signal.log_updated.emit(f"FRP 输出：{line}")
+
+    @pyqtSlot()
+    def on_frp_stderr(self):
+        data = self.frpc.readAllStandardError()
+        text = bytes(data).decode('utf-8', errors='replace')
+        for line in text.splitlines():
+            self.log_signal.log_updated.emit(f"FRP 错误：{line}")
 
     def save_cache(self):
         json.dump(
