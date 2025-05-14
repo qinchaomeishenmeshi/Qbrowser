@@ -632,6 +632,7 @@ async function get_live_goods_list() {
         for (const item of list) {
             try {
                 const param = {
+                    eosLiveId:item.room_id,
                     roomTitle: item.room_title,// 直播名称
                     liveStartTime: item.live_start_time,// 直播开始时间
                     liveEndTime: item.live_end_time,// 直播结束时间

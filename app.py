@@ -243,6 +243,12 @@ class App(QMainWindow):
             await asyncio.sleep(0.01)
 
         self.save_ports()  # 启动后保存端口映射
+        # 并行启动 frpc 服务
+         # 启动 frpc 服务（仅一次）
+        self.frpc_process = self.start_frpc()
+
+        self.log_signal.log_updated.emit("All browsers and frpc services started.")
+
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers started.")
@@ -259,7 +265,34 @@ class App(QMainWindow):
         self.start_btn.setEnabled(True);
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers closed.")
+        # 停止 frpc 服务（如果存在）
+        if hasattr(self, 'frpc_process') and self.frpc_process:
+            try:
+                self.frpc_process.terminate()
+                logger.info("Stopped frpc service.")
+            except Exception as e:
+                logger.error(f"Error stopping frpc: {e}")
+            finally:
+                self.frpc_process = None
 
+    # 在 App 类中添加
+    def start_frpc(self):
+        """启动 frpc 服务，使用固定配置文件"""
+        frpc_path = os.path.join(BASE_PATH, "frp_client", "frpc.exe")
+        toml_path = os.path.join(BASE_PATH, "frp_client", "frpc.toml")
+
+        try:
+            process = subprocess.Popen(
+                [frpc_path, "-c", toml_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            logger.info("Started frpc with default config.")
+            return process
+        except Exception as e:
+            logger.error(f"Failed to start frpc: {e}")
+            return None
     def save_cache(self):
         json.dump(
             [l for l in self.text_edit.toPlainText().splitlines() if l.strip()],
