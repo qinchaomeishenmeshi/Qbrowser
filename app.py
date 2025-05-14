@@ -35,9 +35,12 @@ class App(QMainWindow):
         self.load_ports()
         # 启动 FastAPI（独立类管理）
         run_server(host="127.0.0.1", port=6001)
-        # self.api_server = ApiServer()
-        # self.api_server.start()
         logger.info("FastAPI started")
+        # 启动 frpc 服务（仅一次）
+        # 如果是mac系统不执行
+        if not sys.platform.startswith('darwin'):
+            self.frpc_process = self.start_frpc()
+            self.log_signal.log_updated.emit("All browsers and frpc services started.")
 
     def init_ui(self):
         self.setWindowTitle("Browser Manager")
@@ -245,16 +248,10 @@ class App(QMainWindow):
             await asyncio.sleep(0.01)
 
         self.save_ports()  # 启动后保存端口映射
-        # 并行启动 frpc 服务
-        # 启动 frpc 服务（仅一次）
-        # 如果是mac系统不执行
-        if not sys.platform.startswith('darwin'):
-            self.frpc_process = self.start_frpc()
-            self.log_signal.log_updated.emit("All browsers and frpc services started.")
-
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers started.")
+        # 每次启动获取最新的headers和cookies
         operator = BrowserOperator()
         operator.attach_get_cookies()
 
@@ -265,7 +262,7 @@ class App(QMainWindow):
         self.log_signal.log_updated.emit("Stopping all browsers…")
         await asyncio.gather(*(asyncio.to_thread(m.cleanup) for m in self.browser_managers if m.is_running))
         self.progress.setValue(0)
-        self.start_btn.setEnabled(True);
+        self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers closed.")
 
