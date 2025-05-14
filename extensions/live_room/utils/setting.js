@@ -48,7 +48,7 @@ const API = {
     // 保存违规信息
     liveviolationrecordsdealSaveApi: '/aiplay/admin/liveviolationrecordsdeal/save',
     // 保存直播复盘记录
-    livebroadcastreviewSaveApi: '/admin/livebroadcastreview/batchSave'
+    livebroadcastreviewSaveApi: '/aiplay/admin/livebroadcastreview/batchSave'
 
 }
 
