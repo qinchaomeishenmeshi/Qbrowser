@@ -10,15 +10,15 @@ webServer.password = "admin"
 
 [[proxies]]
 # ssh_random
-name = "ssh_random_live"
+name = "ssh_random_test_live"
 # 代理类型
 type = "tcp"
 # 代理的ip
 localIP = "127.0.0.1"
 # 需要代理的端口
-localPort = 8000
+localPort = 6001
 # 对外暴露的端口
-remotePort = 6788
+remotePort = 6111
 
 # cmd 执行.\frpc.exe -c .\frpc.toml
 # name和remotePort不可以重复
