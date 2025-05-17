@@ -10,6 +10,7 @@ import requests
 from conf import PORTS_FILE
 from log.logger import logger
 from utils.common_response import PublicResponse
+from worker.main import BrowserOperator
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -318,10 +319,13 @@ def process_products(data, basic_list):
 
 def anchor_coupon_create_main(data) -> PublicResponse:
     """ 批量创建达人券入口 """
+    from worker.main import BrowserOperator
+    device_no_list = [uid.strip() for uid in data.get('deviceNoList', '').split(',') if uid.strip()]
+    # 只抓取本次涉及的 user_id
+    BrowserOperator().attach_get_cookies(user_ids=device_no_list)
     client = CouponClient()
     response_json_data = []
     print(f"批量创建达人券入口{data}")
-    device_no_list = data.get('deviceNoList').split(',')
     for user_id in device_no_list:
         entry = client.get_user(user_id)
         if not entry:

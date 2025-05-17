@@ -251,9 +251,9 @@ class App(QMainWindow):
         self.start_btn.setEnabled(True)
         self.stop_btn.setEnabled(True)
         self.log_signal.log_updated.emit("All browsers started.")
-        # 每次启动获取最新的headers和cookies
-        operator = BrowserOperator()
-        operator.attach_get_cookies()
+        # # 每次启动获取最新的headers和cookies
+        # operator = BrowserOperator()
+        # operator.attach_get_cookies()
 
     @asyncSlot()
     async def stop_browsers(self):

@@ -131,9 +131,18 @@ class BrowserOperator:
         cookies = tab.cookies()
         return {"cookies": cookies, "headers": headers}
 
-    def attach_get_cookies(self, eos: bool = False):
-        self.attach_browsers()
-        for user_id in list(self.browsers.keys()):
+    def attach_get_cookies(self, user_ids=None, eos: bool = False):
+        self.load_ports()
+        if user_ids is None:
+            user_ids = list(self.mapping.keys())
+        for user_id in user_ids:
+            if user_id not in self.mapping:
+                continue
+            port = self.mapping[user_id]['port'] if isinstance(self.mapping[user_id], dict) else self.mapping[user_id]
+            co = ChromiumOptions().set_local_port(port)
+            browser = Chromium(co)
+            self.browsers[user_id] = browser
+
             target_url = COUPON_MANAGER_URL
             api_uri = '/selection/common/btm_mapping'
             if eos:
@@ -161,7 +170,7 @@ class BrowserOperator:
 
 def main():
     operator = BrowserOperator()
-    operator.attach_get_cookies()
+    operator.attach_get_cookies("wh001,wh002")
 
 
 if __name__ == "__main__":
