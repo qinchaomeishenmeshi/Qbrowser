@@ -40,6 +40,26 @@ class BrowserManager:
             self.last_urls_file.touch()
         self.browser: Optional[Chromium] = None
 
+    def get_user_blank_html_path(self):
+        """
+        为每个user_id生成专属的本地空白页，带user_id标识
+        """
+        static_dir = Path(BASE_DIR) / "static"
+        static_dir.mkdir(exist_ok=True)
+        template_path = static_dir / "blank.html"
+        user_blank_path = static_dir / f"blank_{self.user_id}.html"
+        # 如果模板不存在，自动生成一个简单模板
+        if not template_path.exists():
+            template_path.write_text(
+                """<!DOCTYPE html>\n<html lang='zh-CN'>\n<head>\n<meta charset='UTF-8'>\n<title>【USER_ID】</title>\n<style>body{background:#fff;}#user-id-tag{position:fixed;top:10px;left:10px;background:#333;color:#fff;padding:8px 16px;border-radius:8px;font-size:16px;z-index:9999;}</style>\n</head>\n<body><div id='user-id-tag'>Browser ID: 【USER_ID】</div></body>\n</html>\n""",
+                encoding="utf-8",
+            )
+        html = template_path.read_text(encoding="utf-8").replace(
+            "【USER_ID】", self.user_id
+        )
+        user_blank_path.write_text(html, encoding="utf-8")
+        return user_blank_path.as_uri()
+
     def initialize(self) -> bool:
         try:
             # 配置并启动 Chromium（持久化用户数据）
@@ -59,7 +79,7 @@ class BrowserManager:
             urls = json.loads(self.last_urls_file.read_text() or "[]")
             print("urls:", urls)
             tabs = self.browser.get_tabs()
-            print(tabs)
+            print("tabs:", tabs)
             for url in urls:
                 # 判断url是否已经被打开
                 if url in [tab.url for tab in tabs]:
@@ -80,6 +100,9 @@ class BrowserManager:
                                                                                 """
                 )
 
+            # 打开自定义本地空白页
+            blank_url = self.get_user_blank_html_path()
+            self.browser.new_tab(url=blank_url)
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}", exc_info=True)
@@ -95,10 +118,11 @@ class BrowserManager:
                     tab = self.browser.get_tab(i)
                     url = tab.url
                     if (
-                            url
-                            and not url.startswith("chrome://")
-                            and url != "about:blank"
-                            and url not in seen
+                        url
+                        and not url.startswith("chrome://")
+                        and url != "about:blank"
+                        and "/qw-browser/static" not in url
+                        and url not in seen
                     ):
                         urls.append(url)
                         seen.add(url)
@@ -113,6 +137,16 @@ class BrowserManager:
                     logger.info("ℹ️ No URLs to save.")
 
                 self.browser.quit()
+
+            # 清理 user_blank_path 文件
+            static_dir = Path(BASE_DIR) / "static"
+            user_blank_path = static_dir / f"blank_{self.user_id}.html"
+            if user_blank_path.exists():
+                try:
+                    user_blank_path.unlink()
+                    logger.info(f"已删除本地空白页缓存: {user_blank_path}")
+                except Exception as e:
+                    logger.warning(f"删除本地空白页缓存失败: {e}")
         except Exception as e:
             logger.error(f"❌ Cleanup error: {e}", exc_info=True)
 
