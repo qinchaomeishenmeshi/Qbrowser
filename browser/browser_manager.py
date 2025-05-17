@@ -118,11 +118,11 @@ class BrowserManager:
                     tab = self.browser.get_tab(i)
                     url = tab.url
                     if (
-                        url
-                        and not url.startswith("chrome://")
-                        and url != "about:blank"
-                        and "/qw-browser/static" not in url
-                        and url not in seen
+                            url
+                            and not url.startswith("chrome://")
+                            and url != "about:blank"
+                            and "/qw-browser/static" not in url
+                            and url not in seen
                     ):
                         urls.append(url)
                         seen.add(url)
