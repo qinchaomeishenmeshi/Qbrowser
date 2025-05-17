@@ -3,16 +3,18 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 
 import requests
 
+from browser.browser_operator import BrowserOperator
 from conf import PORTS_FILE
-from log.logger import logger
+from utils.common_logger import get_logger
 from utils.common_response import PublicResponse
-from worker.main import BrowserOperator
 
 BASE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+logger = get_logger(__name__)
 
 
 class CouponClient:
@@ -23,17 +25,21 @@ class CouponClient:
     def __init__(self, ports_file: Union[str, Path] = Path(BASE_PATH) / PORTS_FILE):
         self.ports_file = Path(__file__).parent / ports_file
         self.mapping = self._load_ports()
-        self.ab_url = 'http://113.57.110.35:13276/DouyinLiveWebFetcher/api/get_sign_buyin'
-        self.check_login_url = 'https://buyin-sso.jinritemai.com/aff/check_login/'
-        self.create_url = 'https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/create'
-        self.basic_url = 'https://buyin.jinritemai.com/api/anchor/livepc/basic_list'
-        self.promotion_url = 'https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/promotion_list'
+        self.ab_url = (
+            "http://113.57.110.35:13276/DouyinLiveWebFetcher/api/get_sign_buyin"
+        )
+        self.check_login_url = "https://buyin-sso.jinritemai.com/aff/check_login/"
+        self.create_url = (
+            "https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/create"
+        )
+        self.basic_url = "https://buyin.jinritemai.com/api/anchor/livepc/basic_list"
+        self.promotion_url = "https://buyin.jinritemai.com/api/buyin/marketing/anchor_coupon/promotion_list"
 
     def _load_ports(self) -> Dict[str, Any]:
         """读取并返回 ports_file 中的映射"""
         if not self.ports_file.exists():
             raise FileNotFoundError(f"Ports file not found: {self.ports_file}")
-        text = self.ports_file.read_text(encoding='utf-8')
+        text = self.ports_file.read_text(encoding="utf-8")
         return json.loads(text)
 
     def get_user(self, user_id: str):
@@ -49,9 +55,11 @@ class CouponClient:
         entry = self.get_user(user_id)
 
         # entry 可能是 {"port": 9222, "cookies": [...]}
-        cookies_list = entry.get('cookies') or []
+        cookies_list = entry.get("cookies") or []
         # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
-        cookies_dict = {c['name']: c['value'] for c in cookies_list if 'name' in c and 'value' in c}
+        cookies_dict = {
+            c["name"]: c["value"] for c in cookies_list if "name" in c and "value" in c
+        }
         # print(f"Cookies for user {user_id}: {cookies_dict}")
         return cookies_dict
 
@@ -66,23 +74,23 @@ class CouponClient:
 
         # 默认 headers
         default_headers = {
-            'accept': '*/*',
-            'accept-language': 'zh-CN,zh;q=0.9',
-            'content-type': 'application/json',
-            'origin': 'https://buyin.jinritemai.com',
-            'priority': 'u=1, i',
-            'referer': 'https://buyin.jinritemai.com/dashboard/marketing/coupon-manager?pre_universal_page_params_id=&universal_page_params_id=8d19445a-fe2f-4e76-a3cb-5571dcc66afe',
-            'sec-ch-ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-            'x-secsdk-csrf-token': '000100000001fce811655e8cb3ac1bcfeff9e29b8cb6d8df2bd6272d1e5a601aa1ddb74da05f183dcc6360bd0127',
+            "accept": "*/*",
+            "accept-language": "zh-CN,zh;q=0.9",
+            "content-type": "application/json",
+            "origin": "https://buyin.jinritemai.com",
+            "priority": "u=1, i",
+            "referer": "https://buyin.jinritemai.com/dashboard/marketing/coupon-manager?pre_universal_page_params_id=&universal_page_params_id=8d19445a-fe2f-4e76-a3cb-5571dcc66afe",
+            "sec-ch-ua": '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"macOS"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+            "x-secsdk-csrf-token": "000100000001fce811655e8cb3ac1bcfeff9e29b8cb6d8df2bd6272d1e5a601aa1ddb74da05f183dcc6360bd0127",
         }
 
-        saved_headers = entry.get('headers', {})
+        saved_headers = entry.get("headers", {})
         if saved_headers is None:
             return {}
         # 只保留 default_headers 中的 key，并优先使用 saved_headers 中的值
@@ -100,11 +108,13 @@ class CouponClient:
         ts = int(time.time() * 1000)
         params = {
             "source_type": "force",
-            "User-Agent": headers.get('user-agent', ''),
+            "User-Agent": headers.get("user-agent", ""),
         }
 
         print(f"发送请求：{self.ab_url} params={params}")
-        resp = requests.post(self.ab_url, params=params, cookies=cookies, headers=headers)
+        resp = requests.post(
+            self.ab_url, params=params, cookies=cookies, headers=headers
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -113,10 +123,10 @@ class CouponClient:
         return self.get_basic_list(user_id)
 
     def create_coupon(
-            self,
-            user_id: str,
-            coupon_data: Dict[str, Any],
-            extra_params: Optional[Dict[str, Any]] = None
+        self,
+        user_id: str,
+        coupon_data: Dict[str, Any],
+        extra_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         发送创建达人券请求，返回接口 JSON
@@ -127,17 +137,25 @@ class CouponClient:
         # 默认 params
         ts = int(time.time() * 1000)
         params = {
-            '_bid': 'mcenter_buyin',
-            '_': str(ts),
+            "_bid": "mcenter_buyin",
+            "_": str(ts),
             # 's': '1216599',
-            'verifyFp': cookies.get('s_v_web_id', ''),
-            'fp': cookies.get('s_v_web_id', ''),
+            "verifyFp": cookies.get("s_v_web_id", ""),
+            "fp": cookies.get("s_v_web_id", ""),
         }
         # 合并额外 params
         if extra_params:
             params.update(extra_params)
-        logger.info(f"发送请求： {self.create_url}  params {params} headers {headers} coupon_data {coupon_data}")
-        resp = requests.post(self.create_url, params=params, cookies=cookies, headers=headers, json=coupon_data)
+        logger.info(
+            f"发送请求： {self.create_url}  params {params} headers {headers} coupon_data {coupon_data}"
+        )
+        resp = requests.post(
+            self.create_url,
+            params=params,
+            cookies=cookies,
+            headers=headers,
+            json=coupon_data,
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -146,15 +164,17 @@ class CouponClient:
         cookies = self._get_cookies_for_user(user_id)
         headers = self._get_headers_for_user(user_id)
         params = {
-            'source_type': 'force',
-            'verifyFp': cookies.get('s_v_web_id', ''),
-            'fp': cookies.get('s_v_web_id', ''),
+            "source_type": "force",
+            "verifyFp": cookies.get("s_v_web_id", ""),
+            "fp": cookies.get("s_v_web_id", ""),
             # "msToken": "OeDuKb1bB6Od4tYKwdX2SopCTY0HUpDkS_8F_KwQrPSQC4--rS3YZvZB2DwBg9b2C53yOkSipM8ofmQiCBW0YfsfOWGngNELb=c4822d3W5a9dcg7X0_L4FY",
             # 'a_bogus': "mj8M/5LhdDdkgDyg53ALfY3q6Va3YZO50trEMD2f8xvaFy39HMYr9exosBsvUaRjxT/2IeYjy4hbT3ohrQ2y8qwf9W0L/25gsDSkKl12so0j53inCLf/E0iE5hsAtFH8svr4iKi8owICSYyhldAJ5kIlO62-zo0/91D="
         }
 
         print(f"发送请求：{self.basic_url} params={params}")
-        resp = requests.get(self.basic_url, params=params, cookies=cookies, headers=headers)
+        resp = requests.get(
+            self.basic_url, params=params, cookies=cookies, headers=headers
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -164,21 +184,22 @@ class CouponClient:
         headers = self._get_headers_for_user(user_id)
         ts = int(time.time() * 1000)
         params = {
-            '_bid': 'mcenter_buyin',
-            '_': str(ts),
-            'promotion_name_or_id': '',
-            'page': '1',
-            'size': '10',
-            'search_type': '1',
-            'verifyFp': cookies.get('s_v_web_id', ''),
-            'fp': cookies.get('s_v_web_id', ''),
-            'msToken': 'XClFOeYbnwfwQiJ9QJGaB8P_hx2Igey4ruBcZZ3XVjOmywqGjw8HKhLGNntvN0lHf-zM1RJC7Y2ApdckYZfo3NU1Jjz9zNVDeVKbFpkk6ym_Md5feytr4tTtOyDlTMzrN3vzVicfeT6sZwscGzvml4zBhN-rRdvBiWZIIC7QIvO67uJ08lU45jv2',
-            'a_bogus': 'Dv0jketLY28cC3lt8csLSX9lK92MrTSy3HioWPaTtqF/GqMP5IpbxOGQJxuGU2c6YYBehHp7apTMufxbO9swZCKpFmhDud7bOtVA906Lgqi6GeTmgqgOCwWzzwMF0OJweACUNIhRWsMN2nxAVq5kWQBGy5Fo55jdbHZyDMLyeEWgDAukin3sOHkBE6JqqD==',
-
+            "_bid": "mcenter_buyin",
+            "_": str(ts),
+            "promotion_name_or_id": "",
+            "page": "1",
+            "size": "10",
+            "search_type": "1",
+            "verifyFp": cookies.get("s_v_web_id", ""),
+            "fp": cookies.get("s_v_web_id", ""),
+            "msToken": "XClFOeYbnwfwQiJ9QJGaB8P_hx2Igey4ruBcZZ3XVjOmywqGjw8HKhLGNntvN0lHf-zM1RJC7Y2ApdckYZfo3NU1Jjz9zNVDeVKbFpkk6ym_Md5feytr4tTtOyDlTMzrN3vzVicfeT6sZwscGzvml4zBhN-rRdvBiWZIIC7QIvO67uJ08lU45jv2",
+            "a_bogus": "Dv0jketLY28cC3lt8csLSX9lK92MrTSy3HioWPaTtqF/GqMP5IpbxOGQJxuGU2c6YYBehHp7apTMufxbO9swZCKpFmhDud7bOtVA906Lgqi6GeTmgqgOCwWzzwMF0OJweACUNIhRWsMN2nxAVq5kWQBGy5Fo55jdbHZyDMLyeEWgDAukin3sOHkBE6JqqD==",
         }
 
         print(f"发送请求：{self.promotion_url} params={params}")
-        resp = requests.get(self.promotion_url, params=params, cookies=cookies, headers=headers)
+        resp = requests.get(
+            self.promotion_url, params=params, cookies=cookies, headers=headers
+        )
         resp.raise_for_status()
         return resp.json()
 
@@ -190,87 +211,87 @@ class CouponClient:
 
         json_data = {
             # 'user_id': '1258293549605997',
-            'begin_date': '2025-04-14',
-            'end_date': '2025-05-13',
-            'compare_begin_date': '2025-03-15',
-            'compare_end_date': '2025-04-13',
-            'indicator_set_key': 'replay_goods_card_indicator',
+            "begin_date": "2025-04-14",
+            "end_date": "2025-05-13",
+            "compare_begin_date": "2025-03-15",
+            "compare_end_date": "2025-04-13",
+            "indicator_set_key": "replay_goods_card_indicator",
         }
 
         resp = requests.post(
-            'https://eos.douyin.com/life/api/live_screen/v4/replay/goods_list',
+            "https://eos.douyin.com/life/api/live_screen/v4/replay/goods_list",
             cookies=cookies,
             headers=headers,
             json=json_data,
-            verify=False
+            verify=False,
         )
         resp.raise_for_status()
         return resp.json()
 
 
-def get_basic_list_main(user_id=''):
+def get_basic_list_main(user_id=""):
     client = CouponClient()
 
     data = {
-        'coupon_name': '测试0509-server',
-        'max_apply_times': 1,
-        'type': 53,
-        'threshold': '100',
-        'credit': '10',
-        'total_amount': '5',
-        'anchor_coupon_scene': 0,
-        'start_apply_time': 1746771086,
-        'end_apply_time': 1746792686,
-        'start_use_time': 1746771086,
-        'end_use_time': 1746792686,
-        'goods_id_list': '3740185954082750838',
-        'live_promotion_ids': [
-            '3741298964599800150',
+        "coupon_name": "测试0509-server",
+        "max_apply_times": 1,
+        "type": 53,
+        "threshold": "100",
+        "credit": "10",
+        "total_amount": "5",
+        "anchor_coupon_scene": 0,
+        "start_apply_time": 1746771086,
+        "end_apply_time": 1746792686,
+        "start_use_time": 1746771086,
+        "end_use_time": 1746792686,
+        "goods_id_list": "3740185954082750838",
+        "live_promotion_ids": [
+            "3741298964599800150",
         ],
-        'visibility': 2,
-        'kol_user_tag': 0,
+        "visibility": 2,
+        "kol_user_tag": 0,
     }
     result = client.check_login(user_id)
     # 获取第一页，每页10条记录
     # result = client.get_basic_list(user_id, page=1, size=100)
     print(f"是否登录{result.get('code') == 0}")
-    basic_list = result.get('data', {}).get('basic_list', [])
+    basic_list = result.get("data", {}).get("basic_list", [])
     logger.info(f"basic_list 数据为：{basic_list}")
     return True
     # result = client.create_coupon('wh002', data)
     # print(result)
 
 
-def format_data(data, goods_id_list='', live_promotion_ids=None):
+def format_data(data, goods_id_list="", live_promotion_ids=None):
     live_promotion_ids = live_promotion_ids or []
     return {
-        'coupon_name': data.get('couponName', ''),
-        'max_apply_times': data.get('maxApplyTimes', ''),
-        'type': data.get('type', ''),
-        'threshold': data.get('threshold', ''),
-        'credit': data.get('credit', ''),
-        'total_amount': data.get('totalAmount', ''),
-        'anchor_coupon_scene': data.get('anchorCouponScene', ''),
-        'start_apply_time': data.get('startApplyTime', ''),
-        'end_apply_time': data.get('endApplyTime', ''),
-        'start_use_time': data.get('startUseTime', ''),
-        'end_use_time': data.get('endUseTime', ''),
-        'goods_id_list': goods_id_list,
-        'live_promotion_ids': live_promotion_ids,
-        'kol_user_tag': data.get('kolUserTag'),
-        'visibility': 2,
+        "coupon_name": data.get("couponName", ""),
+        "max_apply_times": data.get("maxApplyTimes", ""),
+        "type": data.get("type", ""),
+        "threshold": data.get("threshold", ""),
+        "credit": data.get("credit", ""),
+        "total_amount": data.get("totalAmount", ""),
+        "anchor_coupon_scene": data.get("anchorCouponScene", ""),
+        "start_apply_time": data.get("startApplyTime", ""),
+        "end_apply_time": data.get("endApplyTime", ""),
+        "start_use_time": data.get("startUseTime", ""),
+        "end_use_time": data.get("endUseTime", ""),
+        "goods_id_list": goods_id_list,
+        "live_promotion_ids": live_promotion_ids,
+        "kol_user_tag": data.get("kolUserTag"),
+        "visibility": 2,
     }
 
 
 def process_products(data, basic_list):
     # 1. 读取并转换参数
     try:
-        goods_id_type = int(data.get('goodsIdType', 1))
+        goods_id_type = int(data.get("goodsIdType", 1))
     except ValueError:
         goods_id_type = 1
 
-    goods_id_list_str = data.get('goodsIdList', '')
-    goods_id_list = [gid.strip() for gid in goods_id_list_str.split(',') if gid.strip()]
+    goods_id_list_str = data.get("goodsIdList", "")
+    goods_id_list = [gid.strip() for gid in goods_id_list_str.split(",") if gid.strip()]
 
     # 2. 初始化输出列表
     goods_id_list_out = []
@@ -288,8 +309,8 @@ def process_products(data, basic_list):
 
     # 4. 遍历 basic_list，收集符合条件的商品
     for p_ind, product in enumerate(basic_list):
-        pid = product.get('product_id', '')
-        prom_id = product.get('promotion_id', '')
+        pid = product.get("product_id", "")
+        prom_id = product.get("promotion_id", "")
 
         if not keep_product(pid):
             continue
@@ -299,72 +320,71 @@ def process_products(data, basic_list):
         live_promotion_ids.append(prom_id)
 
     # 6. 拼成字符串（无尾逗号）
-    goods_id_list_str_out = ','.join(goods_id_list_out)
+    goods_id_list_str_out = ",".join(goods_id_list_out)
 
     # 7. 返回结果
     return {
-        'goodsIdList': goods_id_list_str_out,
-        'promotionIds': live_promotion_ids,
+        "goodsIdList": goods_id_list_str_out,
+        "promotionIds": live_promotion_ids,
     }
 
 
-# —— 调用示例 ——
-# data = {
-#     'goodsIdType': '2',
-#     'goodsIdList': '3740185954082750838,3736891222183247936,3731302879173148771'
-# }
-# result = process_products(data, basic_list)
-# print(result)
-
-
-def anchor_coupon_create_main(data) -> PublicResponse:
-    """ 批量创建达人券入口 """
-    from worker.main import BrowserOperator
-    device_no_list = [uid.strip() for uid in data.get('deviceNoList', '').split(',') if uid.strip()]
-    # 只抓取本次涉及的 user_id
-    BrowserOperator().attach_get_cookies(user_ids=device_no_list)
+async def anchor_coupon_create_main(
+    data: Dict[str, Any], user_ids: List[str]
+) -> PublicResponse:
+    """
+    批量创建达人券入口
+    :param data: 业务参数
+    :param user_ids: 已经保证实例唯一且已启动的 user_id 列表
+    :return: PublicResponse
+    """
+    print("准备抓取cookies")
+    await BrowserOperator().attach_get_cookies(user_ids=user_ids)
+    print("抓取cookies完成")
     client = CouponClient()
     response_json_data = []
     print(f"批量创建达人券入口{data}")
-    for user_id in device_no_list:
+    for user_id in user_ids:
         entry = client.get_user(user_id)
         if not entry:
             logger.error(f"{user_id} 无有效cookie，请检查账号或节点")
-            response_json_data.append({
-                "msg": f"无有效cookie，请检查账号或节点",
-                "data": None,
-                "user_id": user_id
-            })
+            response_json_data.append(
+                {
+                    "msg": f"无有效cookie，请检查账号或节点",
+                    "data": None,
+                    "user_id": user_id,
+                }
+            )
             continue
 
         result = client.get_basic_list(user_id)
-        code = int(result.get('code', -1))
+        code = int(result.get("code", -1))
         if code != 0:
-            response_json_data.append({**result, 'user_id': user_id})
+            response_json_data.append({**result, "user_id": user_id})
             continue
-        basic_list = result.get('data', {}).get('basic_list', [])
-        goods_id_list = ''
+        basic_list = result.get("data", {}).get("basic_list", [])
+        goods_id_list = ""
         live_promotion_ids = []
         print(f"basic_list 数据为：{basic_list}")
-        # 如果data.get('goodsIdType', '1') 为 1 默认不操作 ， 2 指定商品，3 则过滤掉商品
 
-        process_products_resp = process_products({
-            "goodsIdType": data.get('goodsIdType', '1'), 'goodsIdList': data.get('goodsIdList', '')
-        }, basic_list=basic_list)
+        process_products_resp = process_products(
+            {
+                "goodsIdType": data.get("goodsIdType", "1"),
+                "goodsIdList": data.get("goodsIdList", ""),
+            },
+            basic_list=basic_list,
+        )
 
         coupon_data = format_data(
             data,
-            goods_id_list=process_products_resp['goodsIdList'].rstrip(','),  # 去掉末尾逗号
-            live_promotion_ids=process_products_resp['promotionIds'],
+            goods_id_list=process_products_resp["goodsIdList"].rstrip(","),
+            live_promotion_ids=process_products_resp["promotionIds"],
         )
         result = client.create_coupon(user_id, coupon_data)
-        response_json_data.append({**result, 'user_id': user_id})
+        response_json_data.append({**result, "user_id": user_id})
 
     logger.info(f"结果：{response_json_data}")
-    # 先获取商品列表
-    # 再提交创建达人券接口
-
-    return PublicResponse(status='success', message='操作成功', data=response_json_data)
+    return PublicResponse(status="success", message="操作成功", data=response_json_data)
 
 
 def test():
@@ -373,14 +393,13 @@ def test():
     # asyncio.sleep(10)
     client = CouponClient()
     # resp = client.get_promotion_list('wh001')
-    resp = client.get_eos_goods_list('wh001')
-    print('resp:', resp)
+    resp = client.get_eos_goods_list("wh001")
+    print("resp:", resp)
 
 
 # 示例使用
-if __name__ == '__main__':
+if __name__ == "__main__":
     test()
-
 
     def to_timestamp(dt_str: str) -> int:
         """将字符串时间转为时间戳（秒）"""

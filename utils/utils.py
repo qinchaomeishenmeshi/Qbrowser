@@ -1,8 +1,19 @@
 import os
+import time
+from datetime import datetime
 
 import httpx
 import ujson as json
 from loguru import logger
+
+
+def to_timestamp(dt_str: str) -> int:
+    """Convert datetime string to UNIX timestamp in seconds."""
+    try:
+        dt_obj = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        raise ValueError(f"时间格式错误，需为 'YYYY-MM-DD HH:MM:SS'，收到: {dt_str}")
+    return int(time.mktime(dt_obj.timetuple()))
 
 
 def str_to_path(str: str):
@@ -10,11 +21,11 @@ def str_to_path(str: str):
     把字符串转为Windows合法文件名
     """
     # 非法字符
-    lst = ['\r', '\n', '\\', '/', ':', '*', '?', '"', '<', '>', '|']
+    lst = ["\r", "\n", "\\", "/", ":", "*", "?", '"', "<", ">", "|"]
     # lst.extend([' ', '^'])
     # 字符处理方式1
     for key in lst:
-        str = str.replace(key, '_')
+        str = str.replace(key, "_")
     # 字符处理方式2
     # str = str.translate(None, ''.join(lst))
     # 文件名+路径长度最大255，汉字*2，取80
@@ -23,7 +34,7 @@ def str_to_path(str: str):
     return str.strip()
 
 
-def quit(str: str = ''):
+def quit(str: str = ""):
     """
     直接退出程序
     """
@@ -34,7 +45,7 @@ def quit(str: str = ''):
 
 def url_redirect(url):
     r = httpx.head(url, follow_redirects=False)
-    u = r.headers.get('Location', url)
+    u = r.headers.get("Location", url)
     return u
 
 
@@ -43,5 +54,5 @@ def save_json(filename: str, data):
     if path:
         os.makedirs(path, exist_ok=True)
 
-    with open(f'{filename}.json', 'w', encoding='utf-8') as f:
+    with open(f"{filename}.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)

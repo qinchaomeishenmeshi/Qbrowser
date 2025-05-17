@@ -3,8 +3,7 @@ import os
 import httpx
 import ujson as json
 from loguru import logger
-
-from utils.utils import save_json
+from util.utils import save_json
 
 
 def get_cookie_dict(cookie='') -> dict:
