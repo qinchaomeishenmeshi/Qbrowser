@@ -89,7 +89,7 @@ async def launch_browser(user_id: str, url: str = "") -> dict:
 
 @api_router.post("/start/{user_id}")
 async def start_browser(
-    user_id: str, url: str = Query(default="", description="要打开的页面url，可选")
+        user_id: str, url: str = Query(default="", description="要打开的页面url，可选")
 ):
     result = await launch_browser(user_id, url)
     if result["status"] in ("fail", "error"):
@@ -105,8 +105,8 @@ async def stop_all():
 
 @api_router.post("/start_all")
 async def start_all_browsers(
-    user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
-    url: str = Query(default="", description="要打开的页面url，可选"),
+        user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
+        url: str = Query(default="", description="要打开的页面url，可选"),
 ):
     results = [await launch_browser(user_id, url) for user_id in user_ids]
     return {"results": results}

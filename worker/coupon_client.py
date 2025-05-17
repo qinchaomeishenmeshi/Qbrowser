@@ -123,10 +123,10 @@ class CouponClient:
         return self.get_basic_list(user_id)
 
     def create_coupon(
-        self,
-        user_id: str,
-        coupon_data: Dict[str, Any],
-        extra_params: Optional[Dict[str, Any]] = None,
+            self,
+            user_id: str,
+            coupon_data: Dict[str, Any],
+            extra_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         发送创建达人券请求，返回接口 JSON
@@ -330,7 +330,7 @@ def process_products(data, basic_list):
 
 
 async def anchor_coupon_create_main(
-    data: Dict[str, Any], user_ids: List[str]
+        data: Dict[str, Any], user_ids: List[str]
 ) -> PublicResponse:
     """
     批量创建达人券入口
@@ -400,6 +400,7 @@ def test():
 # 示例使用
 if __name__ == "__main__":
     test()
+
 
     def to_timestamp(dt_str: str) -> int:
         """将字符串时间转为时间戳（秒）"""
