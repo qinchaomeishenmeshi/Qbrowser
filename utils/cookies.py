@@ -2,8 +2,12 @@ import os
 
 import httpx
 import ujson as json
-from loguru import logger
-from util.utils import save_json
+
+from utils.util import save_json
+
+from utils.common_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_cookie_dict(cookie='') -> dict:

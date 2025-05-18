@@ -4,7 +4,9 @@ from datetime import datetime
 
 import httpx
 import ujson as json
-from loguru import logger
+from utils.common_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def str_to_path(str: str):
