@@ -7,7 +7,7 @@ from typing import Optional
 from DrissionPage._base.chromium import Chromium
 from DrissionPage._configs.chromium_options import ChromiumOptions
 
-from conf import BASE_DIR
+from conf import BASE_DIR, resource_path
 from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
@@ -46,7 +46,8 @@ class BrowserManager:
         """
         static_dir = Path(BASE_DIR) / "static"
         static_dir.mkdir(exist_ok=True)
-        template_path = static_dir / "blank.html"
+        # 用 resource_path 兼容打包和开发环境
+        template_path = Path(resource_path("static/blank.html"))
         user_blank_path = static_dir / f"blank_{self.user_id}.html"
         # 如果模板不存在，自动生成一个简单模板
         if not template_path.exists():
@@ -118,11 +119,11 @@ class BrowserManager:
                     tab = self.browser.get_tab(i)
                     url = tab.url
                     if (
-                            url
-                            and not url.startswith("chrome://")
-                            and url != "about:blank"
-                            and "/qw-browser/static" not in url
-                            and url not in seen
+                        url
+                        and not url.startswith("chrome://")
+                        and url != "about:blank"
+                        and "/qw-browser/static" not in url
+                        and url not in seen
                     ):
                         urls.append(url)
                         seen.add(url)
