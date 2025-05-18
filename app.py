@@ -31,6 +31,8 @@ from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
 
+USE_MODERN_UI = True  # 设置为True启用新UI
+
 def is_admin():
     """检查程序是否以管理员权限运行"""
     try:
@@ -473,7 +475,20 @@ def main():
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
-    w = App()
+    
+    if USE_MODERN_UI:
+        # 导入新UI
+        try:
+            from ui.modern_app import ModernApp
+            w = ModernApp()
+        except Exception as e:
+            print(f"加载新UI失败: {e}，将使用经典UI")
+            import traceback
+            traceback.print_exc()  # 打印完整的堆栈跟踪
+            w = App()
+    else:
+        w = App()
+        
     w.show()
     with loop:
         loop.run_forever()
