@@ -342,18 +342,6 @@ class App(QMainWindow):
                 self.progress.setValue(idx)
                 await asyncio.sleep(0.01)
 
-            # 收集cookies
-            if success_count > 0:
-                self.log_signal.log_updated.emit("开始收集 cookies 信息...")
-                try:
-                    await self.browser_operator.attach_get_cookies(ids)
-                    self.log_signal.log_updated.emit("完成收集 cookies 信息")
-                except Exception as e:
-                    self.log_signal.log_updated.emit(f"收集 cookies 失败: {e}")
-            else:
-                self.log_signal.log_updated.emit("没有成功启动的浏览器，无法收集 cookies")
-                if sys.platform == 'win32':
-                    self.log_signal.log_updated.emit("提示：Windows系统需要以管理员权限运行此程序")
         except Exception as e:
             self.log_signal.log_updated.emit(f"启动浏览器时发生错误: {e}")
             logger.error(f"启动浏览器失败: {e}", exc_info=True)
