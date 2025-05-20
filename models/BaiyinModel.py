@@ -40,3 +40,7 @@ class CouponRequest(BaseModel):
         if not isinstance(v, int):
             raise TypeError(f"时间字段必须为时间戳(int)，当前: {v}")
         return v
+
+
+class LivingRequest(BaseModel):
+    deviceNoList: str

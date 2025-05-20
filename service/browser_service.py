@@ -1,12 +1,14 @@
 import asyncio
 import json
 import os
+from pathlib import Path
 from typing import List, Dict
 
 from browser.browser_manager import BrowserManager
 from browser.browser_store import browser_store
-from conf import CACHE_FILE, PORTS_FILE
+from conf import CACHE_FILE, PORTS_FILE, DATA_DIR
 from utils.common_logger import get_logger
+from utils.cookies_manager import CookiesManager
 from utils.port_manager import PortManager
 
 logger = get_logger(__name__)
@@ -16,6 +18,7 @@ class BrowserService:
     def __init__(self):
         self.browser_store = browser_store  # 全局单例
         self.port_manager = PortManager()  # 使用新的端口管理器
+        self.cookies_manager = CookiesManager(Path(os.path.join(DATA_DIR, "cookies")))
 
     async def start_browsers(self, user_ids: List[str]) -> List[Dict]:
         results = []
@@ -93,7 +96,12 @@ class BrowserService:
             try:
                 with open(PORTS_FILE, encoding="utf-8") as f:
                     mapping = json.load(f)
-                ports = {v["port"] for v in mapping.values()}
+
+                ports = {
+                    v["port"]
+                    for v in mapping.values()
+                    if isinstance(v, dict) and "port" in v
+                }
                 await self.port_manager.load_ports(ports)
                 logger.info(f"加载端口映射成功: {mapping}")
             except Exception as e:
@@ -139,7 +147,9 @@ class BrowserService:
         """
         获取已存在的浏览器实例，否则新建并返回
         """
+
         manager = await self.browser_store.get(user_id)
+        print(f"获取或创建浏览器实例 {manager}")
         if manager and manager.is_running:
             return manager
 

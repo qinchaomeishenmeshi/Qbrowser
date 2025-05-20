@@ -11,12 +11,15 @@ class BrowserManagerStore:
 
     async def add(self, manager: BrowserManager):
         async with self._lock:
-            # 避免重复 user_id
-            if not any(m.user_id == manager.user_id for m in self._managers):
-                self._managers.append(manager)
-            else:
-                # 如果已存在同 user_id，可选择覆盖或忽略，这里忽略
-                pass
+            existing_manager = await self.get(manager.user_id)
+            if existing_manager:
+                if existing_manager.is_running:
+                    return existing_manager  # 如果已存在且运行中，直接返回
+                else:
+                    # 如果存在但没有运行，先清理
+                    await self.remove(manager.user_id)
+            self._managers.append(manager)
+            return manager
 
     async def remove(self, user_id: str) -> bool:
         async with self._lock:

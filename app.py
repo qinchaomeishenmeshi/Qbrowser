@@ -33,12 +33,16 @@ logger = get_logger(__name__)
 
 USE_MODERN_UI = True  # 设置为True启用新UI
 
+
 def is_admin():
     """检查程序是否以管理员权限运行"""
     try:
-        return ctypes.windll.shell32.IsUserAnAdmin() if sys.platform == 'win32' else True
+        return (
+            ctypes.windll.shell32.IsUserAnAdmin() if sys.platform == "win32" else True
+        )
     except:
         return False
+
 
 class LogSignal(QObject):
     log_updated = pyqtSignal(str)
@@ -60,33 +64,36 @@ class App(QMainWindow):
         self.browser_service = browser_service
         self.browser_operator = browser_operator
         self.frpc_process = None
-        
+
         # 检查管理员权限
-        if sys.platform == 'win32' and not is_admin():
+        if sys.platform == "win32" and not is_admin():
             logger.warning("程序未以管理员权限运行，某些功能可能受限")
-            QMessageBox.warning(self, "权限提示", 
-                          "程序没有以管理员权限运行。\n在Windows上，浏览器自动化和frpc服务可能需要管理员权限。\n请考虑以管理员身份重新运行程序。")
-        
+            QMessageBox.warning(
+                self,
+                "权限提示",
+                "程序没有以管理员权限运行。\n在Windows上，浏览器自动化和frpc服务可能需要管理员权限。\n请考虑以管理员身份重新运行程序。",
+            )
+
         # 初始化UI
         self.init_ui()
-        
+
         # 使用同步方法加载基本缓存
         self.load_cache()
-        
+
         # 使用QTimer在Qt事件循环启动后执行异步初始化
         QTimer.singleShot(0, self._schedule_async_init)
-    
+
     def _schedule_async_init(self):
         """使用事件循环安排异步初始化任务"""
         loop = asyncio.get_event_loop()
         loop.create_task(self.async_init())
-        
+
     async def async_init(self):
         """异步初始化，加载端口和启动服务"""
         try:
             # 加载端口配置
             await self.load_ports()
-            
+
             # 启动API服务
             try:
                 run_server(host="127.0.0.1", port=6001)
@@ -95,20 +102,22 @@ class App(QMainWindow):
             except Exception as e:
                 logger.error(f"FastAPI服务启动失败: {e}")
                 self.log_signal.log_updated.emit(f"FastAPI服务启动失败: {e}")
-            
+
             # 仅在Windows系统上尝试启动frpc服务
-            if sys.platform == 'win32':
+            if sys.platform == "win32":
                 try:
                     self.frpc_process = self._start_frpc()
                     if self.frpc_process:
                         self.log_signal.log_updated.emit("frpc服务已启动")
                     else:
-                        self.log_signal.log_updated.emit("frpc服务启动失败，请确保以管理员权限运行程序")
+                        self.log_signal.log_updated.emit(
+                            "frpc服务启动失败，请确保以管理员权限运行程序"
+                        )
                 except Exception as e:
                     logger.error(f"frpc服务启动错误: {e}")
                     self.log_signal.log_updated.emit(f"frpc服务启动错误: {e}")
-                    
-            logger.info("应用初始化完成")    
+
+            logger.info("应用初始化完成")
             self.log_signal.log_updated.emit("应用初始化完成")
         except Exception as e:
             logger.error(f"初始化失败: {e}")
@@ -303,20 +312,22 @@ class App(QMainWindow):
     async def start_browsers(self):
         try:
             # 在Windows上检查权限
-            if sys.platform == 'win32' and not is_admin():
+            if sys.platform == "win32" and not is_admin():
                 result = QMessageBox.warning(
-                    self, 
-                    "权限不足", 
+                    self,
+                    "权限不足",
                     "程序没有以管理员权限运行，浏览器可能无法正常启动。\n是否继续尝试？",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No
+                    QMessageBox.StandardButton.No,
                 )
                 if result == QMessageBox.StandardButton.No:
                     self.log_signal.log_updated.emit("操作已取消")
                     return
-            
+
             ids = [
-                l.strip() for l in self.text_edit.toPlainText().splitlines() if l.strip()
+                l.strip()
+                for l in self.text_edit.toPlainText().splitlines()
+                if l.strip()
             ]
             if not ids:
                 QMessageBox.critical(self, "错误", "请输入至少一个 user_id。")
@@ -334,10 +345,10 @@ class App(QMainWindow):
             results = await self.browser_service.start_browsers(ids)
             success_count = 0
             for idx, result in enumerate(results, 1):
-                status = result['status']
-                if status == 'started' or status == 'already_running':
+                status = result["status"]
+                if status == "started" or status == "already_running":
                     success_count += 1
-                    
+
                 self.log_signal.log_updated.emit(
                     f"[{idx}/{len(results)}] {result['user_id']} {result['status']} (端口: {result.get('port', 'N/A')})"
                 )
@@ -372,7 +383,7 @@ class App(QMainWindow):
     def _start_frpc():
         """
         启动 frpc 服务，使用固定配置文件，并确保可执行文件与配置文件存在
-        
+
         注意：在Windows上可能需要管理员权限
         """
         frpc_path = os.path.join(BASE_DIR, "frp_client", "frpc.exe")
@@ -385,7 +396,7 @@ class App(QMainWindow):
                 return None
 
         # 检查Windows权限
-        if sys.platform == 'win32' and not is_admin():
+        if sys.platform == "win32" and not is_admin():
             logger.warning("frpc服务可能需要管理员权限才能运行")
 
         try:
@@ -397,7 +408,7 @@ class App(QMainWindow):
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
-                creationflags=0x08000000 if sys.platform == 'win32' else 0  # 隐藏窗口
+                creationflags=0x08000000 if sys.platform == "win32" else 0,  # 隐藏窗口
             )
             logger.info("启动 frpc 服务: PID=%d", proc.pid)
 
@@ -468,27 +479,29 @@ class App(QMainWindow):
 
 def main():
     # 显示管理员权限提示
-    if sys.platform == 'win32' and not is_admin():
+    if sys.platform == "win32" and not is_admin():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")
         print("建议: 右键点击程序，选择'以管理员身份运行'")
-    
+
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
-    
+
     if USE_MODERN_UI:
         # 导入新UI
         try:
             from ui.modern_app import ModernApp
+
             w = ModernApp()
         except Exception as e:
             print(f"加载新UI失败: {e}，将使用经典UI")
             import traceback
+
             traceback.print_exc()  # 打印完整的堆栈跟踪
             w = App()
     else:
         w = App()
-        
+
     w.show()
     with loop:
         loop.run_forever()

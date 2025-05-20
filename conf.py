@@ -15,6 +15,7 @@ def resource_path(relative_path):
 
 # 项目根目录
 BASE_DIR = resource_path("")
+DATA_DIR = resource_path("data")
 
 # 缓存和端口文件都在根目录
 CACHE_FILE = os.path.join(BASE_DIR, "user_ids_cache.json")
