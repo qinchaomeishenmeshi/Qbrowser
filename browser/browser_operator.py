@@ -76,7 +76,7 @@ class BrowserOperator:
     ) -> Dict[str, Any]:
         """
         获取指定页面的cookies和headers，支持多个API路径监听和重试机制
-        
+
         Args:
             browser: 浏览器实例
             user_id: 用户ID
@@ -84,7 +84,7 @@ class BrowserOperator:
             api_paths: 要监听的API路径列表
             max_retries: 最大重试次数
             retry_delay: 重试间隔(秒)
-            
+
         Returns:
             包含cookies和headers的字典，每个API路径对应一个条目
         """
@@ -116,7 +116,7 @@ class BrowserOperator:
                     listener = RequestListener(tab, api_path)
 
                     # 页面交互 - 可以在这里添加模拟点击等操作
-                    # 例如: tab.ele('xpath://button[@id="refresh"]').click() 
+                    # 例如: tab.ele('xpath://button[@id="refresh"]').click()
 
                     # 刷新页面触发API请求
                     tab.refresh()
@@ -160,14 +160,14 @@ class BrowserOperator:
 
         # 收集全量cookies
         result["cookies"] = data.get("cookies", {})
-        
+
         # 收集全量headers (来自所有API路径)
         all_headers = {}
         for headers_dict in data.get("headers", {}).values():
             all_headers.update(headers_dict)
-        
+
         result["headers"] = all_headers
-        
+
         return result
 
     async def collect_site_cookies(
@@ -178,12 +178,12 @@ class BrowserOperator:
     ) -> bool:
         """
         收集特定站点的cookies
-        
+
         Args:
             user_id: 用户ID
             site_key: 站点配置键名
             custom_config: 自定义配置(覆盖默认)
-            
+
         Returns:
             操作成功与否
         """
@@ -282,4 +282,3 @@ class BrowserOperator:
 
 
 browser_operator = BrowserOperator()
-
