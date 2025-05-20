@@ -3,9 +3,10 @@
 
     const TARGET_PATH = '/data/life/live/plan/detail/';
     const AGREEMENT_GET_PATH = '/data/life/live/case/agreement/get';
+    const LIVE_CORE_DARA = '/compass_api/author/live/live_screen/core_data'
 
     function shouldIntercept(url) {
-        return url.includes(TARGET_PATH) || url.includes(AGREEMENT_GET_PATH);
+        return url.includes(TARGET_PATH) || url.includes(AGREEMENT_GET_PATH) || url.includes(LIVE_CORE_DARA)
     }
 
     function dispatch(url, status, body) {

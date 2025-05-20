@@ -56,6 +56,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 // 监听直播间变化
 document.addEventListener('DOMContentLoaded', () => {
     console.log('页面加载完成 DOMContentLoaded')
+
+    get_live_history_list()
     let timeoutId = null
     // 使用 MutationObserver 替代 setTimeout
     const observer = new MutationObserver((mutations, obs) => {
@@ -70,10 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 开始观察整个文档变化
     observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: false,
-        characterData: false
+        childList: true, subtree: true, attributes: false, characterData: false
     })
 
     // 设置超时回退（10秒）
@@ -110,7 +109,6 @@ function injectFetchInterceptor() {
 window.addEventListener('fetchResponse', (event) => {
     const {url, status, body} = event.detail
     console.log('接口监听-test:', url, status, body)
-    // if (url.includes('/data/life/live/shelves/anchor/') && status === 200) {
     if (url.includes('/data/life/live/plan/detail/') && status === 200) {
         try {
             const data = JSON.parse(body)
@@ -123,6 +121,7 @@ window.addEventListener('fetchResponse', (event) => {
                 }, 3000)
             }
         } catch (e) {
+
             console.error('数据解析失败:', e)
         }
     }
@@ -141,6 +140,22 @@ window.addEventListener('fetchResponse', (event) => {
             console.error('解析 user_id 或存储时出错:', e);
         }
     }
+
+
+    if (url.includes('/compass_api/author/live/live_screen/core_data') && status === 200) {
+        try {
+            const data = JSON.parse(body)
+            console.log('直播大屏数据:', data.data)
+            // 获取search中的live_room_id 参数
+            const params = new URLSearchParams(window.location.search);
+            // 获取指定参数值（自动处理URL编码）
+            const liveRoomId = params.get('live_room_id');
+            console.log('liveRoomId:', liveRoomId)
+
+        } catch (e) {
+            console.error('解析 live_room_id 或存储时出错:', e);
+        }
+    }
 })
 
 
@@ -152,9 +167,7 @@ function createSyncContainer() {
     }
 
     // 查找父容器
-    const tabGuide = document.querySelector(
-        "div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-child(1)"
-    );
+    const tabGuide = document.querySelector("div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-child(1)");
     if (!tabGuide || !tabGuide.parentElement) {
         console.error('未找到目标容器，无法创建同步按钮');
         return;
@@ -295,9 +308,7 @@ async function getCommodityDetail(productId) {
         .then((data) => {
             console.log('获取commodityDetail信息成功:', data)
             // 找到对应的商品 ，然后更新productsList的数据
-            const product = productsList.find(
-                (product) => product.product_base_info.product_id === productId
-            )
+            const product = productsList.find((product) => product.product_base_info.product_id === productId)
             if (product) {
                 product.commodity_info = data.commodity_info || {}
                 product.use_rule_info = data.use_rule_info || {}
@@ -312,8 +323,7 @@ async function getCommodityDetail(productId) {
 // 获取商品详情数据
 async function getProductDetail(productId) {
     window.scrollBy({
-        top: Math.random() * 100,
-        behavior: 'smooth'
+        top: Math.random() * 100, behavior: 'smooth'
     })
     const baseUrl = `https://eos.douyin.com/life/alliance/v2/goods/product/detail/get?from_type=5&image_size=%7B%22width%22:750%7D&product_id=${productId}`
     return fetch(baseUrl)
@@ -321,9 +331,7 @@ async function getProductDetail(productId) {
         .then((data) => {
             console.log('获取商品详情成功:', data)
             // 找到对应的商品 ，然后更新productsList的数据
-            const product = productsList.find(
-                (product) => product.product_base_info.product_id === productId
-            )
+            const product = productsList.find((product) => product.product_base_info.product_id === productId)
             if (product) {
                 product.product_info = data.product_info || {}
                 product.poi_nearest = data.poi_nearest || {}
@@ -338,14 +346,9 @@ async function getProductDetail(productId) {
 // 将组装好的productsList数据发送到后台
 async function sendProductsListToBackground() {
     const params = {
-        attr: '1',
-        dyAccountNo: dyAccountNo,
-        planContent: cacheData,
-        products: productsList.map((product, index) => {
+        attr: '1', dyAccountNo: dyAccountNo, planContent: cacheData, products: productsList.map((product, index) => {
             return {
-                ...product,
-                fromType: '5',
-                sort: index + 1
+                ...product, fromType: '5', sort: index + 1
             }
         })
     }
@@ -401,9 +404,7 @@ setInterval(() => {
     let isLiving = false;
     try {
         const liveMenus = document.querySelectorAll('.okee-main-menu-line-title');
-        isLiving = Array.from(liveMenus).some(menu =>
-            menu.textContent.includes('正在直播')
-        );
+        isLiving = Array.from(liveMenus).some(menu => menu.textContent.includes('正在直播'));
     } catch (e) {
         isLiving = false;
         console.error('获取直播状态失败:', e);
@@ -445,9 +446,7 @@ async function getModalText() {
     const spans = document.querySelectorAll('span');
 
     // 2. 过滤出文本里包含 “违规原因” 的元素
-    const targetSpans = Array.from(spans).filter(span =>
-        span.textContent.includes('处罚原因')
-    );
+    const targetSpans = Array.from(spans).filter(span => span.textContent.includes('处罚原因'));
 
     // 3. 如果只需要第一个匹配项，可以：
     const firstSpan = targetSpans[0] || null;
@@ -459,14 +458,12 @@ async function getModalText() {
 
         const match = modal_span_text.match(pattern);
 
-        const result = match
-            ? {
-                violationReason: match[1].trim(),
-                violationTime: match[2].trim(),
-                punishmentType: match[3].trim(),
-                dyAccountNo: localStorage.getItem('dyAccountNo')
-            }
-            : {};
+        const result = match ? {
+            violationReason: match[1].trim(),
+            violationTime: match[2].trim(),
+            punishmentType: match[3].trim(),
+            dyAccountNo: localStorage.getItem('dyAccountNo')
+        } : {};
 
         console.log(result);
         const dyAccountNo = localStorage.getItem('dyAccountNo')
@@ -523,20 +520,11 @@ async function get_punish_list() {
 
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
-        const res = await fetch(
-            'https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list',
-            {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    user_id: '1258293549605997',
-                    begin_date,
-                    end_date,
-                    compare_begin_date,
-                    compare_end_date
-                })
-            }
-        );
+        const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+                user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
+            })
+        });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
         const {data: list = []} = await res.json();
@@ -604,20 +592,11 @@ async function get_live_goods_list() {
 
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
-        const res = await fetch(
-            'https://eos.douyin.com/life/api/live_screen/v4/replay/live_room_list',
-            {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    user_id: '1258293549605997',
-                    begin_date,
-                    end_date,
-                    compare_begin_date,
-                    compare_end_date
-                })
-            }
-        );
+        const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/live_room_list', {
+            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+                user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
+            })
+        });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
         const {data: list = []} = await res.json();
@@ -632,16 +611,14 @@ async function get_live_goods_list() {
         for (const item of list) {
             try {
                 const param = {
-                    eosLiveId: item.room_id,
-                    roomTitle: item.room_title,// 直播名称
+                    eosLiveId: item.room_id, roomTitle: item.room_title,// 直播名称
                     liveStartTime: item.live_start_time,// 直播开始时间
                     liveEndTime: item.live_end_time,// 直播结束时间
                     liveDurationTime: item.live_duration_time,// 直播时长
                     orderMoney: item.order_money,// 成交金额
                     orderCnt: item.order_cnt,// 成交订单数
                     watchUv: item.watch_uv,// 累计观看人数
-                    dyAccountNo,
-                    dyRoomName: dyRoomName
+                    dyAccountNo, dyRoomName: dyRoomName
                 };
                 params.push(param)
 
@@ -660,6 +637,67 @@ async function get_live_goods_list() {
     }
 }
 
+async function get_live_history_list() {
+    console.log('每天执行一次-get_live_history_list');
+    createTopTips('同步直播间明细——开始');
+
+    const dyAccountNo = localStorage.getItem('dyAccountNo');
+    const dyRoomName = localStorage.getItem('dyRoomName');
+
+
+    const periodDays = 7;             // 周期天数
+    const {
+        begin_date, begin_date_format
+    } = getBeginDate(periodDays)
+
+
+    try {
+        const getUserRes = await fetch('https://buyin.jinritemai.com/index/getUser', {
+            method: 'GET', headers: {'Content-Type': 'application/json'},
+        });
+
+        const getUserResult = await getUserRes.json();
+
+        console.log(`getUserRes接口 ${getUserResult}`)
+        const buyinAccountId = getUserResult?.data?.buyin_account_id
+        const dyAccountName = getUserResult?.data?.user_name
+        const res = await fetch(`https://buyin.jinritemai.com/compass_api/content_live/author/live_detail/history_live?is_asc=false&page_no=1&page_size=10&date_type=21&begin_date=${begin_date}&begin_date_format=${begin_date_format}`, {
+            method: 'GET', headers: {'Content-Type': 'application/json'},
+        });
+        console.log(`接口状态 ${res.status}`);
+        console.log(`接口resp `, res);
+        const {data = {}} = await res.json();
+        const data_result = data.data_result || []
+        console.log('保存参数：', data_result);
+        if (data_result.length === 0) {
+            createTopTips('无直播间明细记录');
+            console.log('ℹ️ 当前无直播间明细记录');
+            return;
+        }
+        const params = []
+
+        for (const item of data_result) {
+            try {
+                const param = {
+                    ...item, buyinAccountId: buyinAccountId, dyAccountName: dyAccountName
+                };
+                params.push(param)
+
+
+            } catch (e) {
+                console.error('⚠️ 单条保存失败：', e, item);
+            }
+        }
+        console.log('保存参数：', params);
+        // const result = await $Request(API.livebroadcastreviewSaveApi, {params});
+        // console.log('✅ 全部记录已处理完毕,保存结果：', result)
+        createTopTips('同步直播间明细——完成');
+    } catch (err) {
+        console.error('❌ 同步过程出错：', err);
+        createTopTips(`同步失败：${err.message || '未知错误'}`);
+    }
+}
+
 
 function getActiveCommentData() {
     return new Promise(async (resolve, reject) => {
@@ -668,8 +706,7 @@ function getActiveCommentData() {
         debounceTimeout = setTimeout(async () => {
             try {
                 const params = {
-                    roomNo: localStorage.getItem('dyAccountNo'),
-                    roomName: localStorage.getItem('dyRoomName')
+                    roomNo: localStorage.getItem('dyAccountNo'), roomName: localStorage.getItem('dyRoomName')
                 };
                 const result = await $Request(API.pullAdminComment + '?roomNo=' + localStorage.getItem('dyAccountNo'), {params});
                 console.log('主动评论数据', result)
@@ -696,10 +733,7 @@ function sendMessage(url, word, data, sendResponse) {
             const send_btn = document.querySelector('.submit-button')
             // 创建一个 mouseclick 事件
             const mouseEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                button: 0 // 左键点击
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             send_btn.dispatchEvent(mouseEvent)
             sendResponse({action: 'send_input_message', data: data, status: 1})
@@ -718,10 +752,7 @@ function sendMessage(url, word, data, sendResponse) {
             const svg_send = document.querySelector('.webcast-chatroom___send-btn')
             // 创建一个 mouseclick 事件
             const mouseEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                button: 0 // 左键点击
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             svg_send.dispatchEvent(mouseEvent)
             sendResponse({action: 'send_input_message', data: data, status: 1})
@@ -741,10 +772,7 @@ function sendMessage(url, word, data, sendResponse) {
             const svg_send = parentEle.querySelector('div[class*="button-"]')
             // 创建一个 mouseclick 事件
             const mouseEvent = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                button: 0 // 左键点击
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             svg_send.dispatchEvent(mouseEvent)
             sendResponse({action: 'send_input_message', data: data, status: 1})
@@ -812,3 +840,29 @@ function createTopTips(text, timeOut = 5000) {
     // 返回定时器 ID，便于外部操作（如取消自动移除）
     return {fixedTipBox, autoRemoveTimer}
 }
+
+function getBeginDate(offsetDays = 7) {
+    const now = new Date();
+
+    // 获取当前 UTC 时间 + 8 小时 = 北京时间
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const beijingTime = new Date(utc + 8 * 60 * 60 * 1000);
+
+    // 减去 offsetDays 天（默认 7 天）
+    beijingTime.setDate(beijingTime.getDate() - offsetDays);
+
+    // 构造格式化时间字符串
+    const year = beijingTime.getFullYear();
+    const month = String(beijingTime.getMonth() + 1).padStart(2, '0');
+    const day = String(beijingTime.getDate()).padStart(2, '0');
+    const formatted = `${year}-${month}-${day}T00:00:00+08:00`;
+
+    // 将格式化时间转成 Date 对象，并得到秒级时间戳
+    const timestampSeconds = Math.floor(new Date(formatted).getTime() / 1000);
+
+    return {
+        begin_date: timestampSeconds,  // 秒级时间戳
+        begin_date_format: formatted   // 格式化字符串
+    };
+}
+

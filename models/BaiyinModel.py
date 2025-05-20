@@ -44,3 +44,8 @@ class CouponRequest(BaseModel):
 
 class LivingRequest(BaseModel):
     deviceNoList: str
+
+
+class LivingCoreDataRequest(BaseModel):
+    userId: str
+    roomId: str
