@@ -48,7 +48,11 @@ const API = {
     // 保存违规信息
     liveviolationrecordsdealSaveApi: '/aiplay/admin/liveviolationrecordsdeal/save',
     // 保存直播复盘记录
-    livebroadcastreviewSaveApi: '/aiplay/admin/livebroadcastreview/batchSave'
+    livebroadcastreviewSaveApi: '/aiplay/admin/livebroadcastreview/batchSave',
+    // 保存百应直播复盘记录
+    livereplaydatasynmessageApi: '/aiplay/admin/livereplaydata/synmessage',
+    // 保存百应直播大屏信息
+    livereplaydatadetailsynmessageApi: '/aiplay/admin/livereplaydatadetail/synmessage'
 
 }
 

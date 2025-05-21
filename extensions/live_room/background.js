@@ -159,6 +159,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 统一数据处理逻辑
         handleShelvesData(request.data)
     }
+
+    if (request.action === 'CLOSE_TAB_BY_URL') {
+        const targetUrl = request.data.url;
+        
+        // 查询所有标签页
+        chrome.tabs.query({}, (tabs) => {
+            try {
+                let found = false;
+                // 遍历所有标签页
+                tabs.forEach(tab => {
+                    // 检查标签页URL是否匹配目标URL
+                    if (tab.url.includes(targetUrl)) {
+                        // 关闭匹配的标签页
+                        chrome.tabs.remove(tab.id);
+                        found = true;
+                    }
+                });
+                
+                // 发送响应
+                sendResponse({
+                    success: true,
+                    message: found ? '标签页已关闭' : '未找到匹配的标签页'
+                });
+            } catch (error) {
+                sendResponse({
+                    success: false,
+                    error: error.message
+                });
+            }
+        });
+        
+        // 返回true表示将异步发送响应
+        return true;
+    }
     return true // 保持通道开放用于异步响应
 })
 

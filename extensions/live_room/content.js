@@ -3,10 +3,6 @@ console.log('当前时间：' + cur_time)
 // 获取抖音账号信息
 let dyAccountNo = null
 
-// 连接socket
-let socketWs = null
-let reconnectStartTime = null // 记录重连的起始时间
-
 // 保存规则配置后启动定时器
 let timerId = null
 let isTimerRunning = false;
@@ -57,7 +53,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('页面加载完成 DOMContentLoaded')
 
-    get_live_history_list()
+
     let timeoutId = null
     // 使用 MutationObserver 替代 setTimeout
     const observer = new MutationObserver((mutations, obs) => {
@@ -105,7 +101,7 @@ function injectFetchInterceptor() {
     }
 }
 
-// 优化事件监听处理
+// 事件监听处理
 window.addEventListener('fetchResponse', (event) => {
     const {url, status, body} = event.detail
     console.log('接口监听-test:', url, status, body)
@@ -146,16 +142,26 @@ window.addEventListener('fetchResponse', (event) => {
         try {
             const data = JSON.parse(body)
             console.log('直播大屏数据:', data.data)
+            const core_data = data?.data?.core_data
+            const other_data = JSON.stringify(data.data)
             // 获取search中的live_room_id 参数
             const params = new URLSearchParams(window.location.search);
             // 获取指定参数值（自动处理URL编码）
-            const liveRoomId = params.get('live_room_id');
-            console.log('liveRoomId:', liveRoomId)
+            const live_id = params.get('live_room_id');
+            console.log('liveRoomId:', live_id)
+            const postData = {
+                live_id,
+                other_data,
+                core_data
+            }
+            get_live_core_data(postData)
 
         } catch (e) {
             console.error('解析 live_room_id 或存储时出错:', e);
         }
     }
+
+
 })
 
 
@@ -425,15 +431,21 @@ async function syncPunishList() {
     try {
         const res = await get_punish_list();
         const res_goods_list = await get_live_goods_list();
+        workTimeCallBack(get_live_history_list)
     } catch (error) {
         console.error('Error syncing punish list:', error);
     }
 }
 
 
-// 设置定时器，每小时同步一次
+// 设置定时器，每小时同步一次数据
 setInterval(() => {
-    console.log('定时器执行')
+    // 当前时间
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+
+    console.log(hour + ':' + minute, '定时器执行')
     syncPunishList();
 }, 3600000);
 
@@ -441,6 +453,27 @@ setInterval(() => {
 // 获取主动评论数据
 let debounceTimeout = null;
 
+
+// 获取抖音账号信息
+function getDyAccountNo() {
+    const accountNoEle = document.querySelector("div[class*='dropdown-panel-']")
+    if (!accountNoEle) {
+        createTopTips('未找到抖音账号信息')
+        return
+    }
+    const accountNo = accountNoEle.querySelector("div[class*='panel-profile-account-']").textContent
+    const accountName = accountNoEle.querySelector("div[class*='panel-profile-name-']").textContent
+    console.log('accountNo', accountNo.split('：')[1])
+    console.log('accountName', accountName)
+    dyAccountNo = accountNo.split('：')[1]
+
+    localStorage.setItem('dyAccountNo', dyAccountNo)
+    localStorage.setItem('dyRoomName', accountName)
+
+
+}
+
+// 获取弹窗内容
 async function getModalText() {
     // 找到弹窗内容
     const spans = document.querySelectorAll('span');
@@ -486,9 +519,15 @@ async function getModalText() {
 
 }
 
+// 获取eos违规记录
 async function get_punish_list() {
     console.log('每天执行一次-get_punish_list');
     createTopTips('同步违规记录——开始');
+    if (window.location.origin !== "https://eos.douyin.com") {
+        // 非eos 不执行
+        console.log('非eos 不执行')
+        return
+    }
 
     // const agreementUserId = localStorage.getItem('agreement_user_id');
     const dyAccountNo = localStorage.getItem('dyAccountNo');
@@ -559,9 +598,15 @@ async function get_punish_list() {
     }
 }
 
+// 获取eos直播复盘
 async function get_live_goods_list() {
     console.log('每天执行一次-get_live_goods_list');
     createTopTips('同步直播复盘——开始');
+    if (window.location.origin !== "https://eos.douyin.com") {
+        // 非eos 不执行
+        console.log('非eos 不执行')
+        return
+    }
 
     const dyAccountNo = localStorage.getItem('dyAccountNo');
     const dyRoomName = localStorage.getItem('dyRoomName');
@@ -637,15 +682,18 @@ async function get_live_goods_list() {
     }
 }
 
+// 获取baiying 直播间数据
 async function get_live_history_list() {
     console.log('每天执行一次-get_live_history_list');
     createTopTips('同步直播间明细——开始');
+    if (window.location.origin !== "https://buyin.jinritemai.com") {
+        // 非eos 不执行
+        console.log('非buyin 不执行')
+        return
+    }
 
-    const dyAccountNo = localStorage.getItem('dyAccountNo');
-    const dyRoomName = localStorage.getItem('dyRoomName');
-
-
-    const periodDays = 7;             // 周期天数
+    // 周期天数
+    const periodDays = 7;
     const {
         begin_date, begin_date_format
     } = getBeginDate(periodDays)
@@ -682,22 +730,46 @@ async function get_live_history_list() {
                     ...item, buyinAccountId: buyinAccountId, dyAccountName: dyAccountName
                 };
                 params.push(param)
-
-
             } catch (e) {
                 console.error('⚠️ 单条保存失败：', e, item);
             }
         }
+
+        function openLinksSequentially(items, index = 0) {
+            if (index >= items.length) return;
+
+            const item = items[index];
+            if (item.operation?.live_id) {
+                window.open(`https://compass.jinritemai.com/screen/live/talent?live_room_id=${item.operation.live_id}`);
+            }
+
+            // 递归调用下一个元素
+            setTimeout(() => {
+                openLinksSequentially(items, index + 1);
+            }, 2000); // 每个间隔 2 秒
+        }
+
+// 调用函数
+        openLinksSequentially(data_result);
         console.log('保存参数：', params);
-        // const result = await $Request(API.livebroadcastreviewSaveApi, {params});
-        // console.log('✅ 全部记录已处理完毕,保存结果：', result)
+        const result = await $Request(API.livereplaydatasynmessageApi, {params});
+        console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步直播间明细——完成');
+
     } catch (err) {
         console.error('❌ 同步过程出错：', err);
         createTopTips(`同步失败：${err.message || '未知错误'}`);
     }
 }
 
+async function get_live_core_data(postData) {
+    await $Request(API.livereplaydatadetailsynmessageApi, {params: postData})
+    console.log('✅ 保存直播间大屏数据成功')
+    createTopTips(`保存直播间大屏数据成功`)
+    workTimeCallBack(() => {
+        closeTabByUrl('https://compass.jinritemai.com/screen/live/talent?live_room_id=' + postData.live_id)
+    }, 1000)
+}
 
 function getActiveCommentData() {
     return new Promise(async (resolve, reject) => {
@@ -781,26 +853,6 @@ function sendMessage(url, word, data, sendResponse) {
 }
 
 
-// 获取抖音账号信息
-function getDyAccountNo() {
-    const accountNoEle = document.querySelector("div[class*='dropdown-panel-']")
-    if (!accountNoEle) {
-        createTopTips('未找到抖音账号信息')
-        return
-    }
-    const accountNo = accountNoEle.querySelector("div[class*='panel-profile-account-']").textContent
-    const accountName = accountNoEle.querySelector("div[class*='panel-profile-name-']").textContent
-    console.log('accountNo', accountNo.split('：')[1])
-    console.log('accountName', accountName)
-    dyAccountNo = accountNo.split('：')[1]
-
-    localStorage.setItem('dyAccountNo', dyAccountNo)
-    localStorage.setItem('dyRoomName', accountName)
-
-
-}
-
-
 // 创建一个屏幕顶部的fixed提示框，黑色背景，白色16号字体。参数为需要展示的文字，文字居中展示
 function createTopTips(text, timeOut = 5000) {
     if (!fixedTipBox) {
@@ -866,3 +918,38 @@ function getBeginDate(offsetDays = 7) {
     };
 }
 
+// ... existing code ...
+
+// 关闭指定URL的标签页
+async function closeTabByUrl(targetUrl) {
+    // 向background.js发送消息，请求关闭标签页
+    // 因为content script没有直接访问chrome.tabs API的权限
+    chrome.runtime.sendMessage({
+        action: 'CLOSE_TAB_BY_URL',
+        data: {
+            url: targetUrl
+        }
+    }, (response) => {
+        console.log('关闭标签页响应:', response);
+        if (response && response.success) {
+            console.log(`✅ 成功关闭URL为 ${targetUrl} 的标签页`);
+        } else {
+            console.error(`❌ 关闭URL为 ${targetUrl} 的标签页失败:`, response?.error || '未知错误');
+        }
+    });
+}
+
+
+function workTimeCallBack(callback, timeOut = 5000) {
+    // 判断现在的时间 是不是早上9点-10点 是的话 关闭标签页
+    const now = new Date();
+    const hour = now.getHours();
+    console.log('workTimeCallBack:' + hour);
+
+    if (hour >= 9 && hour <= 10) {
+
+        setTimeout(() => {
+            callback && callback()
+        }, timeOut);
+    }
+}
