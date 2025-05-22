@@ -441,36 +441,54 @@ class VideoProcessor:
     def _get_encode_params(self):
         """获取编码参数"""
         # 基础编码参数
-        base_params = [
-            "-c:v",
-            "libx264" if not self.use_gpu else "h264_nvenc",
-            "-preset",
-            self.video_preset if not self.use_gpu else self.gpu_preset,
-            "-pix_fmt",
-            "yuv420p",  # 强制使用 8 位颜色
-        ]
+        if self.use_gpu:
+            try:
+                # 尝试使用NVENC
+                cmd = ["ffmpeg", "-hide_banner", "-encoders"]
+                result = subprocess.run(cmd, capture_output=True, text=True)
+                if "h264_nvenc" in result.stdout:
+                    logger.info("使用NVENC硬件加速编码")
+                    return [
+                        "-c:v",
+                        "h264_nvenc",
+                        "-preset",
+                        self.gpu_preset,
+                        "-pix_fmt",
+                        "yuv420p",  # 强制使用 8 位颜色
+                        "-rc",
+                        "vbr",
+                        "-cq",
+                        "23",
+                        "-b:v",
+                        "0",
+                        "-profile:v",
+                        "high",
+                        "-tune",
+                        "hq",
+                        "-spatial-aq",
+                        "1",
+                        "-temporal-aq",
+                        "1",
+                    ]
+                else:
+                    logger.warning("NVENC不可用，切换到CPU编码")
+                    self.use_gpu = False
+            except Exception as e:
+                logger.warning(f"GPU编码器初始化失败: {e}，切换到CPU编码")
+                self.use_gpu = False
 
-        if not self.use_gpu:
-            # CPU 编码参数
-            return base_params + ["-crf", "23"]
-        else:
-            # GPU 编码参数
-            return base_params + [
-                "-rc",
-                "vbr",
-                "-cq",
-                "23",
-                "-b:v",
-                "0",
-                "-profile:v",
-                "high",  # 使用高规格编码
-                "-tune",
-                "hq",  # 高质量调优
-                "-spatial-aq",
-                "1",  # 开启空间自适应量化
-                "-temporal-aq",
-                "1",  # 开启时间自适应量化
-            ]
+        # CPU编码参数（作为备选方案）
+        logger.info("使用CPU编码 (libx264)")
+        return [
+            "-c:v",
+            "libx264",
+            "-preset",
+            self.video_preset,
+            "-pix_fmt",
+            "yuv420p",
+            "-crf",
+            "23",
+        ]
 
     def reencode_clip(self, clip_info):
         """重编码单个视频片段（用于并行处理）"""
