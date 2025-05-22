@@ -197,6 +197,12 @@ def parse_args():
         default=DEFAULT_CONFIG["mirror_ratio"],
         help="随机镜像素材的比例（0~1），如0.5表示一半素材做镜像，默认0.33",
     )
+    parser.add_argument(
+        "--append-mode",
+        choices=["random", "sequential", "alternating"],
+        default="alternating",
+        help="视频补充模式：random-随机补充，sequential-顺序补充，alternating-交替使用",
+    )
 
     args = parser.parse_args()
 
@@ -234,9 +240,12 @@ def parse_args():
             f"自动设置并行处理线程数为: {args.max_workers} (内存: {mem_gb:.0f}GB)"
         )
 
-    # 新增参数赋值
+    # 是否随机镜像
     args.random_mirror = getattr(args, "random_mirror", False)
+    # 随机镜像素材的比例
     args.mirror_ratio = getattr(args, "mirror_ratio", DEFAULT_CONFIG["mirror_ratio"])
+    # 视频补充模式
+    args.append_mode = getattr(args, "append_mode", "alternating")
 
     return args
 
@@ -302,8 +311,12 @@ class VideoProcessor:
         self._resolution_cache = {}
         self._duration_cache = {}
 
-        # 新增参数赋值
-        self.mirror_ratio = getattr(args, "mirror_ratio", 0.33)
+        # 随机镜像
+        self.random_mirror = args.random_mirror
+        # 随机镜像素材的比例
+        self.mirror_ratio = args.mirror_ratio
+        # 视频补充模式
+        self.append_mode = args.append_mode
 
     def _get_audio_params(self):
         """根据质量设置选择音频参数"""
@@ -1059,94 +1072,117 @@ class VideoProcessor:
         else:
             map_label = "[zoomed]"
 
-        # 修复：确保音频流正确处理
+        # 修改音频处理部分，确保音频存在且音量适当
         has_audio = self.has_audio_stream(self.concat_file)
         if has_audio:
-            # 直接调整音量，不做其他处理
-            parts.append(f"[0:a]volume={self.audio_volume}[aout]")
+            # 确保明确复制音频流
+            parts.append(f"[0:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,volume={self.audio_volume}[aout]")
             audio_map = ["-map", "[aout]"]
-            # 使用原始音频编码参数保持音质
-            audio_params = self.audio_params
+            audio_params = ["-c:a", "aac", "-b:a", "192k", "-ac", "2"]
         else:
-            # 如果没有音频，添加静音轨道
-            parts.append("anullsrc=channel_layout=stereo:sample_rate=44100[aout]")
+            # 生成静音
+            parts.append(f"anullsrc=channel_layout=stereo:sample_rate=48000,atrim=duration={dur}[aout]")
             audio_map = ["-map", "[aout]"]
-            audio_params = ["-c:a", "aac", "-b:a", "128k", "-ar", "48000"]
-
-        cmd = (
-            [
-                "ffmpeg",
-                "-nostdin",
-                "-y",
-                "-i",
-                str(self.concat_file),
-                "-filter_complex",
-                ";".join(parts),
-                "-map",
-                map_label,
-            ]
-            + audio_map
-            + [
-                *self._get_encode_params(),
-                *audio_params,
-                "-shortest",
-                str(self.output_file),
-            ]
-        )
+            audio_params = ["-c:a", "aac", "-b:a", "128k"]
+        
+        # 添加调试日志
+        logger.info(f"音频状态: {'有音频流' if has_audio else '无音频流'}, 音量: {self.audio_volume}")
+        
+        cmd = [
+            "ffmpeg", "-nostdin", "-y",
+            "-i", str(self.concat_file),
+            "-filter_complex", ";".join(parts),
+            "-map", map_label,
+        ] + audio_map + [
+            *self._get_encode_params(),
+            *audio_params,
+            "-shortest",
+            str(self.output_file),
+        ]
+        
+        # 输出完整命令方便调试
+        logger.debug(f"缩放处理命令: {' '.join(cmd)}")
         self.run_cmd(cmd, stage_desc="缩放+音量处理")
 
-    def append_concat_file(self):
-        """直接添加已拼接的视频文件"""
+    def append_concat_file(self, clips=None, append_mode='random'):
+        """使用重编码好的素材线性补充视频时长
+        
+        Args:
+            clips: 已重编码的素材列表，如果为None则使用保存的素材
+            append_mode: 'random' 随机选择素材，'sequential' 顺序选择素材
+        """
         # 清除缓存确保获取最新时长
         self._duration_cache.clear()
-
+        
+        # 如果没有提供clips，使用已保存的素材
+        if clips is None and hasattr(self, '_encoded_clips'):
+            clips = self._encoded_clips
+        
+        # 如果仍然没有可用的clips，报错
+        if not clips or len(clips) == 0:
+            raise ValueError("没有可用的素材进行补充，请先重编码素材")
+        
         # 获取当前视频时长
         original_duration = self.get_duration(self.concat_file)
         temp_file = self.temp_folder / "temp_append.mp4"
-
-        # 将当前文件与自身拼接
+        
+        # 获取命令行参数或使用传入的模式
+        actual_mode = append_mode
+        
+        # 根据模式选择素材
+        selected_clips = []
+        if actual_mode == 'random':
+            # 随机选择1-3个素材
+            num_to_select = min(random.randint(1, 3), len(clips))
+            selected_clips = random.sample(clips, num_to_select)
+            logger.info(f"随机选择了 {num_to_select} 个素材")
+        else:  # sequential模式
+            # 使用轮询方式选择下一个素材
+            if not hasattr(self, '_append_index'):
+                self._append_index = 0
+            selected_clips = [clips[self._append_index % len(clips)]]
+            self._append_index += 1
+            logger.info(f"顺序选择了第 {self._append_index-1} 个素材")
+        
+        logger.info(f"使用{actual_mode}模式补充 {len(selected_clips)} 个素材")
+        
+        # 构建命令：将原始文件和选定的素材拼接
+        inputs = ["-i", str(self.concat_file)]
+        for clip in selected_clips:  # 使用筛选后的素材列表
+            inputs.extend(["-i", str(clip)])
+            logger.info(f"添加素材: {clip}")
+        
+        # 构建滤镜链
+        n_inputs = 1 + len(selected_clips)  # 修正：使用selected_clips的长度
+        filter_complex = f"concat=n={n_inputs}:v=1:a=1[v][a];[a]volume={self.audio_volume}[aout]"
+        
         cmd = [
-            "ffmpeg",
-            "-nostdin",
-            "-y",
-            "-i",
-            str(self.concat_file),
-            "-i",
-            str(self.concat_file),
-            "-filter_complex",
-            "concat=n=2:v=1:a=1[v][a]",
-            "-map",
-            "[v]",
-            "-map",
-            "[a]",
-            "-c:v",
-            "libx264",
-            "-preset",
-            self.video_preset,
-            "-crf",
-            "23",
+            "ffmpeg", "-nostdin", "-y",
+            *inputs,
+            "-filter_complex", filter_complex,
+            "-map", "[v]", 
+            "-map", "[aout]",
+            *self._get_encode_params(),
             *self.audio_params,
             str(temp_file),
         ]
-
-        self.run_cmd(cmd, "整体视频拼接")
-
+        
+        self.run_cmd(cmd, f"{actual_mode}模式素材补充")
+        
         # 验证新时长
         new_duration = self.get_duration(temp_file)
-        if new_duration <= original_duration * 1.5:  # 检查是否真的增加了
-            raise RuntimeError(
-                f"拼接后时长不足预期: {original_duration:.2f}s -> {new_duration:.2f}s"
-            )
-
+        if new_duration <= original_duration * 1.05:  # 检查是否真的增加了
+            logger.warning(f"拼接后时长几乎没有增加: {original_duration:.2f}s -> {new_duration:.2f}s")
+        
         # 更新文件
         shutil.move(temp_file, self.concat_file)
         logger.info(
-            f"整体拼接成功: {original_duration / 60:.2f}分钟 -> {new_duration / 60:.2f}分钟"
+            f"素材补充成功: {original_duration / 60:.2f}分钟 -> {new_duration / 60:.2f}分钟"
         )
-
+        
         # 清除缓存
         self._duration_cache.clear()
-
+        
         return new_duration
 
     def simple_concat(self):
@@ -1352,6 +1388,9 @@ class VideoProcessor:
                 self.prepare_temp()
                 # 步骤1：重编码源视频
                 clips, durations = self.reencode_clips()
+                
+                # 保存重编码的素材，供后续补充使用
+                self._encoded_clips = clips
 
                 # 步骤2：初始拼接
                 self.concat_with_xfade(clips)
@@ -1370,17 +1409,34 @@ class VideoProcessor:
 
                     tries = 0
                     max_tries = 100
-
+                    
+                    # 获取命令行参数指定的补充模式
+                    user_append_mode = getattr(self, 'append_mode', 'alternating')
+                    
+                    # 根据用户设置决定补充模式
+                    if user_append_mode == 'alternating':
+                        # 交替模式
+                        current_mode = 'random'
+                        alternate = True
+                    else:
+                        # 固定模式
+                        current_mode = user_append_mode
+                        alternate = False
+                    
                     while current_dur < self.min_duration and tries < max_tries:
                         try:
                             logger.info(
                                 f"当前总时长: {current_dur / 60:.2f}分钟，目标时长: {self.min_duration / 60:.2f}分钟，剩余: {(self.min_duration - current_dur) / 60:.2f}分钟"
                             )
 
-                            # 使用整体拼接方法
-                            new_dur = self.append_concat_file()
+                            # 使用修改后的补充方法
+                            new_dur = self.append_concat_file(self._encoded_clips,append_mode=current_mode)
                             current_dur = new_dur
                             tries += 1
+                            
+                            # 只有在交替模式时才切换
+                            if alternate:
+                                current_mode = 'sequential' if current_mode == 'random' else 'random'
 
                         except Exception as e:
                             logger.error(f"补充拼接失败: {e}")
@@ -1401,6 +1457,10 @@ class VideoProcessor:
                 logger.info(
                     f"最终视频参数：{self.output_width}x{self.output_height} {current_dur:.2f}s"
                 )
+
+                # 在process方法的最后一步前添加
+                if not self.has_audio_stream(self.concat_file):
+                    logger.warning("警告：拼接后的文件没有音频流，最终视频可能无声")
 
         except Exception as e:
             logger.error(f"处理失败: {e}")
