@@ -31,6 +31,8 @@ DEFAULT_CONFIG = {
     "video_preset": "ultrafast",  # 视频编码预设: ultrafast, veryfast, medium
     "simple_concat": True,  # 是否使用简单拼接模式
     "force_encode": False,  # 是否强制统一编码格式
+    "random_mirror": False,  # 是否随机对部分素材做镜像
+    "mirror_ratio": 0.33,  # 镜像素材比例（0~1）
 }
 
 # 日志配置
@@ -184,6 +186,17 @@ def parse_args():
         default="p2",
         help="NVENC预设质量，p1最快但质量最低，p7最慢但质量最高",
     )
+    parser.add_argument(
+        "--random-mirror",
+        action="store_true",
+        help="随机对部分原始素材做左右镜像，镜像后的视频和原视频一起拼接",
+    )
+    parser.add_argument(
+        "--mirror-ratio",
+        type=float,
+        default=DEFAULT_CONFIG["mirror_ratio"],
+        help="随机镜像素材的比例（0~1），如0.5表示一半素材做镜像，默认0.33",
+    )
 
     args = parser.parse_args()
 
@@ -221,6 +234,10 @@ def parse_args():
             f"自动设置并行处理线程数为: {args.max_workers} (内存: {mem_gb:.0f}GB)"
         )
 
+    # 新增参数赋值
+    args.random_mirror = getattr(args, "random_mirror", False)
+    args.mirror_ratio = getattr(args, "mirror_ratio", DEFAULT_CONFIG["mirror_ratio"])
+
     return args
 
 
@@ -236,10 +253,8 @@ class VideoProcessor:
             else self.video_folder / "output_with_zoom.mp4"
         )
 
-        # 使用系统临时目录作为基础
-        temp_base = Path(tempfile.gettempdir()) / "video_processor"
-        temp_base.mkdir(exist_ok=True)
-        self.temp_folder = temp_base / self.video_folder.name
+        # 临时目录直接放在当前素材文件夹下
+        self.temp_folder = self.video_folder / "__temp"
         self.concat_file = self.temp_folder / "__concat.mp4"
         self.temp_concat_prefix = "temp_concat_"
 
@@ -287,14 +302,27 @@ class VideoProcessor:
         self._resolution_cache = {}
         self._duration_cache = {}
 
+        # 新增参数赋值
+        self.mirror_ratio = getattr(args, "mirror_ratio", 0.33)
+
     def _get_audio_params(self):
         """根据质量设置选择音频参数"""
+        # 基础音频参数，移除volume滤镜
         if self.audio_quality == "fast":
-            return ["-c:a", "libmp3lame", "-b:a", "96k", "-ar", "44100"]
+            return [
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-ar",
+                "48000",
+                "-ac",
+                "2",  # 强制双声道
+            ]
         elif self.audio_quality == "normal":
-            return ["-c:a", "aac", "-b:a", "128k", "-ar", "48000"]
+            return ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"]
         else:  # high
-            return ["-c:a", "aac", "-b:a", "192k", "-ar", "48000"]
+            return ["-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2"]
 
     def run_cmd(self, cmd, stage_desc=None):
         """执行命令并记录时间"""
@@ -338,7 +366,7 @@ class VideoProcessor:
             raise
 
     def cleanup_temp(self):
-        """清理临时文件"""
+        """清理临时文件和临时目录"""
         # 清理过时文件
         stale_files = [
             self.video_folder / "output_with_dots.mp4",
@@ -347,12 +375,18 @@ class VideoProcessor:
         ]
         for stale_file in stale_files:
             if stale_file.exists():
-                stale_file.unlink()
+                try:
+                    stale_file.unlink()
+                except Exception as e:
+                    logger.warning(f"删除文件失败: {stale_file} {e}")
 
-        # 清理临时拼接文件
+        # 删除整个临时目录
         if self.temp_folder.exists():
-            for f in self.temp_folder.glob(f"{self.temp_concat_prefix}*.mp4"):
-                f.unlink()
+            try:
+                shutil.rmtree(self.temp_folder)
+                logger.info(f"已删除临时目录: {self.temp_folder}")
+            except Exception as e:
+                logger.warning(f"删除临时目录失败: {e}")
 
     def prepare_temp(self):
         """准备临时文件夹"""
@@ -499,59 +533,90 @@ class VideoProcessor:
         if self.skip_existing and dst.exists():
             try:
                 duration = self.get_duration(dst)
-                if duration > 0:
+                if duration > 0 and self.has_audio_stream(dst):
                     logger.info(f"跳过已存在文件: {dst.name} ({duration:.2f}s)")
                     self.skipped_count += 1
                     return dst, duration
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"检查文件失败: {e}")
 
-        # 获取视频旋转信息
+        # 获取源文件音频信息
+        has_audio = self.has_audio_stream(clip)
+        logger.info(f"处理文件 {clip.name} - {'有' if has_audio else '无'}音频流")
+
+        # 构建基础命令
+        cmd = ["ffmpeg", "-nostdin", "-y", "-i", str(clip)]
+
+        # 如果没有音频，添加静音源
+        if not has_audio:
+            cmd.extend(
+                [
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "anullsrc=channel_layout=stereo:sample_rate=48000",
+                ]
+            )
+
+        # 构建滤镜链
+        vfilters = []
         rotation = self._get_video_rotation(clip)
+        if rotation:
+            vfilters.append(f"transpose={1 if rotation == 90 else 2}")
 
-        # 根据旋转角度调整目标尺寸
         target_width = self.output_width
         target_height = self.output_height
         if rotation in [90, 270]:
             target_width, target_height = target_height, target_width
 
-        # 构建滤镜链
-        filters = []
-
-        # 添加旋转滤镜（如果需要）
-        if rotation:
-            filters.append(f"transpose={1 if rotation == 90 else 2}")
-
-        # 添加缩放和填充滤镜
-        filters.extend(
+        vfilters.extend(
             [
                 f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease",
                 f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2",
             ]
         )
 
-        # 构建命令
-        cmd = [
-            "ffmpeg",
-            "-nostdin",
-            "-y",
-            "-i",
-            str(clip),
-            *self._get_encode_params(),
-            "-force_key_frames",
-            "expr:gte(t,0)",
-            *self.audio_params,
-            "-movflags",
-            "+faststart",
-            "-vf",
-            ",".join(filters),
-            "-metadata:s:v:0",
-            "rotate=0",  # 清除旋转元数据
-            str(dst),
-        ]
+        # 添加编码参数
+        cmd.extend(self._get_encode_params())
+
+        # 添加音频参数
+        if has_audio:
+            cmd.extend(
+                [
+                    "-map",
+                    "0:v:0",  # 第一个输入的视频流
+                    "-map",
+                    "0:a:0?",  # 第一个输入的音频流（如果存在）
+                    *self._get_audio_params(),
+                ]
+            )
+        else:
+            cmd.extend(
+                [
+                    "-map",
+                    "0:v:0",  # 第一个输入的视频流
+                    "-map",
+                    "1:a:0",  # 第二个输入（静音源）的音频流
+                    *self._get_audio_params(),
+                    "-shortest",  # 确保视频和音频长度匹配
+                ]
+            )
+
+        # 添加视频滤镜
+        if vfilters:
+            cmd.extend(["-vf", ",".join(vfilters)])
+
+        # 添加输出文件
+        cmd.extend(["-movflags", "+faststart", "-metadata:s:v:0", "rotate=0", str(dst)])
 
         progress_indicator = f"[{i + 1}/{self.total_clips}]"
         self.run_cmd(cmd, stage_desc=f"重编码 {progress_indicator}: {clip.name}")
+
+        # 验证输出文件
+        if not self.has_audio_stream(dst):
+            logger.error(f"错误：输出文件 {dst.name} 没有音频流！")
+            raise RuntimeError(f"音频处理失败: {dst.name}")
+
         self.processed_count += 1
 
         # 计算预计剩余时间
@@ -653,7 +718,7 @@ class VideoProcessor:
         return video_files
 
     def reencode_clips(self):
-        """并行重编码所有视频片段"""
+        """并行重编码所有视频片段，并根据配置随机镜像部分素材"""
         logger.info("步骤1：重编码所有视频片段")
 
         # 过滤出有效视频文件
@@ -669,11 +734,35 @@ class VideoProcessor:
         if not all_files:
             raise ValueError(f"未在 {self.video_folder} 找到视频文件")
 
+        # ===== 新增：随机镜像部分素材 =====
+        mirror_files = []
+        if getattr(self, "random_mirror", False):
+            logger.info("启用随机镜像功能，部分素材将被左右翻转")
+            import random
+
+            mirror_count = max(1, int(len(all_files) * self.mirror_ratio))
+            mirror_indices = set(random.sample(range(len(all_files)), mirror_count))
+            for idx in mirror_indices:
+                src = all_files[idx]
+                mirrored = self.temp_folder / (src.stem + "_mirrored" + src.suffix)
+                if not mirrored.exists():
+                    self.mirror_video(str(src), str(mirrored))
+                mirror_files.append(mirrored)
+            logger.info(
+                f"已生成 {len(mirror_files)} 个镜像素材 (比例: {self.mirror_ratio})"
+            )
+        # ====== 结束 ======
+
         # 采样选择要处理的文件
         selected_files = self._sample_video_files(all_files)
+        # 合并镜像素材
+        if mirror_files:
+            selected_files = list(selected_files) + mirror_files
 
         self.total_clips = len(selected_files)
-        logger.info(f"找到 {len(all_files)} 个视频文件，将处理 {self.total_clips} 个")
+        logger.info(
+            f"找到 {len(all_files)} 个视频文件，将处理 {self.total_clips} 个（含镜像）"
+        )
 
         # 重置统计信息
         self.start_time = time.time()
@@ -717,28 +806,30 @@ class VideoProcessor:
         # 跳过已存在的文件
         if self.skip_existing and batch_output.exists():
             try:
-                # 验证文件有效性
                 duration = self.get_duration(batch_output)
                 if duration > 0:
                     logger.info(f"跳过已存在批次: {batch_output.name}")
                     return batch_output
             except Exception:
-                # 文件损坏，需要重新拼接
                 pass
 
         inputs = []
         for clip in batch_clips:
             inputs += ["-i", str(clip)]
 
-        # 简化的视频滤镜链
-        video_filter = "".join(f"[{i}:v]" for i in range(len(batch_clips)))
-        video_filter += f"concat=n={len(batch_clips)}:v=1:a=0[v]"
+        # 构建滤镜链
+        filter_parts = []
+        # 1. 构建输入标签部分
+        for i in range(len(batch_clips)):
+            filter_parts.append(f"[{i}:v][{i}:a]")
 
-        # 简化音频处理 - 避免复杂的音频规范化处理
-        audio_filter = "".join(f"[{i}:a]" for i in range(len(batch_clips)))
-        audio_filter += f"concat=n={len(batch_clips)}:v=0:a=1[a]"
+        # 2. 添加concat滤镜，输出到临时标签
+        filter_parts.append(f"concat=n={len(batch_clips)}:v=1:a=1[v][a];")
 
-        filter_complex = f"{video_filter};{audio_filter}"
+        # 3. 添加音量调整滤镜
+        filter_parts.append(f"[a]volume={self.audio_volume}[aout]")
+
+        filter_complex = "".join(filter_parts)
 
         cmd = (
             ["ffmpeg", "-nostdin", "-y"]
@@ -749,19 +840,13 @@ class VideoProcessor:
                 "-map",
                 "[v]",
                 "-map",
-                "[a]",
-                "-c:v",
-                "libx264",
-                "-preset",
-                self.video_preset,
-                "-crf",
-                "23",
+                "[aout]",
+                *self._get_encode_params(),
                 *self.audio_params,
                 str(batch_output),
             ]
         )
         self.run_cmd(cmd, stage_desc=f"批次拼接 #{batch_index + 1}")
-
         return batch_output
 
     def concat_with_xfade(self, clips):
@@ -887,24 +972,32 @@ class VideoProcessor:
         for file in input_files:
             inputs += ["-i", str(file)]
 
-        # 简化的拼接方式
+        # 构建滤镜链
+        filter_parts = []
+        # 1. 构建输入标签部分
+        for i in range(len(input_files)):
+            filter_parts.append(f"[{i}:v][{i}:a]")
+
+        # 2. 添加concat滤镜，输出到临时标签
+        filter_parts.append(f"concat=n={len(input_files)}:v=1:a=1[v][a];")
+
+        # 3. 添加音量调整滤镜
+        filter_parts.append(f"[a]volume={self.audio_volume}[aout]")
+
+        filter_complex = "".join(filter_parts)
+
         cmd = [
             "ffmpeg",
             "-nostdin",
             "-y",
             *inputs,
             "-filter_complex",
-            f"concat=n={len(input_files)}:v=1:a=1[v][a]",
+            filter_complex,
             "-map",
             "[v]",
             "-map",
-            "[a]",
-            "-c:v",
-            "libx264",
-            "-preset",
-            self.video_preset,
-            "-crf",
-            "23",
+            "[aout]",
+            *self._get_encode_params(),
             *self.audio_params,
             str(self.concat_file),
         ]
@@ -919,23 +1012,23 @@ class VideoProcessor:
         dur = self.get_duration(self.concat_file)
 
         # 生成缩放时间点
-        times = []
+        self.zoom_times = []
         step = random.randint(self.min_interval, self.max_interval)
         t = self.min_interval
         while t < dur:
-            times.append(round(t, 2))
+            self.zoom_times.append(round(t, 2))
             t += step
 
         # 如果没有缩放点并且启用了预设缩放，添加中间点
-        if not times and self.preset_zoom:
-            times = [dur / 2]
+        if not self.zoom_times and self.preset_zoom:
+            self.zoom_times = [dur / 2]
 
         # 确保最后一个缩放效果持续到视频结束
-        if times and times[-1] + self.zoom_duration < dur:
-            times[-1] = dur - self.zoom_duration
+        if self.zoom_times and self.zoom_times[-1] + self.zoom_duration < dur:
+            self.zoom_times[-1] = dur - self.zoom_duration
 
         # 缩放位置选项
-        positions = [
+        self.zoom_positions = [
             (0, 0),  # 左上
             (w - w // self.zoom_scale, 0),  # 右上
             (0, h - h // self.zoom_scale),  # 左下
@@ -946,8 +1039,8 @@ class VideoProcessor:
         # 构建滤镜链
         parts = []
         prev_label = "[0:v]"
-        for i, start in enumerate(times):
-            x, y = random.choice(positions)
+        for i, start in enumerate(self.zoom_times):
+            x, y = random.choice(self.zoom_positions)
             parts.append(
                 f"[0:v]crop={w // self.zoom_scale}:{h // self.zoom_scale}:{x}:{y},scale={w}:{h}[z{i}]"
             )
@@ -966,14 +1059,19 @@ class VideoProcessor:
         else:
             map_label = "[zoomed]"
 
-        # 简化音频处理
+        # 修复：确保音频流正确处理
         has_audio = self.has_audio_stream(self.concat_file)
         if has_audio:
+            # 直接调整音量，不做其他处理
             parts.append(f"[0:a]volume={self.audio_volume}[aout]")
             audio_map = ["-map", "[aout]"]
+            # 使用原始音频编码参数保持音质
+            audio_params = self.audio_params
         else:
+            # 如果没有音频，添加静音轨道
             parts.append("anullsrc=channel_layout=stereo:sample_rate=44100[aout]")
             audio_map = ["-map", "[aout]"]
+            audio_params = ["-c:a", "aac", "-b:a", "128k", "-ar", "48000"]
 
         cmd = (
             [
@@ -989,15 +1087,8 @@ class VideoProcessor:
             ]
             + audio_map
             + [
-                "-c:v",
-                "libx264",
-                "-preset",
-                self.video_preset,
-                "-pix_fmt",
-                "yuv420p",
-                "-movflags",
-                "+faststart",
-                *self.audio_params,
+                *self._get_encode_params(),
+                *audio_params,
                 "-shortest",
                 str(self.output_file),
             ]
@@ -1319,6 +1410,34 @@ class VideoProcessor:
             logger.info(f"总耗时 {elapsed // 60:.0f}分{elapsed % 60:.0f}秒")
 
         return self.output_file
+
+    def mirror_video(self, input_file: str, output_file: str = None) -> str:
+        """
+        对指定视频文件进行左右镜像（水平翻转），输出到output_file。
+        如果output_file未指定，则在原文件名后加_mirrored后缀。
+        返回输出文件路径。
+        """
+        input_path = Path(input_file)
+        if output_file is None:
+            output_path = input_path.with_name(
+                input_path.stem + "_mirrored" + input_path.suffix
+            )
+        else:
+            output_path = Path(output_file)
+
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_path),
+            "-vf",
+            "hflip",
+            "-c:a",
+            "copy",
+            str(output_path),
+        ]
+        self.run_cmd(cmd, stage_desc=f"左右镜像: {input_path.name}")
+        return str(output_path)
 
 
 def main():
