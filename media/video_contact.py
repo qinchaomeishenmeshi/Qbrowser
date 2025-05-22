@@ -440,46 +440,36 @@ class VideoProcessor:
 
     def _get_encode_params(self):
         """获取编码参数"""
-        if not self.use_gpu:
-            return [
-                "-c:v",
-                "libx264",
-                "-preset",
-                self.video_preset,
-                "-crf",
-                "23",
-            ]
+        # 基础编码参数
+        base_params = [
+            "-c:v",
+            "libx264" if not self.use_gpu else "h264_nvenc",
+            "-preset",
+            self.video_preset if not self.use_gpu else self.gpu_preset,
+            "-pix_fmt",
+            "yuv420p",  # 强制使用 8 位颜色
+        ]
 
-        if self.is_windows and self.encoder == "h264_nvenc":
-            return [
-                "-c:v",
-                "h264_nvenc",
-                "-preset",
-                self.gpu_preset,
+        if not self.use_gpu:
+            # CPU 编码参数
+            return base_params + ["-crf", "23"]
+        else:
+            # GPU 编码参数
+            return base_params + [
                 "-rc",
                 "vbr",
                 "-cq",
                 "23",
                 "-b:v",
                 "0",
-            ]
-        elif self.is_mac and self.encoder == "h264_videotoolbox":
-            return [
-                "-c:v",
-                "h264_videotoolbox",
-                "-b:v",
-                "5000k",
-                "-allow_sw",
-                "1",
-            ]
-        else:
-            return [
-                "-c:v",
-                "libx264",
-                "-preset",
-                self.video_preset,
-                "-crf",
-                "23",
+                "-profile:v",
+                "high",  # 使用高规格编码
+                "-tune",
+                "hq",  # 高质量调优
+                "-spatial-aq",
+                "1",  # 开启空间自适应量化
+                "-temporal-aq",
+                "1",  # 开启时间自适应量化
             ]
 
     def reencode_clip(self, clip_info):
@@ -498,9 +488,29 @@ class VideoProcessor:
             except Exception:
                 pass
 
-        # 强制统一尺寸 + 清除旋转元数据
-        vf_scale = f"scale={self.output_width}:{self.output_height}:force_original_aspect_ratio=decrease,"
-        vf_pad = f"pad={self.output_width}:{self.output_height}:(ow-iw)/2:(oh-ih)/2"
+        # 获取视频旋转信息
+        rotation = self._get_video_rotation(clip)
+
+        # 根据旋转角度调整目标尺寸
+        target_width = self.output_width
+        target_height = self.output_height
+        if rotation in [90, 270]:
+            target_width, target_height = target_height, target_width
+
+        # 构建滤镜链
+        filters = []
+
+        # 添加旋转滤镜（如果需要）
+        if rotation:
+            filters.append(f"transpose={1 if rotation == 90 else 2}")
+
+        # 添加缩放和填充滤镜
+        filters.extend(
+            [
+                f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease",
+                f"pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2",
+            ]
+        )
 
         # 构建命令
         cmd = [
@@ -516,9 +526,9 @@ class VideoProcessor:
             "-movflags",
             "+faststart",
             "-vf",
-            f"{vf_scale}{vf_pad}",
+            ",".join(filters),
             "-metadata:s:v:0",
-            "rotate=0",
+            "rotate=0",  # 清除旋转元数据
             str(dst),
         ]
 
@@ -538,6 +548,53 @@ class VideoProcessor:
             )
 
         return dst, self.get_duration(dst)
+
+    def _get_video_rotation(self, video_path):
+        """获取视频旋转角度"""
+        try:
+            cmd = [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream_tags=rotate",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            rotation = result.stdout.strip()
+
+            if rotation:
+                return int(rotation)
+
+            # 检查显示矩阵
+            cmd = [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream_side_data=displaymatrix",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(video_path),
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if "rotation of 90.00 degrees" in result.stdout:
+                return 90
+            elif "rotation of 270.00 degrees" in result.stdout:
+                return 270
+            elif "rotation of 180.00 degrees" in result.stdout:
+                return 180
+
+        except Exception as e:
+            logger.warning(f"获取视频旋转信息失败: {e}")
+
+        return 0
 
     def _sample_video_files(self, video_files):
         """根据采样策略选择要处理的视频文件"""
@@ -587,7 +644,7 @@ class VideoProcessor:
                 f
                 for f in self.video_folder.iterdir()
                 if f.suffix.lower() in [".mp4", ".mov", ".avi"]
-                   and not f.name.startswith(("__", "output_with"))
+                and not f.name.startswith(("__", "output_with"))
             ]
         )
 
@@ -618,7 +675,7 @@ class VideoProcessor:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 batch_size = 20  # 每批处理20个文件
                 for i in range(0, len(selected_files), batch_size):
-                    batch = selected_files[i: i + batch_size]
+                    batch = selected_files[i : i + batch_size]
                     results = list(
                         executor.map(self.reencode_clip, enumerate(batch, i))
                     )
@@ -636,7 +693,7 @@ class VideoProcessor:
         """处理单个批次的拼接"""
         batch_index, batch_clips = batch_info
         batch_output = (
-                self.temp_folder / f"{self.temp_concat_prefix}{batch_index:02d}.mp4"
+            self.temp_folder / f"{self.temp_concat_prefix}{batch_index:02d}.mp4"
         )
 
         # 跳过已存在的文件
@@ -666,24 +723,24 @@ class VideoProcessor:
         filter_complex = f"{video_filter};{audio_filter}"
 
         cmd = (
-                ["ffmpeg", "-nostdin", "-y"]
-                + inputs
-                + [
-                    "-filter_complex",
-                    filter_complex,
-                    "-map",
-                    "[v]",
-                    "-map",
-                    "[a]",
-                    "-c:v",
-                    "libx264",
-                    "-preset",
-                    self.video_preset,
-                    "-crf",
-                    "23",
-                    *self.audio_params,
-                    str(batch_output),
-                ]
+            ["ffmpeg", "-nostdin", "-y"]
+            + inputs
+            + [
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "[v]",
+                "-map",
+                "[a]",
+                "-c:v",
+                "libx264",
+                "-preset",
+                self.video_preset,
+                "-crf",
+                "23",
+                *self.audio_params,
+                str(batch_output),
+            ]
         )
         self.run_cmd(cmd, stage_desc=f"批次拼接 #{batch_index + 1}")
 
@@ -701,7 +758,7 @@ class VideoProcessor:
         # 准备批次
         batches = []
         for i in range(0, len(clips), self.batch_size):
-            batch_clips = clips[i: i + self.batch_size]
+            batch_clips = clips[i : i + self.batch_size]
             batches.append((i // self.batch_size, batch_clips))
 
         # 处理批次
@@ -714,10 +771,10 @@ class VideoProcessor:
         else:
             # 并行处理批次，但限制同时处理的批次数
             with ThreadPoolExecutor(
-                    max_workers=min(len(batches), self.max_workers)
+                max_workers=min(len(batches), self.max_workers)
             ) as executor:
                 for i in range(0, len(batches), self.max_workers):
-                    current_batches = batches[i: i + self.max_workers]
+                    current_batches = batches[i : i + self.max_workers]
                     results = list(executor.map(self.process_batch, current_batches))
                     temp_concat_files.extend(results)
 
@@ -729,7 +786,7 @@ class VideoProcessor:
         # 一级拼接 - 每batch_size个文件一组
         level1_batches = []
         for i in range(0, len(clips), self.batch_size):
-            batch_clips = clips[i: i + self.batch_size]
+            batch_clips = clips[i : i + self.batch_size]
             level1_batches.append((i // self.batch_size, batch_clips))
 
         # 处理一级批次
@@ -749,8 +806,10 @@ class VideoProcessor:
             batch_size = min(10, len(level1_files) // 3)  # 合适的二级批次大小
 
             for i in range(0, len(level1_files), batch_size):
-                batch_files = level1_files[i: i + batch_size]
-                output_file = self.temp_folder / f"level2_batch_{i // batch_size:02d}.mp4"
+                batch_files = level1_files[i : i + batch_size]
+                output_file = (
+                    self.temp_folder / f"level2_batch_{i // batch_size:02d}.mp4"
+                )
 
                 # 合并这批文件
                 self._concat_files(batch_files, output_file)
@@ -899,31 +958,31 @@ class VideoProcessor:
             audio_map = ["-map", "[aout]"]
 
         cmd = (
-                [
-                    "ffmpeg",
-                    "-nostdin",
-                    "-y",
-                    "-i",
-                    str(self.concat_file),
-                    "-filter_complex",
-                    ";".join(parts),
-                    "-map",
-                    map_label,
-                ]
-                + audio_map
-                + [
-                    "-c:v",
-                    "libx264",
-                    "-preset",
-                    self.video_preset,
-                    "-pix_fmt",
-                    "yuv420p",
-                    "-movflags",
-                    "+faststart",
-                    *self.audio_params,
-                    "-shortest",
-                    str(self.output_file),
-                ]
+            [
+                "ffmpeg",
+                "-nostdin",
+                "-y",
+                "-i",
+                str(self.concat_file),
+                "-filter_complex",
+                ";".join(parts),
+                "-map",
+                map_label,
+            ]
+            + audio_map
+            + [
+                "-c:v",
+                "libx264",
+                "-preset",
+                self.video_preset,
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+                *self.audio_params,
+                "-shortest",
+                str(self.output_file),
+            ]
         )
         self.run_cmd(cmd, stage_desc="缩放+音量处理")
 
@@ -991,7 +1050,7 @@ class VideoProcessor:
                 f
                 for f in self.video_folder.iterdir()
                 if f.suffix.lower() in [".mp4", ".mov", ".avi"]
-                   and not f.name.startswith(("__", "output_with"))
+                and not f.name.startswith(("__", "output_with"))
             ]
         )
 
@@ -1009,7 +1068,9 @@ class VideoProcessor:
 
             # 检查是否需要补充时长
             if current_duration < self.min_duration:
-                logger.info(f"当前时长不足 {self.min_duration / 60:.2f}分钟，开始补充...")
+                logger.info(
+                    f"当前时长不足 {self.min_duration / 60:.2f}分钟，开始补充..."
+                )
 
                 tries = 0
                 max_tries = 100
