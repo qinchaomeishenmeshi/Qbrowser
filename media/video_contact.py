@@ -181,6 +181,13 @@ def parse_args():
         help="使用GPU加速（需要NVIDIA显卡和NVENC支持）",
     )
     parser.add_argument(
+        "--encoder",
+        type=str,
+        choices=["auto", "h264_nvenc", "h264_videotoolbox", "h264_qsv", "h264_amf", "libx264"],
+        default="auto",
+        help="指定编码器: auto-自动检测, h264_nvenc-NVIDIA, h264_videotoolbox-Mac, h264_qsv-Intel, h264_amf-AMD, libx264-CPU",
+    )
+    parser.add_argument(
         "--gpu-preset",
         choices=["p1", "p2", "p3", "p4", "p5", "p6", "p7"],
         default="p2",
@@ -294,9 +301,11 @@ class VideoProcessor:
         # GPU相关配置
         self.use_gpu = args.use_gpu
         self.gpu_preset = args.gpu_preset
+        # 用户指定的编码器选择
+        self.encoder_choice = args.encoder
 
         # 检查GPU可用性
-        if self.use_gpu:
+        if self.use_gpu or self.encoder_choice != "auto":
             self._check_gpu_availability()
 
         # 音频编码参数
@@ -487,43 +496,87 @@ class VideoProcessor:
 
     def _get_encode_params(self):
         """获取编码参数"""
-        # 基础编码参数
-        if self.use_gpu:
-            try:
-                # 尝试使用NVENC
-                cmd = ["ffmpeg", "-hide_banner", "-encoders"]
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                if "h264_nvenc" in result.stdout:
-                    logger.info("使用NVENC硬件加速编码")
-                    return [
-                        "-c:v",
-                        "h264_nvenc",
-                        "-preset",
-                        self.gpu_preset,
-                        "-pix_fmt",
-                        "yuv420p",  # 强制使用 8 位颜色
-                        "-rc",
-                        "vbr",
-                        "-cq",
-                        "23",
-                        "-b:v",
-                        "0",
-                        "-profile:v",
-                        "high",
-                        "-tune",
-                        "hq",
-                        "-spatial-aq",
-                        "1",
-                        "-temporal-aq",
-                        "1",
-                    ]
-                else:
-                    logger.warning("NVENC不可用，切换到CPU编码")
-                    self.use_gpu = False
-            except Exception as e:
-                logger.warning(f"GPU编码器初始化失败: {e}，切换到CPU编码")
-                self.use_gpu = False
-
+        # 使用已经由_check_gpu_availability设置好的self.encoder
+        if self.use_gpu and hasattr(self, 'encoder'):
+            encoder_type = self.encoder
+            
+            if encoder_type == "h264_nvenc":  # NVIDIA GPU
+                logger.info("使用NVENC硬件加速编码")
+                return [
+                    "-c:v",
+                    encoder_type,
+                    "-preset",
+                    self.gpu_preset,
+                    "-pix_fmt",
+                    "yuv420p",  # 强制使用 8 位颜色
+                    "-rc",
+                    "vbr",
+                    "-cq",
+                    "23",
+                    "-b:v",
+                    "0",
+                    "-profile:v",
+                    "high",
+                    "-tune",
+                    "hq",
+                    "-spatial-aq",
+                    "1",
+                    "-temporal-aq",
+                    "1",
+                ]
+            elif encoder_type == "h264_videotoolbox":  # macOS VideoToolbox
+                logger.info("使用VideoToolbox硬件加速编码")
+                return [
+                    "-c:v",
+                    encoder_type,
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-b:v",
+                    "5M",
+                    "-allow_sw",
+                    "1",
+                    "-profile:v",
+                    "high",
+                ]
+            elif encoder_type == "h264_qsv":  # Intel QuickSync
+                logger.info("使用Intel QuickSync硬件加速编码")
+                return [
+                    "-c:v",
+                    encoder_type,
+                    "-preset",
+                    "medium",
+                    "-pix_fmt",
+                    "nv12",  # QSV通常使用nv12
+                    "-global_quality",
+                    "23",
+                    "-look_ahead",
+                    "1",
+                ]
+            elif encoder_type == "h264_amf":  # AMD AMF
+                logger.info("使用AMD AMF硬件加速编码")
+                return [
+                    "-c:v",
+                    encoder_type,
+                    "-quality",
+                    "quality",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-rc",
+                    "cqp",
+                    "-qp_i",
+                    "23",
+                    "-qp_p",
+                    "25",
+                ]
+            else:  # 其他硬件编码器
+                logger.info(f"使用硬件编码器: {encoder_type}")
+                return [
+                    "-c:v",
+                    encoder_type,
+                    "-pix_fmt",
+                    "yuv420p",
+                ]
+        
         # CPU编码参数（作为备选方案）
         logger.info("使用CPU编码 (libx264)")
         return [
@@ -1346,11 +1399,27 @@ class VideoProcessor:
     def _check_gpu_availability(self):
         """检查GPU/硬件编码器是否可用"""
         try:
+            # 获取所有可用编码器
             result = subprocess.run(
                 ["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True
             )
             encoders = result.stdout.lower()
-
+            
+            # 如果用户指定了编码器（非auto），优先使用
+            if hasattr(self, 'encoder_choice') and self.encoder_choice != "auto":
+                user_encoder = self.encoder_choice
+                
+                # 检查用户指定的编码器是否可用
+                if user_encoder in encoders:
+                    logger.info(f"使用用户指定的编码器: {user_encoder}")
+                    self.encoder = user_encoder
+                    # 如果是硬件编码器，则设置GPU标志
+                    self.use_gpu = user_encoder != "libx264"
+                    return
+                else:
+                    logger.warning(f"用户指定的编码器 {user_encoder} 不可用，将尝试自动检测")
+            
+            # 自动检测模式
             # 检查系统类型
             if self.is_mac:  # macOS
                 if "h264_videotoolbox" in encoders:
@@ -1367,8 +1436,16 @@ class VideoProcessor:
                     self.use_gpu = True
                     self.encoder = "h264_nvenc"
                     logger.info("检测到NVENC编码器支持，将使用GPU加速")
+                elif "h264_qsv" in encoders:  # Intel QuickSync
+                    self.use_gpu = True
+                    self.encoder = "h264_qsv"
+                    logger.info("检测到Intel QuickSync支持，将使用硬件加速")
+                elif "h264_amf" in encoders:  # AMD
+                    self.use_gpu = True
+                    self.encoder = "h264_amf"
+                    logger.info("检测到AMD AMF支持，将使用硬件加速")
                 else:
-                    logger.warning("未检测到NVENC编码器支持，将使用CPU编码")
+                    logger.warning("未检测到硬件编码器支持，将使用CPU编码")
                     self.use_gpu = False
                     self.encoder = "libx264"
         except Exception as e:
