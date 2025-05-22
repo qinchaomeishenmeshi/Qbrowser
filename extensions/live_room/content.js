@@ -715,7 +715,12 @@ async function get_live_history_list() {
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
         const {data = {}} = await res.json();
-        const data_result = data.data_result || []
+        const data_result = data.data_result?.map(it => {
+            return {
+                ...it,
+                pay_gmv: it.pay_gmv ? Number(it.pay_gmv.replace('¥', '')) : 0,
+            }
+        }) || []
         console.log('保存参数：', data_result);
         if (data_result.length === 0) {
             createTopTips('无直播间明细记录');
@@ -944,7 +949,7 @@ function workTimeCallBack(callback, timeOut = 5000) {
     // 判断现在的时间 是不是早上9点-10点 是的话 关闭标签页
     const now = new Date();
     const hour = now.getHours();
-    console.log('workTimeCallBack:' + hour);
+    console.log('workTimeCallBack:', hour, callback);
 
     if (hour >= 9 && hour <= 10) {
 
