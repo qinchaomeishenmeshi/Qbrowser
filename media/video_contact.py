@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import math
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -33,6 +34,10 @@ DEFAULT_CONFIG = {
     "force_encode": False,  # 是否强制统一编码格式
     "random_mirror": False,  # 是否随机对部分素材做镜像
     "mirror_ratio": 0.33,  # 镜像素材比例（0~1）
+    "random_rotate": False,  # 是否随机旋转视频
+    "rotate_angle": 15,  # 旋转角度（度）
+    "rotate_ratio": 0.25,  # 旋转素材比例（0~1）
+    "rotate_scale": 1.5,  # 旋转素材放大比例
 }
 
 # 日志配置
@@ -212,6 +217,29 @@ def parse_args():
         help="随机镜像素材的比例（0~1），如0.5表示一半素材做镜像，默认0.33",
     )
     parser.add_argument(
+        "--random-rotate",
+        action="store_true",
+        help="随机对部分原始素材进行左右旋转，旋转后的视频和原视频一起拼接",
+    )
+    parser.add_argument(
+        "--rotate-angle",
+        type=float,
+        default=DEFAULT_CONFIG["rotate_angle"],
+        help="旋转角度（度），默认15度",
+    )
+    parser.add_argument(
+        "--rotate-ratio",
+        type=float,
+        default=DEFAULT_CONFIG["rotate_ratio"],
+        help="随机旋转素材的比例（0~1），如0.25表示四分之一素材做旋转，默认0.25",
+    )
+    parser.add_argument(
+        "--rotate-scale",
+        type=float,
+        default=DEFAULT_CONFIG["rotate_scale"],
+        help="旋转素材放大比例，值越大黑边越少但裁剪越多，默认1.5",
+    )
+    parser.add_argument(
         "--append-mode",
         choices=["random", "sequential", "alternating"],
         default="alternating",
@@ -274,6 +302,16 @@ def parse_args():
     args.random_mirror = getattr(args, "random_mirror", False)
     # 随机镜像素材的比例
     args.mirror_ratio = getattr(args, "mirror_ratio", DEFAULT_CONFIG["mirror_ratio"])
+
+    # 是否随机旋转
+    args.random_rotate = getattr(args, "random_rotate", False)
+    # 旋转角度
+    args.rotate_angle = getattr(args, "rotate_angle", DEFAULT_CONFIG["rotate_angle"])
+    # 随机旋转素材的比例
+    args.rotate_ratio = getattr(args, "rotate_ratio", DEFAULT_CONFIG["rotate_ratio"])
+    # 旋转素材放大比例
+    args.rotate_scale = getattr(args, "rotate_scale", DEFAULT_CONFIG["rotate_scale"])
+
     # 视频补充模式
     args.append_mode = getattr(args, "append_mode", "alternating")
 
@@ -357,6 +395,16 @@ class VideoProcessor:
         self.random_mirror = args.random_mirror
         # 随机镜像素材的比例
         self.mirror_ratio = args.mirror_ratio
+
+        # 随机旋转
+        self.random_rotate = args.random_rotate
+        # 旋转角度
+        self.rotate_angle = args.rotate_angle
+        # 随机旋转素材的比例
+        self.rotate_ratio = args.rotate_ratio
+        # 旋转素材放大比例
+        self.rotate_scale = args.rotate_scale
+
         # 视频补充模式
         self.append_mode = args.append_mode
 
@@ -964,11 +1012,10 @@ class VideoProcessor:
         if not all_files:
             raise ValueError(f"未在 {self.video_folder} 找到视频文件")
 
-        # ===== 新增：随机镜像部分素材 =====
+        # ===== 处理：随机镜像部分素材 =====
         mirror_files = []
         if getattr(self, "random_mirror", False):
             logger.info("启用随机镜像功能，部分素材将被左右翻转")
-            import random
 
             mirror_count = max(1, int(len(all_files) * self.mirror_ratio))
             mirror_indices = set(random.sample(range(len(all_files)), mirror_count))
@@ -981,17 +1028,52 @@ class VideoProcessor:
             logger.info(
                 f"已生成 {len(mirror_files)} 个镜像素材 (比例: {self.mirror_ratio})"
             )
-        # ====== 结束 ======
+
+        # ===== 处理：随机旋转部分素材 =====
+        rotated_files = []
+        if getattr(self, "random_rotate", False):
+            logger.info(f"启用随机旋转功能，部分素材将被旋转约 {self.rotate_angle} 度")
+
+            # 确保不与镜像素材重复
+            available_indices = list(
+                set(range(len(all_files))) - set(mirror_indices)
+                if "mirror_indices" in locals()
+                else range(len(all_files))
+            )
+            if not available_indices:  # 如果所有素材都被镜像了，就从镜像素材中选
+                available_indices = range(len(all_files))
+
+            rotate_count = max(1, int(len(all_files) * self.rotate_ratio))
+            rotate_count = min(
+                rotate_count, len(available_indices)
+            )  # 确保不超过可用索引数量
+
+            rotate_indices = set(random.sample(available_indices, rotate_count))
+            for idx in rotate_indices:
+                src = all_files[idx]
+                # 随机选择正负角度
+                angle = self.rotate_angle * random.choice([-1, 1])
+                rotated = self.temp_folder / (
+                    src.stem + f"_rotated{angle}" + src.suffix
+                )
+                if not rotated.exists():
+                    self.rotate_video(str(src), str(rotated), angle)
+                rotated_files.append(rotated)
+            logger.info(
+                f"已生成 {len(rotated_files)} 个旋转素材 (比例: {self.rotate_ratio})"
+            )
 
         # 采样选择要处理的文件
         selected_files = self._sample_video_files(all_files)
-        # 合并镜像素材
+        # 合并镜像和旋转素材
         if mirror_files:
             selected_files = list(selected_files) + mirror_files
+        if rotated_files:
+            selected_files = list(selected_files) + rotated_files
 
         self.total_clips = len(selected_files)
         logger.info(
-            f"找到 {len(all_files)} 个视频文件，将处理 {self.total_clips} 个（含镜像）"
+            f"找到 {len(all_files)} 个视频文件，将处理 {self.total_clips} 个（含镜像和旋转）"
         )
 
         # 重置统计信息
@@ -1075,7 +1157,6 @@ class VideoProcessor:
         if not has_encoder:
             audio_params.extend(["-c:a", "copy"])
 
-        # 使用ffmpeg高质量音频处理选项
         cmd = [
             "ffmpeg",
             "-nostdin",
@@ -1240,14 +1321,19 @@ class VideoProcessor:
 
         # 构建滤镜链
         filter_parts = []
-        # 1. 构建输入标签部分
+        # 1. 构建输入标签部分，添加setsar滤镜统一SAR
         for i in range(len(input_files)):
-            filter_parts.append(f"[{i}:v][{i}:a]")
+            filter_parts.append(f"[{i}:v]setsar=1:1[v{i}];")
 
-        # 2. 添加concat滤镜，输出到临时标签
-        filter_parts.append(f"concat=n={len(input_files)}:v=1:a=1[v][a]")
+        # 2. 合并所有视频流
+        v_streams = "".join(f"[v{i}]" for i in range(len(input_files)))
+        filter_parts.append(f"{v_streams}concat=n={len(input_files)}:v=1:a=0[v];")
 
-        # 注意：音量调整放到最后阶段处理，这里不做音量调整
+        # 3. 合并所有音频流
+        a_streams = "".join(f"[{i}:a]" for i in range(len(input_files)))
+        filter_parts.append(f"{a_streams}concat=n={len(input_files)}:v=0:a=1[a]")
+
+        # 完整滤镜链
         filter_complex = "".join(filter_parts)
 
         # 保留音频编码参数中的编码器选择，但不重新指定采样率和声道
@@ -1854,9 +1940,28 @@ class VideoProcessor:
             inputs.extend(["-i", str(clip)])
             logger.info(f"添加素材: {clip}")
 
-        # 构建滤镜链
-        n_inputs = 1 + len(selected_clips)  # 修正：使用selected_clips的长度
-        filter_complex = f"concat=n={n_inputs}:v=1:a=1[v][a]"
+        # 构建滤镜链，添加setsar滤镜统一SAR比例
+        n_inputs = 1 + len(selected_clips)  # 原始视频加上新增的素材
+
+        # 使用更复杂的滤镜链，为每个输入添加setsar滤镜
+        filter_parts = []
+
+        # 首先为每个输入添加setsar滤镜统一SAR
+        for i in range(n_inputs):
+            filter_parts.append(f"[{i}:v]setsar=1:1[v{i}];")
+
+        # 获取所有处理后的视频流
+        v_streams = "".join(f"[v{i}]" for i in range(n_inputs))
+
+        # 合并视频流
+        filter_parts.append(f"{v_streams}concat=n={n_inputs}:v=1:a=0[vout];")
+
+        # 合并音频流
+        a_streams = "".join(f"[{i}:a]" for i in range(n_inputs))
+        filter_parts.append(f"{a_streams}concat=n={n_inputs}:v=0:a=1[aout]")
+
+        # 完整的滤镜链
+        filter_complex = "".join(filter_parts)
 
         # 优化音频参数，尽量保持原始音频质量
         audio_params = []
@@ -1882,9 +1987,12 @@ class VideoProcessor:
             "-filter_complex",
             filter_complex,
             "-map",
-            "[v]",
+            "[vout]",
             "-map",
-            "[a]",
+            "[aout]",
+            # 确保输出视频使用统一的SAR和像素格式
+            "-pix_fmt",
+            "yuv420p",
             *self._get_encode_params(),
             *audio_params,
             "-max_muxing_queue_size",
@@ -2064,6 +2172,12 @@ class VideoProcessor:
             "-y",
             "-i",
             str(input_file),
+            # 添加滤镜设置SAR为1:1
+            "-vf",
+            "setsar=1:1",
+            # 确保使用统一的像素格式
+            "-pix_fmt",
+            "yuv420p",
             *self._get_encode_params(),
             *self.audio_params,
             str(output_file),
@@ -2633,6 +2747,97 @@ class VideoProcessor:
             logger.warning(f"清理临时文件失败: {e}")
 
         return self.output_file
+
+    def rotate_video(
+        self, input_file: str, output_file: str = None, angle: float = None
+    ) -> str:
+        """
+        对指定视频文件进行旋转，输出到output_file。
+        如果output_file未指定，则在原文件名后加_rotated后缀。
+        如果angle未指定，则使用默认旋转角度。
+        返回输出文件路径。
+
+        Args:
+            input_file: 输入视频文件路径
+            output_file: 输出视频文件路径，如果不指定则自动生成
+            angle: 旋转角度，正数表示顺时针旋转，负数表示逆时针旋转
+
+        Returns:
+            输出文件路径
+        """
+        input_path = Path(input_file)
+        if output_file is None:
+            output_path = input_path.with_name(
+                input_path.stem + "_rotated" + input_path.suffix
+            )
+        else:
+            output_path = Path(output_file)
+
+        # 如果未指定角度，则使用默认角度，随机选择正负
+        if angle is None:
+            angle = self.rotate_angle * random.choice([-1, 1])
+
+        # 转换为绝对值用于计算
+        abs_angle = abs(angle)
+
+        # 使用命令行参数中的rotate_scale作为基础缩放比例
+        base_scale = self.rotate_scale
+
+        # 根据角度动态调整缩放系数
+        # 角度越大，额外缩放越多
+        angle_factor = abs_angle / 45.0  # 45度作为参考点
+        extra_scale = angle_factor * 0.3  # 角度增加带来的额外缩放
+
+        # 计算最终缩放因子
+        scale_factor = base_scale + extra_scale
+
+        # 确保即使角度很小时也有足够的缩放
+        min_scale = max(1.15, base_scale * 0.8)
+        scale_factor = max(scale_factor, min_scale)
+
+        # 限制最大缩放比例，避免过度裁剪
+        max_scale = min(2.2, base_scale * 1.5)
+        scale_factor = min(scale_factor, max_scale)
+
+        logger.info(
+            f"旋转角度: {angle}度，计算缩放比例: {scale_factor:.2f} (基础: {base_scale:.2f})"
+        )
+
+        # 构建旋转滤镜
+        # 使用rotate滤镜，角度为弧度制，需要转换
+        # 正角度顺时针旋转，负角度逆时针旋转
+        angle_rad = angle * (3.14159265359 / 180.0)
+
+        # 检测原视频分辨率
+        try:
+            width, height = self.detect_resolution(input_file)
+            logger.info(f"原始视频分辨率: {width}x{height}")
+        except Exception as e:
+            logger.warning(f"无法检测视频分辨率: {e}，使用默认设置")
+            width, height = 1280, 720
+
+        # 构建命令，添加确保宽高为偶数的处理和放大效果，并强制设置SAR为1:1
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_path),
+            "-vf",
+            # 先放大，再旋转，然后确保宽高为偶数，并强制设置SAR为1:1
+            f"scale=iw*{scale_factor}:ih*{scale_factor},rotate={angle_rad}:ow=rotw({angle_rad}):oh=roth({angle_rad}):c=black,scale=trunc(iw/2)*2:trunc(ih/2)*2,setsar=1:1",
+            "-c:a",
+            "copy",
+            # 添加像素格式确保兼容性
+            "-pix_fmt",
+            "yuv420p",
+            str(output_path),
+        ]
+
+        self.run_cmd(
+            cmd,
+            stage_desc=f"旋转视频 {angle}度 (缩放: {scale_factor:.2f}): {input_path.name}",
+        )
+        return str(output_path)
 
 
 def main():
