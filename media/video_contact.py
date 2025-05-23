@@ -2053,9 +2053,8 @@ class VideoProcessor:
                 )
 
                 tries = 0
-                max_tries = 99999
 
-                while current_duration < self.min_duration and tries < max_tries:
+                while current_duration < self.min_duration:
                     try:
                         # 创建新的拼接列表
                         temp_output = self.temp_folder / f"temp_concat_{tries}.mp4"
