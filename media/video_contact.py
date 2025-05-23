@@ -1921,7 +1921,7 @@ class VideoProcessor:
         selected_clips = []
         if actual_mode == "random":
             # 随机选择1-3个素材
-            num_to_select = min(random.randint(1, len(clips) / 2), len(clips))
+            num_to_select = min(random.randint(1, len(clips)), len(clips))
             selected_clips = random.sample(clips, num_to_select)
             logger.info(f"随机选择了 {num_to_select} 个素材")
         else:  # sequential模式
