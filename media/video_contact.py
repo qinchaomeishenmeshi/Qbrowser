@@ -210,6 +210,22 @@ def parse_args():
         default="alternating",
         help="视频补充模式：random-随机补充，sequential-顺序补充，alternating-交替使用",
     )
+    # 音频处理高级选项
+    parser.add_argument(
+        "--preserve-audio-channels",
+        action="store_true",
+        help="保留原始音频声道数，不强制转换为双声道",
+    )
+    parser.add_argument(
+        "--handle-complex-audio",
+        action="store_true",
+        help="处理复杂音频流，解决可能的音频同步问题",
+    )
+    parser.add_argument(
+        "--audio-normalize",
+        action="store_true",
+        help="对音频进行动态范围压缩和音量均衡化处理",
+    )
 
     args = parser.parse_args()
 
@@ -253,6 +269,11 @@ def parse_args():
     args.mirror_ratio = getattr(args, "mirror_ratio", DEFAULT_CONFIG["mirror_ratio"])
     # 视频补充模式
     args.append_mode = getattr(args, "append_mode", "alternating")
+
+    # 音频处理选项
+    args.preserve_audio_channels = getattr(args, 'preserve_audio_channels', False)
+    args.handle_complex_audio = getattr(args, 'handle_complex_audio', False)
+    args.audio_normalize = getattr(args, 'audio_normalize', False)
 
     return args
 
@@ -304,6 +325,11 @@ class VideoProcessor:
         # 用户指定的编码器选择
         self.encoder_choice = args.encoder
 
+        # 音频处理选项
+        self.preserve_audio_channels = getattr(args, 'preserve_audio_channels', False)
+        self.handle_complex_audio = getattr(args, 'handle_complex_audio', False)
+        self.audio_normalize = getattr(args, 'audio_normalize', False)
+        
         # 检查GPU可用性
         if self.use_gpu or self.encoder_choice != "auto":
             self._check_gpu_availability()
@@ -329,22 +355,86 @@ class VideoProcessor:
 
     def _get_audio_params(self):
         """根据质量设置选择音频参数"""
-        # 基础音频参数，移除volume滤镜
+        # 基础音频参数
+        params = []
+        
+        # 检测高级编码器（使用缓存机制避免重复检测）
+        if not hasattr(self, '_audio_encoders_cache'):
+            self._audio_encoders_cache = {}
+            
+        if 'libfdk_aac' not in self._audio_encoders_cache and self.audio_quality == "high":
+            try:
+                # 使用超时防止命令卡住
+                result = subprocess.run(
+                    ["ffmpeg", "-hide_banner", "-encoders"], 
+                    capture_output=True, text=True,
+                    timeout=5
+                )
+                self._audio_encoders_cache['libfdk_aac'] = "libfdk_aac" in result.stdout
+                logger.debug(f"检测到libfdk_aac可用性: {self._audio_encoders_cache['libfdk_aac']}")
+            except (subprocess.SubprocessError, TimeoutError) as e:
+                logger.warning(f"检测音频编码器失败: {e}")
+                self._audio_encoders_cache['libfdk_aac'] = False
+        
+        has_fdk_aac = self._audio_encoders_cache.get('libfdk_aac', False)
+        
+        # 根据质量级别选择编码器和参数
         if self.audio_quality == "fast":
-            return [
-                "-c:a",
-                "aac",
-                "-b:a",
-                "128k",
-                "-ar",
-                "48000",
-                "-ac",
-                "2",  # 强制双声道
-            ]
+            params.extend([
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-ar", "48000",
+            ])
+            if not self.preserve_audio_channels:
+                params.extend(["-ac", "2"])  # 仅当需要时才设置声道
+                
         elif self.audio_quality == "normal":
-            return ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"]
+            params.extend([
+                "-c:a", "aac", 
+                "-b:a", "192k", 
+                "-ar", "48000",
+            ])
+            if not self.preserve_audio_channels:
+                params.extend(["-ac", "2"])
+                
         else:  # high
-            return ["-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2"]
+            if has_fdk_aac:
+                # 使用高质量编码器（如果可用）
+                params.extend([
+                    "-c:a", "libfdk_aac",
+                    "-vbr", "4",  # 可变比特率模式，质量更高
+                    "-ar", "48000",
+                ])
+                # libfdk_aac自行处理声道布局，无需-ac参数
+            else:
+                params.extend([
+                    "-c:a", "aac",
+                    "-b:a", "256k",
+                    "-ar", "48000",
+                ])
+                if not self.preserve_audio_channels:
+                    params.extend(["-ac", "2"])
+        
+        # 处理音频同步和复杂流问题 (使用更现代的方法)
+        if self.handle_complex_audio:
+            # 使用高级音频处理滤镜链
+            af_filters = ["aresample=async=1000"]
+            
+            # 可选添加动态范围压缩以均衡音量
+            if self.audio_normalize:
+                af_filters.append("dynaudnorm=f=150:g=15")
+            
+            # 构建完整滤镜链
+            params.extend([
+                "-af", ",".join(af_filters),
+                "-max_muxing_queue_size", "4096"  # 增加队列大小以处理复杂流
+            ])
+        else:
+            # 基本音频同步修正
+            params.append("-async")
+            params.append("1")
+            
+        return params
 
     def run_cmd(self, cmd, stage_desc=None):
         """执行命令并记录时间"""
@@ -890,28 +980,45 @@ class VideoProcessor:
             filter_parts.append(f"[{i}:v][{i}:a]")
 
         # 2. 添加concat滤镜，输出到临时标签
-        filter_parts.append(f"concat=n={len(batch_clips)}:v=1:a=1[v][a];")
+        filter_parts.append(f"concat=n={len(batch_clips)}:v=1:a=1[v][a]")
 
-        # 3. 添加音量调整滤镜
-        filter_parts.append(f"[a]volume={self.audio_volume}[aout]")
-
+        # 注意：音量调整放到最后阶段处理，这里不做音量调整
         filter_complex = "".join(filter_parts)
 
-        cmd = (
-            ["ffmpeg", "-nostdin", "-y"]
-            + inputs
-            + [
-                "-filter_complex",
-                filter_complex,
-                "-map",
-                "[v]",
-                "-map",
-                "[aout]",
-                *self._get_encode_params(),
-                *self.audio_params,
-                str(batch_output),
-            ]
-        )
+        # 保留音频编码参数中的编码器选择，但不重新指定采样率和声道
+        audio_params = []
+        has_encoder = False
+        for i, param in enumerate(self.audio_params):
+            if param == "-c:a":
+                has_encoder = True
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+            elif param == "-b:a" and i+1 < len(self.audio_params):
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+
+        # 确保有音频编码器
+        if not has_encoder:
+            audio_params.extend(["-c:a", "copy"])
+
+        # 使用ffmpeg高质量音频处理选项
+        cmd = [
+            "ffmpeg",
+            "-nostdin", 
+            "-y",
+            *inputs,
+            "-filter_complex",
+            filter_complex,
+            "-map",
+            "[v]",
+            "-map",
+            "[a]",
+            *self._get_encode_params(),
+            *audio_params,
+            "-max_muxing_queue_size", "4096",  # 增加缓冲区大小避免音频处理问题
+            str(batch_output),
+        ]
+        
         self.run_cmd(cmd, stage_desc=f"批次拼接 #{batch_index + 1}")
         return batch_output
 
@@ -1000,7 +1107,23 @@ class VideoProcessor:
         for file in input_files:
             inputs += ["-i", str(file)]
 
-        # 使用简化的拼接方式
+        # 使用简化的拼接方式，但注意音频处理保持一致性
+        # 保留音频编码参数中的编码器选择，但不重新指定采样率和声道
+        audio_params = []
+        has_encoder = False
+        for i, param in enumerate(self.audio_params):
+            if param == "-c:a":
+                has_encoder = True
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+            elif param == "-b:a" and i+1 < len(self.audio_params):
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+
+        # 确保有音频编码器
+        if not has_encoder:
+            audio_params.extend(["-c:a", "copy"])
+
         cmd = [
             "ffmpeg",
             "-nostdin",
@@ -1018,7 +1141,8 @@ class VideoProcessor:
             self.video_preset,
             "-crf",
             "23",
-            *self.audio_params,
+            *audio_params,
+            "-max_muxing_queue_size", "4096",  # 增加缓冲区大小
             str(output_file),
         ]
 
@@ -1045,16 +1169,31 @@ class VideoProcessor:
             filter_parts.append(f"[{i}:v][{i}:a]")
 
         # 2. 添加concat滤镜，输出到临时标签
-        filter_parts.append(f"concat=n={len(input_files)}:v=1:a=1[v][a];")
+        filter_parts.append(f"concat=n={len(input_files)}:v=1:a=1[v][a]")
 
-        # 3. 添加音量调整滤镜
-        filter_parts.append(f"[a]volume={self.audio_volume}[aout]")
-
+        # 注意：音量调整放到最后阶段处理，这里不做音量调整
         filter_complex = "".join(filter_parts)
 
+        # 保留音频编码参数中的编码器选择，但不重新指定采样率和声道
+        audio_params = []
+        has_encoder = False
+        for i, param in enumerate(self.audio_params):
+            if param == "-c:a":
+                has_encoder = True
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+            elif param == "-b:a" and i+1 < len(self.audio_params):
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+
+        # 确保有音频编码器
+        if not has_encoder:
+            audio_params.extend(["-c:a", "copy"])
+
+        # 注意：音量调整将在apply_zoom阶段处理，这里仅合并
         cmd = [
             "ffmpeg",
-            "-nostdin",
+            "-nostdin", 
             "-y",
             *inputs,
             "-filter_complex",
@@ -1062,9 +1201,10 @@ class VideoProcessor:
             "-map",
             "[v]",
             "-map",
-            "[aout]",
+            "[a]",
             *self._get_encode_params(),
-            *self.audio_params,
+            *audio_params,
+            "-max_muxing_queue_size", "4096",  # 增加缓冲区大小
             str(self.concat_file),
         ]
         self.run_cmd(cmd, stage_desc="最终合并")
@@ -1128,10 +1268,27 @@ class VideoProcessor:
         # 修改音频处理部分，确保音频存在且音量适当
         has_audio = self.has_audio_stream(self.concat_file)
         if has_audio:
-            # 确保明确复制音频流
-            parts.append(f"[0:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,volume={self.audio_volume}[aout]")
-            audio_map = ["-map", "[aout]"]
-            audio_params = ["-c:a", "aac", "-b:a", "192k", "-ac", "2"]
+            # 使用更保守的音频处理方法，避免失真
+            if self.audio_volume != 1.0:
+                # 只有在需要调整音量时才添加volume滤镜
+                parts.append(f"[0:a]volume={self.audio_volume}:precision=float[aout]")
+                audio_map = ["-map", "[aout]"]
+            else:
+                # 直接使用原始音频，避免重复处理
+                audio_map = ["-map", "0:a:0"]
+            
+            # 使用自定义音频参数，但避免格式转换
+            audio_params = []
+            for param in self.audio_params:
+                # 避免强制转换采样率和声道数，这可能导致音质下降
+                if param not in ["-ar", "48000", "-ac", "2"]:
+                    audio_params.append(param)
+            
+            # 如果启用了复杂音频处理，使用高质量重采样
+            if self.handle_complex_audio:
+                audio_params.extend([
+                    "-af", "aresample=resampler=soxr:precision=28:osf=s32p:cutoff=0.99"
+                ])
         else:
             # 生成静音
             parts.append(f"anullsrc=channel_layout=stereo:sample_rate=48000,atrim=duration={dur}[aout]")
@@ -1207,16 +1364,33 @@ class VideoProcessor:
         
         # 构建滤镜链
         n_inputs = 1 + len(selected_clips)  # 修正：使用selected_clips的长度
-        filter_complex = f"concat=n={n_inputs}:v=1:a=1[v][a];[a]volume={self.audio_volume}[aout]"
+        filter_complex = f"concat=n={n_inputs}:v=1:a=1[v][a]"
+        
+        # 优化音频参数，尽量保持原始音频质量
+        audio_params = []
+        has_encoder = False
+        for i, param in enumerate(self.audio_params):
+            if param == "-c:a":
+                has_encoder = True
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+            elif param == "-b:a" and i+1 < len(self.audio_params):
+                audio_params.append(param)
+                audio_params.append(self.audio_params[i+1])
+
+        # 确保有音频编码器
+        if not has_encoder:
+            audio_params.extend(["-c:a", "copy"])
         
         cmd = [
             "ffmpeg", "-nostdin", "-y",
             *inputs,
             "-filter_complex", filter_complex,
             "-map", "[v]", 
-            "-map", "[aout]",
+            "-map", "[a]",
             *self._get_encode_params(),
-            *self.audio_params,
+            *audio_params,
+            "-max_muxing_queue_size", "4096",  # 防止复杂音频处理问题
             str(temp_file),
         ]
         
