@@ -1920,10 +1920,23 @@ class VideoProcessor:
         # 根据模式选择素材
         selected_clips = []
         if actual_mode == "random":
-            # 随机选择1-3个素材
-            num_to_select = min(random.randint(1, len(clips)), len(clips))
-            selected_clips = random.sample(clips, num_to_select)
-            logger.info(f"随机选择了 {num_to_select} 个素材")
+            try:
+                # 随机选择素材
+                # 计算最大可选数量，为素材总数的一半，确保至少为1
+                max_select = max(1, len(clips) // 2)
+                # 随机选择1到max_select之间的数量，但不超过素材总数
+                num_to_select = min(random.randint(1, max_select), len(clips))
+                # 随机选择num_to_select个素材
+                selected_clips = random.sample(clips, num_to_select)
+                logger.info(f"随机选择了 {num_to_select} 个素材 (限制: {max_select})")
+            except ValueError as e:
+                # 如果随机选择失败（例如参数错误），回退到安全模式
+                logger.warning(f"随机选择素材失败: {e}，使用单个素材")
+                selected_clips = [random.choice(clips)]
+            except Exception as e:
+                # 处理其他异常
+                logger.error(f"选择素材时发生错误: {e}，使用第一个素材")
+                selected_clips = [clips[0]]
         else:  # sequential模式
             # 使用轮询方式选择下一个素材
             if not hasattr(self, "_append_index"):
@@ -2274,7 +2287,6 @@ class VideoProcessor:
                     shutil.copy(self.concat_file, initial_concat)
 
                     tries = 0
-                    max_tries = 100
 
                     # 获取命令行参数指定的补充模式
                     user_append_mode = getattr(self, "append_mode", "alternating")
@@ -2289,7 +2301,7 @@ class VideoProcessor:
                         current_mode = user_append_mode
                         alternate = False
 
-                    while current_dur < self.min_duration and tries < max_tries:
+                    while current_dur < self.min_duration:
                         try:
                             logger.info(
                                 f"当前总时长: {current_dur / 60:.2f}分钟，目标时长: {self.min_duration / 60:.2f}分钟，剩余: {(self.min_duration - current_dur) / 60:.2f}分钟"
@@ -2314,10 +2326,6 @@ class VideoProcessor:
                             logger.error(f"补充拼接失败: {e}")
                             tries += 1
 
-                    if tries >= max_tries and current_dur < self.min_duration:
-                        logger.warning(
-                            f"已到达最大尝试次数 {max_tries}，停止补充。最终时长: {current_dur / 60:.2f}分钟"
-                        )
                 else:
                     logger.info(
                         f"当前时长 {current_dur / 60:.2f}分钟 已达目标时长，跳过补充"
