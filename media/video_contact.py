@@ -13,6 +13,37 @@ from pathlib import Path
 
 import psutil
 
+"""
+视频处理工具 - 按需求重新实现流程
+
+新的处理流程：
+1. create_concat_plan(): 
+   - 扫描文件夹下所有视频文件
+   - 计算总时长是否超过目标时长
+   - 如果不足，计算需要补充的视频
+   - 为每个视频分配唯一的特效参数
+   - 将计划写入待拼接文件txt
+
+2. apply_effects_from_plan():
+   - 读取拼接计划文件
+   - 为每个视频应用对应的特效处理（缩放、镜像、旋转）
+   - 处理后的视频保存到临时目录
+
+3. concat_processed_files():
+   - 拼接所有处理后的视频文件
+   - 根据视频格式判断是否需要重编码
+   - 生成最终输出文件
+
+特效类型：
+- zoom: 缩放特效，按指定位置(x,y)缩放
+- mirror: 左右镜像特效
+- rotate: 旋转特效，按指定角度旋转
+- none: 无特效，直接使用原视频
+
+待拼接文件格式：
+文件名,分辨率,时长,特效类型,特效参数
+"""
+
 # ------------------- 配置部分 -------------------
 # 默认值，可通过命令行参数覆盖
 DEFAULT_CONFIG = {
@@ -20,7 +51,7 @@ DEFAULT_CONFIG = {
     "output_height": 1280,
     "min_interval": 60,  # 缩放效果最小间隔（秒）
     "max_interval": 120,  # 缩放效果最大间隔（秒）
-    "zoom_scale": 2,  # 缩放比例
+    "zoom_scale":1.2,  # 缩放比例
     "zoom_duration": 10,  # 缩放持续时间（秒）
     "audio_volume": 0.15,  # 最终音频音量比例
     "min_duration": 300,  # 最小总时长（秒）
@@ -408,6 +439,27 @@ class VideoProcessor:
         # 视频补充模式
         self.append_mode = args.append_mode
 
+        # 缩放位置选项
+        self.zoom_positions = [
+            (0.0, 0.0),  # 左上
+            (1.0, 0.0),  # 右上
+            (0.0, 1.0),  # 左下
+            (1.0, 1.0),  # 右下
+            (0.5, 0.5),  # 中心  
+            (0.05, 0.05),  # 左上-偏移 20px
+            (0.95, 0.05),  # 右上-偏移 20px
+            (0.05, 0.95),  # 左下-偏移 20px
+            (0.95, 0.95),  # 右下-偏移 20px
+            (0.45, 0.45),  # 中心-偏移 20px（左上方向）
+            (0.55, 0.55),  # 中心-偏移 20px（右下方向）
+            (0.55, 0.45),  # 中心-偏移 20px（右上方向）
+            (0.45, 0.55),  # 中心-偏移 20px（左下方向）
+            (0.25, 0.25),  # 左上1/4位置
+            (0.75, 0.25),  # 右上1/4位置
+            (0.25, 0.75),  # 左下1/4位置
+            (0.75, 0.75),  # 右下1/4位置
+        ]
+
     def _get_audio_params(self):
         """根据质量设置选择音频参数"""
         # 基础音频参数
@@ -443,13 +495,13 @@ class VideoProcessor:
         if self.audio_quality == "fast":
             params.extend(
                 [
-                    "-c:a",
-                    "aac",
-                    "-b:a",
-                    "128k",
-                    "-ar",
-                    "48000",
-                ]
+                "-c:a",
+                "aac",
+                "-b:a",
+                "128k",
+                "-ar",
+                "48000",
+            ]
             )
             if not self.preserve_audio_channels:
                 params.extend(["-ac", "2"])  # 仅当需要时才设置声道
@@ -548,6 +600,7 @@ class VideoProcessor:
                     timeout = 1800  # 默认30分钟
 
             logger.debug(f"命令超时设置: {timeout}秒")
+            logger.debug(f"执行命令: {' '.join([str(x) for x in cmd])}")
 
             process = subprocess.Popen(
                 cmd,
@@ -572,6 +625,8 @@ class VideoProcessor:
                     except:
                         pass
                 logger.error(f"命令执行失败: {error_msg}")
+                logger.error(f"完整ffmpeg错误输出:\n{stderr}")
+                logger.error(f"失败命令: {' '.join([str(x) for x in cmd])}")
                 raise RuntimeError(f"命令执行失败: {error_msg[:200]}...")
 
             if stage_desc:
@@ -587,16 +642,17 @@ class VideoProcessor:
         except subprocess.TimeoutExpired:
             if stage_desc:
                 logger.error(f"{stage_desc} 超时: {timeout}秒")
-            # 尝试终止进程
             try:
                 process.kill()
                 process.wait()
             except:
                 pass
+            logger.error(f"超时命令: {' '.join([str(x) for x in cmd])}")
             raise RuntimeError(f"命令执行超时: {timeout}秒")
         except Exception as e:
             if stage_desc:
                 logger.error(f"{stage_desc} 失败: {str(e)}")
+            logger.error(f"异常命令: {' '.join([str(x) for x in cmd])}")
             raise
 
     def cleanup_temp(self):
@@ -666,7 +722,8 @@ class VideoProcessor:
         """获取视频时长（带缓存）"""
         path_str = str(path)
         if path_str not in self._duration_cache:
-            result = subprocess.check_output(
+            try:
+                result = subprocess.run(
                 [
                     "ffprobe",
                     "-v",
@@ -677,16 +734,44 @@ class VideoProcessor:
                     "default=noprint_wrappers=1:nokey=1",
                     path_str,
                 ],
+                    capture_output=True,
                 text=True,
-            ).strip()
-            self._duration_cache[path_str] = float(result)
+                    timeout=10  # 添加超时时间
+                )
+                
+                # 检查输出是否为空或无效
+                duration_str = result.stdout.strip()
+                if not duration_str:
+                    logger.error(f"无法获取视频时长: {Path(path_str).name}, 返回空结果")
+                    raise ValueError(f"无法获取视频时长: {Path(path_str).name}")
+                
+                try:
+                    duration = float(duration_str)
+                    # 检查时长是否合理
+                    if duration <= 0 or duration > 86400:  # 最长24小时
+                        logger.error(f"视频时长异常: {Path(path_str).name}, {duration}秒")
+                        raise ValueError(f"视频时长异常: {Path(path_str).name}")
+                    
+                    self._duration_cache[path_str] = duration
+                except ValueError:
+                    logger.error(f"视频时长数据无效: {Path(path_str).name}, '{duration_str}'")
+                    raise ValueError(f"视频时长数据无效: {Path(path_str).name}")
+                    
+            except subprocess.TimeoutExpired:
+                logger.error(f"获取时长超时: {Path(path_str).name}")
+                raise ValueError(f"获取时长超时: {Path(path_str).name}")
+            except Exception as e:
+                logger.error(f"获取时长失败: {Path(path_str).name} - {e}")
+                raise ValueError(f"获取时长失败: {Path(path_str).name}")
+                
         return self._duration_cache[path_str]
 
     def detect_resolution(self, video_path):
         """检测视频分辨率（带缓存）"""
         path_str = str(video_path)
         if path_str not in self._resolution_cache:
-            result = subprocess.run(
+            try:
+                result = subprocess.run(
                 [
                     "ffprobe",
                     "-v",
@@ -701,9 +786,36 @@ class VideoProcessor:
                 ],
                 capture_output=True,
                 text=True,
-            )
-            width, height = map(int, result.stdout.strip().split(","))
-            self._resolution_cache[path_str] = (width, height)
+                    timeout=10  # 添加超时时间
+                )
+                
+                # 检查输出是否为空或无效
+                if not result.stdout.strip() or "," not in result.stdout:
+                    logger.error(f"无法获取视频分辨率: {video_path.name}, 返回空结果")
+                    raise ValueError(f"无法获取视频分辨率: {video_path.name}")
+                
+                width_str, height_str = result.stdout.strip().split(",")
+                
+                # 检查提取的宽高是否为空
+                if not width_str or not height_str:
+                    logger.error(f"视频分辨率数据无效: {video_path.name}, 宽={width_str}, 高={height_str}")
+                    raise ValueError(f"视频分辨率数据无效: {video_path.name}")
+                
+                width, height = int(width_str), int(height_str)
+                
+                # 检查宽高是否合理
+                if width <= 0 or height <= 0 or width > 10000 or height > 10000:
+                    logger.error(f"视频分辨率异常: {video_path.name}, {width}x{height}")
+                    raise ValueError(f"视频分辨率异常: {video_path.name}")
+                
+                self._resolution_cache[path_str] = (width, height)
+            except subprocess.TimeoutExpired:
+                logger.error(f"检测分辨率超时: {video_path.name}")
+                raise ValueError(f"检测分辨率超时: {video_path.name}")
+            except Exception as e:
+                logger.error(f"检测分辨率失败: {video_path.name} - {e}")
+                raise ValueError(f"检测分辨率失败: {video_path.name}")
+                
         return self._resolution_cache[path_str]
 
     def _get_encode_params(self):
@@ -713,29 +825,29 @@ class VideoProcessor:
             encoder_type = self.encoder
 
             if encoder_type == "h264_nvenc":  # NVIDIA GPU
-                logger.info("使用NVENC硬件加速编码")
-                return [
-                    "-c:v",
+                    logger.info("使用NVENC硬件加速编码")
+                    return [
+                        "-c:v",
                     encoder_type,
-                    "-preset",
-                    self.gpu_preset,
-                    "-pix_fmt",
-                    "yuv420p",  # 强制使用 8 位颜色
-                    "-rc",
-                    "vbr",
-                    "-cq",
-                    "23",
-                    "-b:v",
-                    "0",
-                    "-profile:v",
-                    "high",
-                    "-tune",
-                    "hq",
-                    "-spatial-aq",
-                    "1",
-                    "-temporal-aq",
-                    "1",
-                ]
+                        "-preset",
+                        self.gpu_preset,
+                        "-pix_fmt",
+                        "yuv420p",  # 强制使用 8 位颜色
+                        "-rc",
+                        "vbr",
+                        "-cq",
+                        "23",
+                        "-b:v",
+                        "0",
+                        "-profile:v",
+                        "high",
+                        "-tune",
+                        "hq",
+                        "-spatial-aq",
+                        "1",
+                        "-temporal-aq",
+                        "1",
+                    ]
             elif encoder_type == "h264_videotoolbox":  # macOS VideoToolbox
                 logger.info("使用VideoToolbox硬件加速编码")
                 return [
@@ -1162,18 +1274,18 @@ class VideoProcessor:
             "-nostdin",
             "-y",
             *inputs,
-            "-filter_complex",
-            filter_complex,
-            "-map",
-            "[v]",
-            "-map",
+                "-filter_complex",
+                filter_complex,
+                "-map",
+                "[v]",
+                "-map",
             "[a]",
-            *self._get_encode_params(),
+                *self._get_encode_params(),
             *audio_params,
             "-max_muxing_queue_size",
             "4096",  # 增加缓冲区大小避免音频处理问题
-            str(batch_output),
-        ]
+                str(batch_output),
+            ]
 
         self.run_cmd(cmd, stage_desc=f"批次拼接 #{batch_index + 1}")
         return batch_output
@@ -1397,14 +1509,6 @@ class VideoProcessor:
         if self.zoom_times and self.zoom_times[-1] + self.zoom_duration < dur:
             self.zoom_times[-1] = dur - self.zoom_duration
 
-        # 缩放位置选项
-        self.zoom_positions = [
-            (0, 0),  # 左上
-            (w - w // self.zoom_scale, 0),  # 右上
-            (0, h - h // self.zoom_scale),  # 左下
-            (w - w // self.zoom_scale, h - h // self.zoom_scale),  # 右下
-            ((w - w // self.zoom_scale) // 2, (h - h // self.zoom_scale) // 2),  # 中心
-        ]
 
         # 为每个缩放点预先生成随机位置，避免重复
         random.seed()  # 重置随机种子
@@ -1531,7 +1635,7 @@ class VideoProcessor:
             )
             audio_map = ["-map", "[aout]"]
             audio_params = ["-c:a", "aac", "-b:a", "128k"]
-
+        
         # 添加调试日志
         logger.info(
             f"音频状态: {'有音频流' if has_audio else '无音频流'}, 音量: {self.audio_volume}"
@@ -1551,13 +1655,13 @@ class VideoProcessor:
             ]
             + audio_map
             + [
-                *self._get_encode_params(),
-                *audio_params,
-                "-shortest",
-                str(self.output_file),
-            ]
+            *self._get_encode_params(),
+            *audio_params,
+            "-shortest",
+            str(self.output_file),
+        ]
         )
-
+        
         # 输出完整命令方便调试
         logger.debug(f"缩放处理命令: {' '.join(cmd)}")
         self.run_cmd(cmd, stage_desc="标准缩放+音量处理", timeout=1800)
@@ -1894,29 +1998,29 @@ class VideoProcessor:
 
     def append_concat_file(self, clips=None, append_mode="random"):
         """使用重编码好的素材线性补充视频时长
-
+        
         Args:
             clips: 已重编码的素材列表，如果为None则使用保存的素材
             append_mode: 'random' 随机选择素材，'sequential' 顺序选择素材
         """
         # 清除缓存确保获取最新时长
         self._duration_cache.clear()
-
+        
         # 如果没有提供clips，使用已保存的素材
         if clips is None and hasattr(self, "_encoded_clips"):
             clips = self._encoded_clips
-
+        
         # 如果仍然没有可用的clips，报错
         if not clips or len(clips) == 0:
             raise ValueError("没有可用的素材进行补充，请先重编码素材")
-
+        
         # 获取当前视频时长
         original_duration = self.get_duration(self.concat_file)
         temp_file = self.temp_folder / "temp_append.mp4"
-
+        
         # 获取命令行参数或使用传入的模式
         actual_mode = append_mode
-
+        
         # 根据模式选择素材
         selected_clips = []
         if actual_mode == "random":
@@ -1944,15 +2048,15 @@ class VideoProcessor:
             selected_clips = [clips[self._append_index % len(clips)]]
             self._append_index += 1
             logger.info(f"顺序选择了第 {self._append_index-1} 个素材")
-
+        
         logger.info(f"使用{actual_mode}模式补充 {len(selected_clips)} 个素材")
-
+        
         # 构建命令：将原始文件和选定的素材拼接
         inputs = ["-i", str(self.concat_file)]
         for clip in selected_clips:  # 使用筛选后的素材列表
             inputs.extend(["-i", str(clip)])
             logger.info(f"添加素材: {clip}")
-
+        
         # 构建滤镜链，添加setsar滤镜统一SAR比例
         n_inputs = 1 + len(selected_clips)  # 原始视频加上新增的素材
 
@@ -1991,7 +2095,7 @@ class VideoProcessor:
         # 确保有音频编码器
         if not has_encoder:
             audio_params.extend(["-c:a", "copy"])
-
+        
         cmd = [
             "ffmpeg",
             "-nostdin",
@@ -2012,25 +2116,25 @@ class VideoProcessor:
             "4096",  # 防止复杂音频处理问题
             str(temp_file),
         ]
-
+        
         self.run_cmd(cmd, f"{actual_mode}模式素材补充")
-
+        
         # 验证新时长
         new_duration = self.get_duration(temp_file)
         if new_duration <= original_duration * 1.05:  # 检查是否真的增加了
             logger.warning(
                 f"拼接后时长几乎没有增加: {original_duration:.2f}s -> {new_duration:.2f}s"
             )
-
+        
         # 更新文件
         shutil.move(temp_file, self.concat_file)
         logger.info(
             f"素材补充成功: {original_duration / 60:.2f}分钟 -> {new_duration / 60:.2f}分钟"
         )
-
+        
         # 清除缓存
         self._duration_cache.clear()
-
+        
         return new_duration
 
     def simple_concat(self):
@@ -2260,88 +2364,37 @@ class VideoProcessor:
         overall_start = time.time()
 
         try:
+            # 清理和准备临时目录
+            self.prepare_temp()
+            
+            # 使用新的处理流程
             if self.is_simple_concat:
                 # 使用简单拼接模式
                 self.simple_concat()
             else:
-                self.prepare_temp()
-                # 步骤1：重编码源视频
-                clips, durations = self.reencode_clips()
-
-                # 保存重编码的素材，供后续补充使用
-                self._encoded_clips = clips
-
-                # 步骤2：初始拼接
-                self.concat_with_xfade(clips)
-                current_dur = self.get_duration(self.concat_file)
-                logger.info(f"初始拼接时长: {current_dur / 60:.2f}分钟")
-
-                # 步骤3：智能补充循环
-                if current_dur < self.min_duration:
-                    logger.info(
-                        f"当前时长 {current_dur / 60:.2f}分钟 < 目标时长 {self.min_duration / 60:.2f}分钟，开始补充"
-                    )
-
-                    # 保存初始拼接结果备份
-                    initial_concat = self.temp_folder / "initial_concat.mp4"
-                    shutil.copy(self.concat_file, initial_concat)
-
-                    tries = 0
-
-                    # 获取命令行参数指定的补充模式
-                    user_append_mode = getattr(self, "append_mode", "alternating")
-
-                    # 根据用户设置决定补充模式
-                    if user_append_mode == "alternating":
-                        # 交替模式
-                        current_mode = "random"
-                        alternate = True
-                    else:
-                        # 固定模式
-                        current_mode = user_append_mode
-                        alternate = False
-
-                    while current_dur < self.min_duration:
-                        try:
-                            logger.info(
-                                f"当前总时长: {current_dur / 60:.2f}分钟，目标时长: {self.min_duration / 60:.2f}分钟，剩余: {(self.min_duration - current_dur) / 60:.2f}分钟"
-                            )
-
-                            # 使用修改后的补充方法
-                            new_dur = self.append_concat_file(
-                                self._encoded_clips, append_mode=current_mode
-                            )
-                            current_dur = new_dur
-                            tries += 1
-
-                            # 只有在交替模式时才切换
-                            if alternate:
-                                current_mode = (
-                                    "sequential"
-                                    if current_mode == "random"
-                                    else "random"
-                                )
-
-                        except Exception as e:
-                            logger.error(f"补充拼接失败: {e}")
-                            tries += 1
-
-                else:
-                    logger.info(
-                        f"当前时长 {current_dur / 60:.2f}分钟 已达目标时长，跳过补充"
-                    )
-
-                # 步骤4：添加缩放效果
-                self.apply_zoom()
-
-                logger.info(
-                    f"最终视频参数：{self.output_width}x{self.output_height} {current_dur:.2f}s"
-                )
-
-                # 在process方法的最后一步前添加
-                if not self.has_audio_stream(self.concat_file):
-                    logger.warning("警告：拼接后的文件没有音频流，最终视频可能无声")
-
+                # 新的处理流程：
+                # 1. 创建拼接计划
+                plan_file = self.create_concat_plan()
+                
+                # 1.5 验证拼接计划，如果存在问题则修复
+                if not self._validate_concat_plan(plan_file):
+                    logger.warning("拼接计划存在问题，尝试修复")
+                    fixed_plan_file = self._fix_concat_plan(plan_file)
+                    
+                    # 再次验证修复后的计划
+                    if not self._validate_concat_plan(fixed_plan_file):
+                        logger.warning("修复后的计划仍存在问题，但将继续使用")
+                    
+                    plan_file = fixed_plan_file
+                
+                # 2. 应用特效处理
+                processed_files = self.apply_effects_from_plan(plan_file)
+                
+                # 3. 拼接处理后的文件
+                self.concat_processed_files(processed_files)
+                
+                logger.info("处理完成！")
+                
         except Exception as e:
             logger.error(f"处理失败: {e}")
             raise
@@ -2437,7 +2490,7 @@ class VideoProcessor:
         for i, (start_time, (x, y)) in enumerate(
             zip(self.zoom_times, zoom_positions_sequence)
         ):
-            logger.info(
+                            logger.info(
                 f"缩放点 {i+1}/{total_zoom_points}: 时间={start_time:.2f}s, 位置=({x},{y})"
             )
 
@@ -2476,12 +2529,12 @@ class VideoProcessor:
                 )
 
                 if (
-                    os.path.exists(str(start_file))
-                    and os.path.getsize(str(start_file)) > 1000
-                ):
-                    logger.info(f"成功提取开头部分 (0-{self.zoom_times[0]:.2f}s)")
+                        os.path.exists(str(start_file))
+                        and os.path.getsize(str(start_file)) > 1000
+                    ):
+                        logger.info(f"成功提取开头部分 (0-{self.zoom_times[0]:.2f}s)")
                 else:
-                    logger.error("提取开头部分失败或文件过小")
+                        logger.error("提取开头部分失败或文件过小")
             except Exception as e:
                 logger.error(f"提取开头部分失败: {e}")
 
@@ -2845,6 +2898,1047 @@ class VideoProcessor:
             stage_desc=f"旋转视频 {angle}度 (缩放: {scale_factor:.2f}): {input_path.name}",
         )
         return str(output_path)
+
+    def create_concat_plan(self):
+        """创建拼接计划，生成待拼接文件txt
+        
+        流程：
+        1. 扫描文件夹下所有视频文件
+        2. 计算总时长是否超过目标时长
+        3. 如果不足，计算需要补充的视频，但确保不产生重复子序列且同一视频不连续使用
+        4. 为总数30%的视频分配唯一的特效参数，确保同一视频多次使用时特效不同
+        5. 将计划写入待拼接文件txt
+        
+        Returns:
+            Path: 待拼接文件txt的路径
+        """
+        logger.info("步骤1：创建拼接计划")
+        
+        # 创建临时文件夹
+        self.prepare_temp()
+        
+        # 获取所有视频文件
+        video_files = sorted([
+            f for f in self.video_folder.iterdir()
+            if f.suffix.lower() in [".mp4", ".mov", ".avi"] 
+            and not f.name.startswith(("__", "output_with"))
+        ])
+        
+        if not video_files:
+            raise ValueError(f"未在 {self.video_folder} 找到视频文件")
+            
+        logger.info(f"找到 {len(video_files)} 个视频文件，开始检查有效性")
+            
+        # 采样选择要处理的文件
+        if self.max_clips > 0 and len(video_files) > self.max_clips:
+            video_files = self._sample_video_files(video_files)
+            logger.info(f"根据最大处理数量限制，选择了 {len(video_files)} 个视频文件")
+            
+        # 计算每个视频的分辨率和时长
+        video_info = []
+        total_duration = 0
+        invalid_files = []
+        
+        for video in video_files:
+            try:
+                # 先验证文件是否真的是视频
+                self._validate_video_file(video)
+                
+                # 获取视频信息
+                resolution = self.detect_resolution(video)
+                duration = self.get_duration(video)
+                
+                # 记录有效视频
+                video_info.append({
+                    "file": video,
+                    "resolution": f"{resolution[0]}x{resolution[1]}",
+                    "duration": duration,
+                    "effects": [],  # 待分配的特效
+                    "id": len(video_info)  # 添加唯一ID，用于标识视频在序列中的位置
+                })
+                total_duration += duration
+                logger.info(f"有效视频: {video.name}, 分辨率: {resolution[0]}x{resolution[1]}, 时长: {duration:.2f}秒")
+            except Exception as e:
+                logger.error(f"处理视频信息失败: {video.name} - {e}")
+                invalid_files.append(video.name)
+        
+        if invalid_files:
+            logger.warning(f"发现 {len(invalid_files)} 个无效视频文件，将被忽略: {', '.join(invalid_files[:5])}" + 
+                          (f" 等..." if len(invalid_files) > 5 else ""))
+        
+        if not video_info:
+            raise ValueError(f"未找到有效的视频文件，所有 {len(video_files)} 个文件均无效")
+            
+        logger.info(f"找到 {len(video_info)} 个有效视频文件，总时长: {total_duration:.2f}秒")
+        
+        # 判断是否需要补充视频
+        need_append = total_duration < self.min_duration
+        target_duration = self.min_duration
+        remaining_duration = max(0, target_duration - total_duration)
+        
+        # 如果需要补充，计算需要添加的视频
+        if need_append:
+            logger.info(f"视频总时长 ({total_duration:.2f}秒) 不足目标时长 ({target_duration:.2f}秒)，需要补充 {remaining_duration:.2f}秒")
+            
+            # 复制视频信息列表，用于选择补充视频
+            append_candidates = video_info.copy()
+            append_videos = []
+            
+            # 按照时长从大到小排序，优先选择较长的视频
+            append_candidates.sort(key=lambda x: x["duration"], reverse=True)
+            
+            # 用于记录每个视频被选择的次数
+            video_usage_count = {info["file"].name: 0 for info in video_info}
+            
+            # 计算需要补充的视频
+            current_append_duration = 0
+            
+            # 最大允许每个视频重复使用的次数
+            max_repeat_per_video = 3
+            
+            # 用于记录已经生成的视频序列，防止重复子序列
+            sequence = []
+            
+            # 为每个原始视频添加到序列
+            for info in video_info:
+                sequence.append(info["file"].name)
+            
+            # --------- 新增：初始化每个视频的补充特效参数队列 ---------
+            append_effect_queues = {}
+            for info in video_info:
+                file_name = info["file"].name
+                if file_name not in append_effect_queues:
+                    queue = [("zoom", pos) for pos in self.zoom_positions] + [("mirror", None)]
+                    random.shuffle(queue)
+                    append_effect_queues[file_name] = queue
+            # ---------------------------------------------------
+            
+            # 序列长度检查 - 如果不够生成独特的序列，则需要提示用户
+            if len(video_info) < 3:
+                logger.warning("有效视频数量过少，难以生成无重复子序列！")
+                if len(video_info) < 2:
+                    raise ValueError("至少需要2个有效视频才能生成无重复子序列的计划！")
+            
+            # 检查是否有足够多的视频来避免子序列重复的函数
+            def would_create_repeated_subsequence(file_name, sequence, n=2):
+                if len(sequence) < n:
+                    return False
+                new_subsequence = sequence[-(n-1):] + [file_name]
+                for i in range(len(sequence) - n + 1):
+                    if sequence[i:i+n] == new_subsequence:
+                        return True
+                return False
+            
+            def would_create_consecutive_usage(file_name, sequence):
+                if not sequence:
+                    return False
+                last_file = sequence[-1]
+                if "[补充]" in last_file:
+                    last_file = last_file.split("[补充]")[0]
+                current_file = file_name
+                if "[补充]" in current_file:
+                    current_file = current_file.split("[补充]")[0]
+                return last_file == current_file
+            
+            last_file_name = None
+            while current_append_duration < remaining_duration:
+                # 优先选择不是上一次用的视频，且未超重复上限
+                available_candidates = [candidate for candidate in append_candidates if video_usage_count[candidate["file"].name] < max_repeat_per_video and candidate["file"].name != last_file_name]
+                if not available_candidates:
+                    # 退而求其次，允许同一视频连续
+                    available_candidates = [candidate for candidate in append_candidates if video_usage_count[candidate["file"].name] < max_repeat_per_video]
+                if not available_candidates:
+                    # 所有都超限，放宽限制
+                    available_candidates = append_candidates
+                # 权重分配（可选，简单随机即可）
+                selected = random.choice(available_candidates)
+                last_file_name = selected["file"].name
+                # 分配特效参数（按顺序轮换）
+                effect_queue = append_effect_queues[last_file_name]
+                effect_type, effect_param = effect_queue.pop(0)
+                effect_queue.append((effect_type, effect_param))
+                # 更新使用计数
+                video_usage_count[selected["file"].name] += 1
+                # 添加到补充列表
+                new_entry = selected.copy()
+                new_entry["is_append"] = True
+                new_entry["id"] = len(video_info) + len(append_videos)
+                new_entry["effects"] = [{"type": effect_type, "param": effect_param}]
+                append_videos.append(new_entry)
+                current_append_duration += selected["duration"]
+                sequence.append(f"{selected['file'].name}[补充]")
+                logger.info(f"选择补充视频: {selected['file'].name}，时长: {selected['duration']:.2f}秒，已使用 {video_usage_count[selected['file'].name]} 次，特效: {effect_type} {effect_param}")
+            logger.info(f"共选择了 {len(append_videos)} 个补充视频，预计总时长: {total_duration + current_append_duration:.2f}秒")
+            usage_stats = {name: count for name, count in video_usage_count.items() if count > 0}
+            logger.info(f"视频使用统计: {usage_stats}")
+            for append_video in append_videos:
+                video_info.append(append_video)
+        
+        # 为视频分配特效
+        # 可用的特效类型
+        # effect_types = ["zoom", "mirror", "rotate", "none"]  # 已废弃，不再使用
+
+        # 记录每个文件实例的已分配特效，确保每个实例的特效不重复
+        # 格式: {(文件名, ID): [(特效类型, 参数)]}
+        used_effects = {}
+
+        # 记录每个文件的可用特效，确保同一文件的不同实例有不同特效
+        # 格式: {文件名: {(特效类型, 参数)}}
+        file_available_effects = {}
+
+        # 计算要应用特效的视频数量（30%的总视频数）
+        total_videos = len(video_info)
+        effects_count = int(total_videos * 0.3)
+
+        # 随机选择要应用特效的视频索引
+        effects_indices = random.sample(range(total_videos), min(effects_count, total_videos))
+
+        logger.info(f"总视频数: {total_videos}，将为 {len(effects_indices)} 个视频应用特效（30%）")
+
+        # 初始化每个文件可用的特效集合
+        for info in video_info:
+            file_name = info["file"].name
+            if file_name not in file_available_effects:
+                file_available_effects[file_name] = set()
+                # 只添加zoom和mirror特效，不再添加rotate
+                for pos in self.zoom_positions:
+                    file_available_effects[file_name].add(("zoom", pos))
+                file_available_effects[file_name].add(("mirror", None))
+                # 不再添加rotate特效
+
+        # 为每个视频分配特效
+        for i, info in enumerate(video_info):
+            file_name = info["file"].name
+            file_id = info["id"]
+            instance_key = (file_name, file_id)
+            used_effects[instance_key] = []
+            apply_effect = i in effects_indices
+            if apply_effect:
+                available_effects = list(file_available_effects[file_name])
+                if not available_effects:
+                    logger.warning(f"文件 {file_name} 没有可用特效，跳过特效应用")
+                    continue
+                effect_tuple = random.choice(available_effects)
+                effect_type, effect_param = effect_tuple
+                file_available_effects[file_name].remove(effect_tuple)
+                used_effects[instance_key].append((effect_type, effect_param))
+                info["effects"].append({
+                    "type": effect_type,
+                    "param": effect_param
+                })
+                logger.info(f"为视频 {file_name}（ID:{file_id}）分配特效: {effect_type}{' 参数:'+str(effect_param) if effect_param else ''}")
+                if not file_available_effects[file_name]:
+                    logger.warning(f"文件 {file_name} 已经用完所有可用特效")
+        
+        # 创建待拼接文件txt
+        concat_plan_file = self.temp_folder / "concat_plan.txt"
+        with open(concat_plan_file, "w", encoding="utf-8") as f:
+            f.write("# 待拼接文件计划\n")
+            f.write("# 格式: 文件名,分辨率,时长,特效类型,特效参数\n")
+            f.write(f"# 目标时长: {target_duration:.2f}秒, 原始时长: {total_duration:.2f}秒\n\n")
+            
+            for info in video_info:
+                file_name = info["file"].name
+                resolution = info["resolution"]
+                duration = info["duration"]
+                is_append = info.get("is_append", False)
+                
+                # 如果没有特效，添加一个无特效条目
+                if not info["effects"]:
+                    # 标记补充视频
+                    append_mark = "[补充]" if is_append else ""
+                    # 写入无特效条目
+                    f.write(f"{file_name}{append_mark},{resolution},{duration:.2f},none,无\n")
+                    continue
+                
+                # 处理特效信息
+                for effect in info["effects"]:
+                    effect_type = effect["type"]
+                    effect_param = effect["param"]
+                    
+                    # 格式化特效参数
+                    if effect_type == "zoom" and effect_param:
+                        # 使用冒号作为分隔符，避免与CSV的逗号冲突
+                        param_str = f"{effect_param[0]}:{effect_param[1]}"
+                    elif effect_type == "rotate" and effect_param:
+                        param_str = str(effect_param)
+                    else:
+                        param_str = "无"
+                    
+                    # 标记补充视频
+                    append_mark = "[补充]" if is_append else ""
+                    
+                    # 写入信息
+                    f.write(f"{file_name}{append_mark},{resolution},{duration:.2f},{effect_type},{param_str}\n")
+        
+        logger.info(f"拼接计划已创建: {concat_plan_file}")
+        return concat_plan_file
+        
+    def _validate_video_file(self, video_path):
+        """验证文件是否为有效的视频文件
+        
+        Args:
+            video_path (Path): 视频文件路径
+            
+        Raises:
+            ValueError: 如果文件无效
+        """
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(video_path):
+                raise ValueError(f"文件不存在: {video_path}")
+                
+            # 检查文件大小
+            file_size = os.path.getsize(video_path)
+            if file_size < 10000:  # 小于10KB的文件可能不是有效视频
+                raise ValueError(f"文件过小 ({file_size} 字节)")
+                
+            # 使用ffprobe检查文件
+            result = subprocess.run(
+                [
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-select_streams",
+                    "v:0",
+                    "-show_entries",
+                    "stream=codec_type",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
+                    str(video_path),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            # 检查是否有视频流
+            if "video" not in result.stdout.strip().lower():
+                raise ValueError("没有找到视频流")
+                
+            return True
+        except subprocess.TimeoutExpired:
+            raise ValueError(f"验证视频文件超时: {video_path.name}")
+        except Exception as e:
+            raise ValueError(f"验证视频文件失败: {str(e)}")
+
+    def apply_effects_from_plan(self, plan_file):
+        """根据拼接计划，为每个视频应用特效处理
+        
+        Args:
+            plan_file (Path): 拼接计划文件路径
+            
+        Returns:
+            list: 处理后的视频文件列表
+        """
+        logger.info("步骤2：根据计划应用特效处理")
+        
+        if not os.path.exists(plan_file):
+            raise ValueError(f"拼接计划文件不存在: {plan_file}")
+        
+        # 读取拼接计划
+        plan_entries = []
+        with open(plan_file, "r", encoding="utf-8") as f:
+            for line in f:
+                # 跳过注释行和空行
+                if line.startswith("#") or not line.strip():
+                    continue
+                
+                try:
+                    # 解析计划条目
+                    parts = line.strip().split(",")
+                    
+                    # 确保有足够的部分
+                    if len(parts) < 5:
+                        logger.error(f"计划条目格式错误: {line.strip()} - 字段不足")
+                        continue
+                    
+                    # 处理文件名和补充标记
+                    full_name = parts[0]
+                    is_append = "[补充]" in full_name
+                    file_name = full_name.split("[补充]")[0]  # 移除[补充]标记
+                    
+                    # 获取特效信息
+                    effect_type = parts[3]
+                    effect_param_str = parts[4]
+                    
+                    # 处理参数
+                    param = None
+                    if effect_type == "zoom" and effect_param_str != "无":
+                        try:
+                            # 解析缩放位置 - 使用冒号作为分隔符
+                            pos_parts = effect_param_str.split(":")
+                            if len(pos_parts) < 2:
+                                logger.error(f"缩放参数格式错误: {effect_param_str} - 参数不足")
+                                continue
+                                
+                            param = (float(pos_parts[0]), float(pos_parts[1]))
+                        except (ValueError, IndexError) as e:
+                            logger.error(f"解析缩放参数失败: {effect_param_str} - {e}")
+                            continue
+                    elif effect_type == "rotate" and effect_param_str != "无":
+                        try:
+                            # 解析旋转角度
+                            param = float(effect_param_str)
+                        except ValueError as e:
+                            logger.error(f"解析旋转角度失败: {effect_param_str} - {e}")
+                            continue
+                    
+                    # 创建计划条目
+                    plan_entries.append({
+                        "file_name": file_name,
+                        "effect_type": effect_type,
+                        "effect_param": param,
+                        "is_append": is_append,
+                        "original_line": line.strip(),  # 保存原始行以便调试
+                        "position": len(plan_entries)  # 记录顺序位置
+                    })
+                except Exception as e:
+                    logger.error(f"解析计划条目失败: {line.strip()} - {e}")
+        
+        if not plan_entries:
+            logger.error("未能成功解析任何计划条目")
+            raise ValueError("拼接计划解析失败，无有效条目")
+            
+        logger.info(f"读取到 {len(plan_entries)} 个处理计划条目")
+        
+        # 创建输出目录
+        processed_dir = self.temp_folder / "processed"
+        os.makedirs(processed_dir, exist_ok=True)
+        
+        # 存储所有处理后的文件（按原始顺序）
+        processed_files = []
+        
+        # 处理每个计划条目
+        for i, entry in enumerate(plan_entries):
+            try:
+                file_name = entry["file_name"]
+                effect_type = entry["effect_type"]
+                effect_param = entry["effect_param"]
+                is_append = entry["is_append"]
+                position = entry["position"]
+                
+                # 找到原始文件
+                original_file = None
+                for f in self.video_folder.iterdir():
+                    if f.name == file_name:
+                        original_file = f
+                        break
+                
+                if not original_file:
+                    logger.error(f"未找到原始文件: {file_name}")
+                    continue
+                
+                # 验证视频文件有效性
+                try:
+                    self._validate_video_file(original_file)
+                except ValueError as e:
+                    logger.error(f"视频文件无效: {file_name} - {e}")
+                    continue
+                
+                # 创建输出文件名，包含特效信息和原始顺序
+                output_base = f"{position:03d}_{file_name.rsplit('.', 1)[0]}"
+                if is_append:
+                    output_base += "_append"
+                    
+                if effect_type == "zoom":
+                    if effect_param:
+                        x, y = effect_param
+                        output_base += f"_zoom_{x}_{y}"
+                    else:
+                        output_base += "_zoom"
+                elif effect_type == "mirror":
+                    output_base += "_mirror"
+                elif effect_type == "rotate":
+                    if effect_param:
+                        output_base += f"_rotate_{effect_param}"
+                    else:
+                        output_base += "_rotate"
+                elif effect_type == "none":
+                    output_base += "_noeffect"
+                    
+                output_file = processed_dir / f"{output_base}{original_file.suffix}"
+                
+                # 应用特效
+                try:
+                    if effect_type == "zoom" and effect_param:
+                        self._apply_zoom_to_file(original_file, output_file, effect_param)
+                    elif effect_type == "mirror":
+                        self.mirror_video(str(original_file), str(output_file))
+                    # rotate类型直接按无特效处理
+                    else:
+                        # 无特效或不支持的特效，直接复制（确保统一分辨率和编码）
+                        self._encode_video(original_file, output_file)
+                    # 添加到处理后文件列表（按原始顺序）
+                    if output_file.exists():
+                        processed_files.append({
+                            "file": output_file,
+                            "position": position
+                        })
+                        logger.info(f"处理完成 ({i+1}/{len(plan_entries)}): {output_file.name}")
+                    else:
+                        logger.error(f"处理失败: {output_file.name}")
+                except Exception as e:
+                    logger.error(f"应用特效失败: {effect_type} - {e}")
+                    # 尝试直接复制原文件
+                    try:
+                        logger.info(f"尝试直接复制原文件: {file_name}")
+                        self._encode_video(original_file, output_file)
+                        if output_file.exists():
+                            processed_files.append({
+                                "file": output_file,
+                                "position": position
+                            })
+                            logger.info(f"使用原始文件成功: {output_file.name}")
+                    except Exception as copy_error:
+                        logger.error(f"复制原文件失败: {copy_error}")
+            
+            except Exception as e:
+                logger.error(f"处理计划条目失败: {entry} - {e}")
+        
+        if not processed_files:
+            logger.error("没有成功处理任何文件")
+            raise ValueError("特效处理失败，无有效输出文件")
+            
+        # 按原始顺序排序文件
+        processed_files.sort(key=lambda x: x["position"])
+        
+        # 提取排序后的文件路径
+        result_files = [item["file"] for item in processed_files]
+            
+        logger.info(f"特效处理完成，共处理 {len(processed_files)}/{len(plan_entries)} 个文件")
+        return result_files
+        
+    def _apply_zoom_to_file(self, input_file, output_file, position):
+        """对单个文件应用缩放特效
+        
+        Args:
+            input_file (Path): 输入文件路径
+            output_file (Path): 输出文件路径
+            position (tuple): 缩放位置，格式为(x, y)，值范围0-1
+        """
+        try:
+            # 检测原始分辨率
+            w, h = self.detect_resolution(input_file)
+            
+            # 确保position是有效的浮点数值
+            try:
+                x_ratio = float(position[0])
+                y_ratio = float(position[1])
+                
+                # 限制在0-1范围内
+                x_ratio = max(0.0, min(1.0, x_ratio))
+                y_ratio = max(0.0, min(1.0, y_ratio))
+            except (ValueError, TypeError, IndexError) as e:
+                logger.error(f"无效的缩放位置参数: {position} - {e}，使用默认中心位置")
+                x_ratio, y_ratio = 0.5, 0.5
+            
+            # 计算缩放比例和裁剪区域大小
+            crop_w = w // self.zoom_scale
+            crop_h = h // self.zoom_scale
+            
+            # 确保裁剪区域有合理大小
+            if crop_w <= 0 or crop_h <= 0:
+                crop_w = max(1, w // 2)
+                crop_h = max(1, h // 2)
+            
+            # 计算裁剪区域左上角坐标
+            x = int(x_ratio * (w - crop_w))
+            y = int(y_ratio * (h - crop_h))
+            
+            # 确保坐标是偶数（某些编码器要求）
+            x = x - (x % 2)
+            y = y - (y % 2)
+            
+            # 确保坐标不超出范围
+            x = max(0, min(w - crop_w, x))
+            y = max(0, min(h - crop_h, y))
+            
+            logger.info(f"对文件 {input_file.name} 应用缩放特效: 位置=({x_ratio:.2f},{y_ratio:.2f}), 像素=({x},{y}), 裁剪区域={crop_w}x{crop_h}")
+            
+            # 构建裁剪并缩放的滤镜
+            vf = f"crop={crop_w}:{crop_h}:{x}:{y},scale={w}:{h}"
+            
+            # 执行命令
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(input_file),
+                "-vf",
+                vf,
+                *self._get_encode_params(),
+                *self._get_audio_params(),
+                str(output_file)
+            ]
+            
+            self.run_cmd(cmd, stage_desc=f"缩放处理: {input_file.name}")
+            
+        except Exception as e:
+            logger.error(f"缩放处理失败: {input_file.name} - {e}")
+            # 如果处理失败，复制原文件
+            shutil.copy(input_file, output_file)
+            logger.warning(f"使用原始文件: {input_file.name}")
+
+    def concat_processed_files(self, processed_files):
+        """拼接处理后的视频文件"""
+        logger.info("步骤3：拼接处理后的视频文件")
+        if not processed_files:
+            raise ValueError("没有处理后的文件可供拼接")
+        if len(processed_files) == 1:
+            logger.info("只有一个处理后的文件，直接复制")
+            shutil.copy(processed_files[0], self.output_file)
+            return self.output_file
+        logger.info("开始统一视频分辨率以确保拼接成功")
+        resolutions = []
+        resolution_files = {}
+        total_files = len(processed_files)
+        valid_resolution_count = 0
+        for file in processed_files:
+            try:
+                width, height = self.detect_resolution(file)
+                resolution = (width, height)
+                resolutions.append(resolution)
+                if resolution not in resolution_files:
+                    resolution_files[resolution] = []
+                resolution_files[resolution].append(file)
+                valid_resolution_count += 1
+                logger.info(f"视频 {file.name} 分辨率: {width}x{height}")
+            except Exception as e:
+                logger.warning(f"检测分辨率失败: {file.name} - {e}")
+        if not resolutions:
+            logger.warning("无法获取任何视频的分辨率信息，使用默认值 1080x1920")
+            target_width, target_height = 1080, 1920
+        else:
+            resolution_stats = [(res, len(files)) for res, files in resolution_files.items()]
+            resolution_stats.sort(key=lambda x: x[1], reverse=True)
+            target_resolution = resolution_stats[0][0]
+            target_width, target_height = target_resolution
+            resolution_ratio = resolution_stats[0][1] / valid_resolution_count * 100
+            logger.info(f"选择目标分辨率: {target_width}x{target_height} (出现 {resolution_stats[0][1]} 次, 占比 {resolution_ratio:.1f}%)")
+            if resolution_ratio < 50:
+                logger.warning(f"目标分辨率仅占 {resolution_ratio:.1f}%, 可能需要较多的转码处理")
+            if len(resolution_stats) > 1:
+                other_res = ", ".join([f"{w}x{h}({count}个)" for (w, h), count in resolution_stats[1:3]])
+                logger.info(f"其他常见分辨率: {other_res}")
+        normalized_files = []
+        normalized_dir = self.temp_folder / "normalized"
+        normalized_dir.mkdir(exist_ok=True)
+        matching_files = resolution_files.get((target_width, target_height), [])
+        if matching_files:
+            logger.info(f"已有 {len(matching_files)} 个文件符合目标分辨率，无需处理")
+        files_to_process = [f for f in processed_files if f not in matching_files]
+        logger.info(f"需要处理 {len(files_to_process)} 个非目标分辨率的文件")
+        for file in matching_files:
+            normalized_files.append(file)
+        failed_files = []
+        failed_cmds = []
+        max_workers = min(self.max_workers, 8)
+        if files_to_process:
+            if max_workers > 1:
+                logger.info(f"使用 {max_workers} 个线程并行处理分辨率统一")
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = []
+                    for i, file in enumerate(files_to_process):
+                        output_file = normalized_dir / f"norm_{i:03d}{file.suffix}"
+                        future = executor.submit(
+                            self._normalize_resolution, 
+                            file, 
+                            output_file, 
+                            target_width, 
+                            target_height
+                        )
+                        futures.append((future, output_file, file))
+                    for future, output_file, original_file in futures:
+                        try:
+                            success = future.result()
+                            if success and output_file.exists():
+                                normalized_files.append(output_file)
+                                logger.info(f"统一分辨率成功: {original_file.name} -> {target_width}x{target_height}")
+                            else:
+                                logger.error(f"统一分辨率失败: {original_file.name}")
+                                failed_files.append(original_file.name)
+                                # 立即中断
+                                raise RuntimeError(f"分辨率统一失败，无法继续拼接。失败文件: {original_file.name}")
+                        except Exception as e:
+                            logger.error(f"处理异常: {original_file.name} - {e}")
+                            failed_files.append(original_file.name)
+                            raise RuntimeError(f"分辨率统一失败，无法继续拼接。失败文件: {original_file.name}")
+            else:
+                logger.info("使用单线程处理分辨率统一")
+                for i, file in enumerate(files_to_process):
+                    output_file = normalized_dir / f"norm_{i:03d}{file.suffix}"
+                    try:
+                        success = self._normalize_resolution(file, output_file, target_width, target_height)
+                        if success and output_file.exists():
+                            normalized_files.append(output_file)
+                            logger.info(f"统一分辨率成功: {file.name} -> {target_width}x{target_height}")
+                        else:
+                            logger.error(f"统一分辨率失败: {file.name}")
+                            failed_files.append(file.name)
+                            raise RuntimeError(f"分辨率统一失败，无法继续拼接。失败文件: {file.name}")
+                    except Exception as e:
+                        logger.error(f"处理异常: {file.name} - {e}")
+                        failed_files.append(file.name)
+                        raise RuntimeError(f"分辨率统一失败，无法继续拼接。失败文件: {file.name}")
+        if len(normalized_files) != len(processed_files):
+            logger.error(f"分辨率统一后文件数量不一致，流程中断。成功: {len(normalized_files)}，原始: {len(processed_files)}")
+            raise RuntimeError("分辨率统一后文件数量不一致，无法继续拼接。请检查日志。")
+        logger.info(f"分辨率统一处理完成，共处理 {len(normalized_files)} 个文件")
+        concat_list = self.temp_folder / "final_concat_list.txt"
+        with open(concat_list, "w", encoding="utf-8") as f:
+            for file in normalized_files:
+                f.write(f"file '{file.absolute()}'\n")
+        logger.info(f"开始拼接 {len(normalized_files)} 个处理后的文件...")
+        temp_output = self.temp_folder / "temp_final_output.mp4"
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_list),
+            *self._get_encode_params(),
+            *self._get_audio_params(),
+            str(temp_output)
+        ]
+        logger.info("使用重编码拼接模式确保兼容性")
+        self.run_cmd(cmd, stage_desc="最终拼接")
+        if not temp_output.exists() or os.path.getsize(temp_output) < 1000:
+            logger.error("拼接失败，输出文件无效")
+            logger.info("尝试使用简单拼接模式")
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-c",
+                "copy",
+                str(temp_output)
+            ]
+            self.run_cmd(cmd, stage_desc="简单拼接")
+        if temp_output.exists() and os.path.getsize(temp_output) > 1000:
+            shutil.move(temp_output, self.output_file)
+            logger.info(f"拼接完成，输出文件: {self.output_file}")
+            return self.output_file
+        else:
+            raise RuntimeError("拼接失败，未生成有效的输出文件")
+    
+    def _normalize_resolution(self, input_file, output_file, target_width, target_height):
+        """统一视频分辨率"""
+        try:
+            width, height = self.detect_resolution(input_file)
+            if (width, height) == (target_width, target_height):
+                try:
+                    os.link(input_file, output_file)
+                    logger.debug(f"创建硬链接: {input_file.name} -> {output_file.name}")
+                    return True
+                except Exception as e:
+                    logger.debug(f"硬链接失败: {e}，使用复制")
+                    shutil.copy(input_file, output_file)
+                    return True
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(input_file),
+                "-vf", 
+                f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2,setsar=1:1",
+                "-c:v",
+                "libx264",
+                "-preset",
+                "fast",
+                "-crf",
+                "23",
+                "-c:a",
+                "copy",
+                str(output_file)
+            ]
+            try:
+                self.run_cmd(cmd, stage_desc=f"统一分辨率 {input_file.name}")
+            except Exception as e:
+                logger.error(f"主重编码失败，尝试兜底重编码: {e}")
+                # 兜底重编码分支，始终用aac音频编码
+                cmd = [
+                    "ffmpeg", "-y", "-i", str(input_file),
+                    "-vf", f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2,setsar=1:1",
+                    "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+                    "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "128k",
+                    str(output_file)
+                ]
+                try:
+                    self.run_cmd(cmd, stage_desc=f"兜底重编码 {input_file.name}")
+                except Exception as e2:
+                    logger.error(f"兜底重编码也失败: {e2}")
+                    return False
+            if output_file.exists() and os.path.getsize(output_file) > 1000:
+                try:
+                    new_width, new_height = self.detect_resolution(output_file)
+                    if (new_width, new_height) != (target_width, target_height):
+                        logger.warning(
+                            f"分辨率处理后不匹配: 期望 {target_width}x{target_height}, "
+                            f"实际 {new_width}x{new_height}"
+                        )
+                except Exception:
+                    pass
+                return True
+            else:
+                logger.error(f"输出文件无效: {output_file}")
+                return False
+        except Exception as e:
+            logger.error(f"统一分辨率失败: {input_file.name} - {e}")
+            return False
+
+    def _validate_concat_plan(self, plan_file):
+        """验证拼接计划，检查是否存在连续使用相同视频的情况
+        
+        Args:
+            plan_file (Path): 拼接计划文件路径
+            
+        Returns:
+            bool: 计划是否有效（没有连续使用相同视频）
+        """
+        logger.info("验证拼接计划，检查是否存在连续使用相同视频的情况")
+        
+        if not os.path.exists(plan_file):
+            logger.error(f"拼接计划文件不存在: {plan_file}")
+            return False
+        
+        # 读取计划文件
+        sequence = []
+        with open(plan_file, "r", encoding="utf-8") as f:
+            for line in f:
+                # 跳过注释行和空行
+                if line.startswith("#") or not line.strip():
+                    continue
+                
+                # 解析文件名
+                parts = line.strip().split(",")
+                if len(parts) < 5:
+                    continue
+                
+                file_name = parts[0]
+                # 提取基本文件名（不含[补充]标记）
+                base_name = file_name.split("[补充]")[0]
+                sequence.append(base_name)
+        
+        # 检查是否有连续重复
+        has_consecutive = False
+        for i in range(1, len(sequence)):
+            if sequence[i] == sequence[i-1]:
+                logger.error(f"发现连续使用相同视频: 位置 {i-1} 和 {i}, 文件: {sequence[i]}")
+                has_consecutive = True
+        
+        # 检查是否有超过最大允许连续数量的同一视频
+        max_consecutive_allowed = 3  # 最大允许连续使用次数
+        continuous_files = {}  # 记录每个文件的连续使用情况
+        
+        for i, file_name in enumerate(sequence):
+            if file_name not in continuous_files:
+                continuous_files[file_name] = []
+            continuous_files[file_name].append(i)
+        
+        # 检查每个文件的使用位置是否有连续超过阈值的
+        for file_name, positions in continuous_files.items():
+            if len(positions) <= 1:
+                continue
+                
+            positions.sort()
+            consecutive_count = 1
+            max_consecutive = 1
+            
+            for j in range(1, len(positions)):
+                if positions[j] == positions[j-1] + 1:  # 连续位置
+                    consecutive_count += 1
+                    max_consecutive = max(max_consecutive, consecutive_count)
+                else:
+                    consecutive_count = 1
+            
+            if max_consecutive > max_consecutive_allowed:
+                logger.error(f"文件 {file_name} 在位置 {positions} 连续使用超过 {max_consecutive_allowed} 次")
+                has_consecutive = True
+        
+        if has_consecutive:
+            logger.error("拼接计划验证失败：存在连续使用相同视频的情况")
+            return False
+        else:
+            logger.info("拼接计划验证通过：没有连续使用相同视频")
+            return True
+    
+    def _fix_concat_plan(self, plan_file):
+        """修复拼接计划中连续使用相同视频的问题
+        
+        通过重新排序视频来解决连续使用问题，确保同一视频不会连续出现
+        
+        Args:
+            plan_file (Path): 拼接计划文件路径
+            
+        Returns:
+            Path: 修复后的拼接计划文件路径
+        """
+        logger.info("修复拼接计划中连续使用相同视频的问题")
+        
+        # 读取所有计划条目
+        entries = []
+        header_lines = []
+        with open(plan_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("#") or not line.strip():
+                    header_lines.append(line)
+                    continue
+                
+                entries.append(line.strip())
+        
+        if not entries:
+            logger.error("没有有效的计划条目可供修复")
+            return plan_file
+        
+        # 解析所有条目，提取文件名和特效信息
+        parsed_entries = []
+        for entry in entries:
+            parts = entry.split(",")
+            if len(parts) < 5:
+                continue
+                
+            file_name = parts[0]
+            base_name = file_name.split("[补充]")[0]  # 提取基本文件名（不含[补充]标记）
+            effect_type = parts[3]
+            effect_param = parts[4] if len(parts) > 4 else ""
+            
+            parsed_entries.append({
+                "full_entry": entry,
+                "file_name": file_name,
+                "base_name": base_name,
+                "effect_type": effect_type,
+                "effect_param": effect_param
+            })
+        
+        # 使用智能排序算法修复连续使用问题
+        fixed_entries = []
+        used_files = {}  # 记录已使用的文件及其位置
+        last_file = None
+        
+        # 首先，尝试从原始序列开始，逐步修复连续使用问题
+        remaining_entries = parsed_entries.copy()
+        
+        # 先添加第一个条目
+        if remaining_entries:
+            first_entry = remaining_entries.pop(0)
+            fixed_entries.append(first_entry["full_entry"])
+            last_file = first_entry["base_name"]
+            if last_file not in used_files:
+                used_files[last_file] = []
+            used_files[last_file].append(0)  # 记录在位置0使用
+        
+        # 逐步添加其余条目，避免连续使用
+        while remaining_entries:
+            # 找出可以使用的文件（不是上一个使用的文件）
+            available_entries = [
+                entry for entry in remaining_entries
+                if entry["base_name"] != last_file
+            ]
+            
+            if not available_entries:
+                # 如果没有可用条目，则必须连续使用，选择使用次数最少的文件
+                usage_count = {name: len(positions) for name, positions in used_files.items()}
+                
+                # 查找使用次数最少的文件
+                min_count = float('inf')
+                min_file = None
+                for name, count in usage_count.items():
+                    if count < min_count and any(entry["base_name"] == name for entry in remaining_entries):
+                        min_count = count
+                        min_file = name
+                
+                if min_file:
+                    # 选择该文件的第一个条目
+                    for i, entry in enumerate(remaining_entries):
+                        if entry["base_name"] == min_file:
+                            next_entry = remaining_entries.pop(i)
+                            logger.warning(f"无法避免连续使用视频，选择使用次数最少的文件: {next_entry['base_name']}")
+                            break
+                    else:
+                        # 如果找不到，取第一个
+                        next_entry = remaining_entries.pop(0)
+                        logger.warning(f"无法找到使用次数最少的文件，使用下一个可用条目: {next_entry['base_name']}")
+                else:
+                    # 实在没有其他选择，取第一个
+                    next_entry = remaining_entries.pop(0)
+                    logger.warning(f"无法避免连续使用，使用下一个可用条目: {next_entry['base_name']}")
+            else:
+                # 优先选择之前使用次数最少的文件
+                usage_count = {}
+                for entry in available_entries:
+                    name = entry["base_name"]
+                    usage_count[name] = len(used_files.get(name, []))
+                
+                # 按使用次数排序
+                sorted_available = sorted(available_entries, key=lambda e: usage_count.get(e["base_name"], 0))
+                next_entry = sorted_available[0]
+                remaining_entries.remove(next_entry)
+            
+            # 添加到结果列表
+            fixed_entries.append(next_entry["full_entry"])
+            
+            # 更新状态
+            last_file = next_entry["base_name"]
+            if last_file not in used_files:
+                used_files[last_file] = []
+            used_files[last_file].append(len(fixed_entries) - 1)  # 记录使用位置
+        
+        # 检查是否还有连续使用情况
+        has_consecutive = False
+        for i in range(1, len(fixed_entries)):
+            parts1 = fixed_entries[i-1].split(",")[0].split("[补充]")[0]
+            parts2 = fixed_entries[i].split(",")[0].split("[补充]")[0]
+            if parts1 == parts2:
+                logger.warning(f"修复后仍有连续使用: 位置 {i-1} 和 {i}, 文件: {parts1}")
+                has_consecutive = True
+        
+        if has_consecutive:
+            logger.warning("修复后仍存在连续使用情况，但已尽可能减少")
+        
+        # 检查是否有超过最大允许连续数量的同一视频
+        max_consecutive_allowed = 3  # 最大允许连续使用次数
+        continuous_count = 1
+        prev_file = None
+        
+        for i, entry in enumerate(fixed_entries):
+            current_file = entry.split(",")[0].split("[补充]")[0]
+            
+            if i > 0 and current_file == prev_file:
+                continuous_count += 1
+                if continuous_count > max_consecutive_allowed:
+                    logger.error(f"发现连续使用相同视频超过{max_consecutive_allowed}次: {current_file}，从位置{i-continuous_count+1}到{i}")
+                    # 移除超出限制的条目
+                    fixed_entries = fixed_entries[:-(continuous_count-max_consecutive_allowed)]
+                    logger.warning(f"移除了{continuous_count-max_consecutive_allowed}个条目以避免过度连续使用")
+                    break
+            else:
+                continuous_count = 1
+            
+            prev_file = current_file
+        
+        # 写入修复后的计划
+        fixed_plan_file = plan_file.with_name("fixed_" + plan_file.name)
+        with open(fixed_plan_file, "w", encoding="utf-8") as f:
+            # 写入头部信息
+            for line in header_lines:
+                f.write(line)
+            
+            # 写入修复后的条目
+            for entry in fixed_entries:
+                f.write(entry + "\n")
+        
+        logger.info(f"拼接计划已修复: {fixed_plan_file}")
+        return fixed_plan_file
 
 
 def main():
