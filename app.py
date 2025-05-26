@@ -472,6 +472,17 @@ class App(QMainWindow):
             logger.info("端口映射保存成功")
         except Exception as e:
             logger.error(f"保存端口映射失败: {e}")
+    
+    def closeEvent(self, event):
+        """窗口关闭时自动关闭 frpc 服务"""
+        if self.frpc_process is not None:
+            try:
+                self.frpc_process.terminate()
+                self.frpc_process.wait(timeout=5)
+                self.log_signal.log_updated.emit("frpc 服务已关闭")
+            except Exception as e:
+                self.log_signal.log_updated.emit(f"关闭 frpc 失败: {e}")
+        event.accept()
 
 
 def main():
