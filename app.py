@@ -1,9 +1,9 @@
 import asyncio
+import ctypes
 import os
 import subprocess
 import sys
 import threading
-import ctypes
 
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
@@ -19,14 +19,12 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QMessageBox,
 )
-
 from qasync import QEventLoop, asyncSlot
 
 from api.api_server import run_server
+from browser.browser_operator import browser_operator
 from conf import BASE_DIR
 from service.browser_service import browser_service
-from browser.browser_operator import browser_operator
-
 from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
@@ -379,8 +377,7 @@ class App(QMainWindow):
             self.start_btn.setEnabled(True)
             self.stop_btn.setEnabled(True)
 
-    @staticmethod
-    def _start_frpc():
+    def _start_frpc(self):
         """
         启动 frpc 服务，使用固定配置文件，并确保可执行文件与配置文件存在
 
