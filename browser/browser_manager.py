@@ -149,7 +149,7 @@ class BrowserManager:
                         url
                         and not url.startswith("chrome://")
                         and url != "about:blank"
-                        and "/qw-browser/static" not in url
+                        and not url.startswith("file://")
                         and url not in seen
                     ):
                         urls.append(url)
