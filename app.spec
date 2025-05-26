@@ -21,7 +21,7 @@ datas = [
 
 # 添加 PyQt6 相关模块
 hiddenimports = collect_submodules('playwright') + [
-    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets','DrissionPage'
+      'PyQt6', 'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'DrissionPage'
 ]
 
 # 打包选项
