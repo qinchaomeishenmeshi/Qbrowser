@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     console.log('request', request)
     console.log('sender', sender)
     console.log('sendResponse', sendResponse)
-    const {word, url} = request.data
+    const { word, url } = request.data
     if (request.action === 'send_input_message') {
         // 发送常用词
         sendMessage(url, word, {}, sendResponse)
@@ -103,7 +103,7 @@ function injectFetchInterceptor() {
 
 // 事件监听处理
 window.addEventListener('fetchResponse', (event) => {
-    const {url, status, body} = event.detail
+    const { url, status, body } = event.detail
     console.log('接口监听-test:', url, status, body)
     if (url.includes('/data/life/live/plan/detail/') && status === 200) {
         try {
@@ -360,7 +360,7 @@ async function sendProductsListToBackground() {
     }
 
     console.log('发送商品数据到后台', params)
-    return await $Request(API.saveProductListApi, {params})
+    return await $Request(API.saveProductListApi, { params })
 }
 
 
@@ -513,7 +513,7 @@ async function getModalText() {
             return
         }
         console.log('params', params)
-        await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        await $Request(API.liveviolationrecordsdealSaveApi, { params });
         createTopTips(`账号：${dyAccountNo},违规记录保存成功`)
     }
 
@@ -560,13 +560,13 @@ async function get_punish_list() {
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
         const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
                 user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
             })
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data: list = []} = await res.json();
+        const { data: list = [] } = await res.json();
 
         if (!list || list.length === 0) {
             createTopTips('同步完成：无违规记录');
@@ -584,7 +584,7 @@ async function get_punish_list() {
                     name: dyRoomName
                 };
                 console.log('保存参数：', params);
-                await $Request(API.liveviolationrecordsdealSaveApi, {params});
+                await $Request(API.liveviolationrecordsdealSaveApi, { params });
             } catch (e) {
                 console.error('⚠️ 单条保存失败：', e, item);
             }
@@ -638,13 +638,13 @@ async function get_live_goods_list() {
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
         const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/live_room_list', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
                 user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
             })
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data: list = []} = await res.json();
+        const { data: list = [] } = await res.json();
 
         if (!list || list.length === 0) {
             createTopTips('无复盘记录');
@@ -673,7 +673,7 @@ async function get_live_goods_list() {
             }
         }
         console.log('保存参数：', params);
-        const result = await $Request(API.livebroadcastreviewSaveApi, {params});
+        const result = await $Request(API.livebroadcastreviewSaveApi, { params });
         console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步复盘记录——完成');
     } catch (err) {
@@ -701,7 +701,7 @@ async function get_live_history_list() {
 
     try {
         const getUserRes = await fetch('https://buyin.jinritemai.com/index/getUser', {
-            method: 'GET', headers: {'Content-Type': 'application/json'},
+            method: 'GET', headers: { 'Content-Type': 'application/json' },
         });
 
         const getUserResult = await getUserRes.json();
@@ -710,11 +710,11 @@ async function get_live_history_list() {
         const buyinAccountId = getUserResult?.data?.buyin_account_id
         const dyAccountName = getUserResult?.data?.user_name
         const res = await fetch(`https://buyin.jinritemai.com/compass_api/content_live/author/live_detail/history_live?is_asc=false&page_no=1&page_size=10&date_type=21&begin_date=${begin_date}&begin_date_format=${begin_date_format}`, {
-            method: 'GET', headers: {'Content-Type': 'application/json'},
+            method: 'GET', headers: { 'Content-Type': 'application/json' },
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data = {}} = await res.json();
+        const { data = {} } = await res.json();
         const data_result = data.data_result?.map(it => {
             return {
                 ...it,
@@ -754,10 +754,10 @@ async function get_live_history_list() {
             }, 2000); // 每个间隔 2 秒
         }
 
-// 调用函数
+        // 调用函数
         openLinksSequentially(data_result);
         console.log('保存参数：', params);
-        const result = await $Request(API.livereplaydatasynmessageApi, {params});
+        const result = await $Request(API.livereplaydatasynmessageApi, { params });
         console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步直播间明细——完成');
 
@@ -768,12 +768,17 @@ async function get_live_history_list() {
 }
 
 async function get_live_core_data(postData) {
-    await $Request(API.livereplaydatadetailsynmessageApi, {params: postData})
-    console.log('✅ 保存直播间大屏数据成功')
-    createTopTips(`保存直播间大屏数据成功`)
-    workTimeCallBack(() => {
-        closeTabByUrl('https://compass.jinritemai.com/screen/live/talent?live_room_id=' + postData.live_id)
-    }, 1000)
+    try {
+        await $Request(API.livereplaydatadetailsynmessageApi, { params: postData })
+        console.log('✅ 保存直播间大屏数据成功')
+        createTopTips(`保存直播间大屏数据成功`)
+    } catch (error) {
+        createTopTips(`${error}`)
+    } finally {
+        workTimeCallBack(() => {
+            closeTabByUrl('https://compass.jinritemai.com/screen/live/talent?live_room_id=' + postData.live_id)
+        }, 2000)
+    }
 }
 
 function getActiveCommentData() {
@@ -785,7 +790,7 @@ function getActiveCommentData() {
                 const params = {
                     roomNo: localStorage.getItem('dyAccountNo'), roomName: localStorage.getItem('dyRoomName')
                 };
-                const result = await $Request(API.pullAdminComment + '?roomNo=' + localStorage.getItem('dyAccountNo'), {params});
+                const result = await $Request(API.pullAdminComment + '?roomNo=' + localStorage.getItem('dyAccountNo'), { params });
                 console.log('主动评论数据', result)
                 resolve(result);
             } catch (error) {
@@ -804,7 +809,7 @@ function sendMessage(url, word, data, sendResponse) {
             // 输入框塞数据
             textarea.value = word
             // 触发输入事件
-            const inputEvent = new Event('input', {bubbles: true})
+            const inputEvent = new Event('input', { bubbles: true })
             textarea.dispatchEvent(inputEvent)
             // 触发发送
             const send_btn = document.querySelector('.submit-button')
@@ -813,9 +818,9 @@ function sendMessage(url, word, data, sendResponse) {
                 bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             send_btn.dispatchEvent(mouseEvent)
-            sendResponse({action: 'send_input_message', data: data, status: 1})
+            sendResponse({ action: 'send_input_message', data: data, status: 1 })
         } else {
-            sendResponse({action: 'send_input_message', data: data, status: 0})
+            sendResponse({ action: 'send_input_message', data: data, status: 0 })
         }
     } else if (url.startsWith('https://live.douyin.com/')) {
         const textarea = document.querySelector('textarea.webcast-chatroom___textarea')
@@ -823,7 +828,7 @@ function sendMessage(url, word, data, sendResponse) {
             // 输入框塞数据
             textarea.value = word
             // 触发输入事件
-            const inputEvent = new Event('input', {bubbles: true})
+            const inputEvent = new Event('input', { bubbles: true })
             textarea.dispatchEvent(inputEvent)
             // 触发发送
             const svg_send = document.querySelector('.webcast-chatroom___send-btn')
@@ -832,9 +837,9 @@ function sendMessage(url, word, data, sendResponse) {
                 bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             svg_send.dispatchEvent(mouseEvent)
-            sendResponse({action: 'send_input_message', data: data, status: 1})
+            sendResponse({ action: 'send_input_message', data: data, status: 1 })
         } else {
-            sendResponse({action: 'send_input_message', data: data, status: 0})
+            sendResponse({ action: 'send_input_message', data: data, status: 0 })
         }
     } else if (url.startsWith('https://eos.douyin.com/')) {
         const textarea = document.querySelector("textarea[class*='input-']")
@@ -842,7 +847,7 @@ function sendMessage(url, word, data, sendResponse) {
             // 输入框塞数据
             textarea.value = word
             // 触发输入事件
-            const inputEvent = new Event('input', {bubbles: true})
+            const inputEvent = new Event('input', { bubbles: true })
             textarea.dispatchEvent(inputEvent)
             // 触发发送
             const parentEle = document.querySelector('div[class*="input-wrap-"]')
@@ -852,7 +857,7 @@ function sendMessage(url, word, data, sendResponse) {
                 bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
             })
             svg_send.dispatchEvent(mouseEvent)
-            sendResponse({action: 'send_input_message', data: data, status: 1})
+            sendResponse({ action: 'send_input_message', data: data, status: 1 })
         }
     }
 }
@@ -895,7 +900,7 @@ function createTopTips(text, timeOut = 5000) {
     }, timeOut)
 
     // 返回定时器 ID，便于外部操作（如取消自动移除）
-    return {fixedTipBox, autoRemoveTimer}
+    return { fixedTipBox, autoRemoveTimer }
 }
 
 function getBeginDate(offsetDays = 7) {
@@ -946,15 +951,20 @@ async function closeTabByUrl(targetUrl) {
 
 
 function workTimeCallBack(callback, timeOut = 5000) {
-    // 判断现在的时间 是不是早上9点-10点 是的话 关闭标签页
+    // 判断现在的时间 是否在9:00 - 9:59之间
     const now = new Date();
     const hour = now.getHours();
-    console.log('workTimeCallBack:', hour, callback);
+    const minute = now.getMinutes();
+    console.log('workTimeCallBack:', hour, minute, callback);
 
-    if (hour >= 9 && hour <= 10) {
-
+    if (hour === 9 && minute >= 0 && minute <= 59) {
         setTimeout(() => {
             callback && callback()
         }, timeOut);
+        return true; // 表示在工作时间内，已安排执行
     }
+
+    // 不在指定时间范围内，不执行回调
+    console.log('不在工作时间范围内(9:00-9:59)，跳过执行');
+    return false;
 }

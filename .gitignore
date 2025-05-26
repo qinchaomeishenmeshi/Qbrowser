@@ -60,3 +60,4 @@ htmlcov/
 Thumbs.db
 /.cursorrules
 data/cookies/
+static/

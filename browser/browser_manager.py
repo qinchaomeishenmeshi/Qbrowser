@@ -73,7 +73,7 @@ class BrowserManager:
             co.add_extension(self.config.extension_path)
             co.add_extension(self.config.block_videos_extension_path)
             # 如需加载扩展，可用 co.set_args([...])
-            co.set_argument("--start-maximized")
+            co.set_argument("--window-size", "1910,1070")
             self.browser = Chromium(co)
             logger.info(f"Browser started for user: {self.user_id}")
 
