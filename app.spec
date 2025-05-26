@@ -16,12 +16,11 @@ datas = [
     ('conf.py', '.'),
     ('user_ids_cache.json', '.'),
     ('user_ports_cache.json', '.'),
-    ('static/blank.html', 'static'),
 ]
 
 # 添加 PyQt6 相关模块
 hiddenimports = collect_submodules('playwright') + [
-      'PyQt6', 'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'DrissionPage'
+    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets','DrissionPage'
 ]
 
 # 打包选项
