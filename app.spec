@@ -16,6 +16,7 @@ datas = [
     ('conf.py', '.'),
     ('user_ids_cache.json', '.'),
     ('user_ports_cache.json', '.'),
+    ('static', 'static'),
 ]
 
 # 添加 PyQt6 相关模块

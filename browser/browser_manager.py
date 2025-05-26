@@ -43,20 +43,13 @@ class BrowserManager:
     def get_user_blank_html_path(self) -> str:
         """
         为每个 user_id 生成专属的本地空白页，带 user_id 标识。
-        - 如果 static/blank.html 模板不存在，则自动生成一个默认模板。
-        - 会将模板中的 '【USER_ID】' 替换为当前 user_id。
+        - 模板和生成的 html 都放在 BASE_DIR/static 下，避免 PyInstaller 路径混乱。
         - 返回生成的本地 html 文件的 file:// URI 路径。
-
-        Returns:
-            str: 生成的本地 html 文件的 URI 路径
         """
         static_dir = Path(BASE_DIR) / "static"
         static_dir.mkdir(parents=True, exist_ok=True)
 
-        template_path = Path(resource_path("static/blank.html"))
-        if not template_path.parent.exists():
-            template_path.parent.mkdir(parents=True, exist_ok=True)
-
+        template_path = static_dir / "blank.html"
         default_template = (
             "<!DOCTYPE html>\n"
             "<html lang='zh-CN'>\n"
@@ -75,17 +68,18 @@ class BrowserManager:
                 template_path.write_text(default_template, encoding="utf-8")
             except Exception as e:
                 logger.error(f"写入默认模板失败: {e}")
-                # 兜底直接用内存模板
                 template_content = default_template
-        try:
-            template_content = template_path.read_text(encoding="utf-8")
-        except Exception as e:
-            logger.error(f"读取模板失败: {e}")
-            template_content = default_template
+            else:
+                template_content = default_template
+        else:
+            try:
+                template_content = template_path.read_text(encoding="utf-8")
+            except Exception as e:
+                logger.error(f"读取模板失败: {e}")
+                template_content = default_template
 
         html = template_content.replace("【USER_ID】", self.user_id)
         user_blank_path = static_dir / f"blank_{self.user_id}.html"
-        # 只有内容变化时才写入，减少磁盘操作
         try:
             if not user_blank_path.exists() or user_blank_path.read_text(encoding="utf-8") != html:
                 user_blank_path.write_text(html, encoding="utf-8")
