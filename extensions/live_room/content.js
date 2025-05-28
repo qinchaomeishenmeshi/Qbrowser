@@ -625,14 +625,15 @@ async function get_live_history_list() {
         console.log('非buyin 不执行')
         return
     }
-
     // 周期天数
     const periodDays = 7;
     const {
         begin_date, begin_date_format
     } = getBeginDate(periodDays)
-
-
+    // 非直播明细页面需要先跳转到直播明细，否则直播大屏权限不足
+    if (window.location.pathname !== '/dashboard/compass-home/live-list') {
+        window.location.replace('https://buyin.jinritemai.com/dashboard/compass-home/live-list')
+    }
     try {
         const getUserRes = await fetch('https://buyin.jinritemai.com/index/getUser', {
             method: 'GET', headers: {'Content-Type': 'application/json'},
@@ -649,10 +650,10 @@ async function get_live_history_list() {
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
         const {data = {}} = await res.json();
-        const data_result = data.data_result?.map(it => {
+        const data_result = data?.data_result?.map(it => {
             return {
                 ...it,
-                pay_gmv: Number(it.pay_gmv.replace(/[^0-9.-]+/g, "")),
+                pay_gmv: it.pay_gmv ? it.pay_gmv.replace(/,/g, "") : 0
             }
         }) || []
         console.log('保存参数：', data_result);
@@ -679,6 +680,7 @@ async function get_live_history_list() {
 
             const item = items[index];
             if (item.operation?.live_id) {
+
                 window.open(`https://compass.jinritemai.com/screen/live/talent?live_room_id=${item.operation.live_id}`);
             }
 
@@ -687,6 +689,7 @@ async function get_live_history_list() {
                 openLinksSequentially(items, index + 1);
             }, 2000); // 每个间隔 2 秒
         }
+
 
         // 调用函数
         openLinksSequentially(data_result);
@@ -808,7 +811,7 @@ function workTimeCallBack(callback, timeOut = 5000) {
     const minute = now.getMinutes();
     console.log('workTimeCallBack:', hour, minute, callback);
 
-    if (hour === 9 && minute >= 0 && minute <= 59) {
+    if ((hour === 15 || hour === 9) && minute >= 0 && minute <= 59) {
         setTimeout(() => {
             callback && callback()
         }, timeOut);
