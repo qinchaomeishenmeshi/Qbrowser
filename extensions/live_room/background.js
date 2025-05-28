@@ -1,27 +1,9 @@
-const eosHomePage = 'https://*.douyin.com/*'
-const targetUrlPattern = /^https:\/\/eos\.douyin\.com\/data\/life\/live\/shelves\/anchor\//
-// 存储请求ID和标签页ID的映射
-const requestTabMap = {}
-
-//监听所有请求
-// chrome.webRequest.onBeforeRequest.addListener(
-//     function (details) {
-//         if (ws.readyState != ws.OPEN) {
-//             return;
-//         }
-//         chrome.tabs.getSelected(null, function (tab) {
-//             var tabUrl = tab.url;
-//             var message = {"cmd": "url", "message": details.url, "tabUrl": tabUrl};
-//             ws.send(JSON.stringify(message));
-//             console.log(JSON.stringify(message));
-//         });
-//     },
-//     {urls: ["<all_urls>"]},
-//     ["blocking"]
-// )
-
-// background.js
-
+// 抖音域名匹配模式
+const DOUYIN_DOMAINS = [
+    'https://www.douyin.com/*',
+    'https://eos.douyin.com/*',
+    'https://buyin.jinritemai.com/*'
+];
 
 // 新增数据处理函数
 function handleShelvesData(data) {
@@ -35,28 +17,27 @@ function handleShelvesData(data) {
 
 function getDouyinTab() {
     return new Promise((resolve, reject) => {
-        chrome.tabs.query({url: eosHomePage}, async (tabs) => {
-            console.log(tabs, 'tabs')
+        // 使用正确的URL匹配模式
+        chrome.tabs.query({url: DOUYIN_DOMAINS}, async (tabs) => {
+            console.log('查找到的抖音标签页:', tabs)
             if (tabs.length > 0) {
                 const tab = tabs[0]
                 try {
                     await ensureScriptInjected(tab.id)
                     if (!tab.active) {
-                        chrome.tabs.update(tab.id, {active: true})
+                        await chrome.tabs.update(tab.id, {active: true})
                     }
                     resolve(tab)
                 } catch (error) {
-                    console.log('检测脚本状态时出错:', error)
-                    reject(error.message)
+                    console.error('检测脚本状态时出错:', error)
+                    reject(error)
                 }
             } else {
-                reject('未找到抖音tab')
+                reject(new Error('未找到抖音标签页'))
             }
         })
     })
 }
-
-getDouyinTab()
 
 // 确保脚本注入逻辑的优化版
 async function ensureScriptInjected(tabId) {
@@ -116,7 +97,7 @@ function injectContentScript(tabId) {
 }
 
 
-// 计算下一个“今天 9:30”或“明天 9:30”的时间戳（毫秒）
+// 计算下一个"今天 9:30"或"明天 9:30"的时间戳（毫秒）
 function computeNext930() {
     const now = new Date();
     const next = new Date();
@@ -127,7 +108,7 @@ function computeNext930() {
     return next.getTime();
 }
 
-// 计算下一个“下个整点”的时间戳（毫秒）
+// 计算下一个"下个整点"的时间戳（毫秒）
 // 例如当前 9:17 → 返回今天 10:00；当前 10:00:00.100 → 返回 11:00
 function computeNextHour() {
     const now = new Date();
@@ -140,17 +121,31 @@ function computeNextHour() {
 }
 
 // 业务函数：每天早上 9:30 要执行的逻辑
-function doDailyTask() {
+async function doDailyTask() {
     console.log('执行每日任务');
-//    发送消息给content.js 执行任务
-    chrome.tabs.query({url: eosHomePage}, (tabs) => {
-        if (tabs.length > 0) {
-            const tab = tabs[0]
-            chrome.tabs.sendMessage(tab.id, {action: 'DO_DAILY_TASK', data: {}, url: ''}, (response) => {
-                console.log('发送消息给content.js执行任务', response)
-            })
-        }
-    })
+    try {
+        const tab = await getDouyinTab();
+        await chrome.tabs.sendMessage(tab.id, {
+            action: 'DO_DAILY_TASK',
+            data: {},
+            url: ''
+        });
+        console.log('每日任务消息已发送');
+    } catch (error) {
+        console.error('执行每日任务失败:', error);
+    }
+}
+
+// 业务函数：每小时执行的逻辑
+async function doHourlyTask() {
+    console.log('执行整点任务');
+    try {
+        // 这里添加整点特有的任务逻辑
+        // 如果暂时没有特殊逻辑，可以调用日常任务
+        await doDailyTask();
+    } catch (error) {
+        console.error('执行整点任务失败:', error);
+    }
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -162,7 +157,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'CLOSE_TAB_BY_URL') {
         const targetUrl = request.data.url;
-        
+
         // 查询所有标签页
         chrome.tabs.query({}, (tabs) => {
             try {
@@ -176,7 +171,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         found = true;
                     }
                 });
-                
+
                 // 发送响应
                 sendResponse({
                     success: true,
@@ -189,7 +184,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 });
             }
         });
-        
+
         // 返回true表示将异步发送响应
         return true;
     }
@@ -231,8 +226,12 @@ chrome.runtime.onStartup.addListener(() => {
 // 监听 Alarm 触发
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'daily930') {
-        doDailyTask();
+        doDailyTask().catch(error => {
+            console.error('daily930任务执行失败:', error);
+        });
     } else if (alarm.name === 'hourlyTop') {
-        doDailyTask();
+        doHourlyTask().catch(error => {
+            console.error('hourlyTop任务执行失败:', error);
+        });
     }
 });

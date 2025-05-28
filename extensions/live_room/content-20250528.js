@@ -26,8 +26,16 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     console.log('request', request)
     console.log('sender', sender)
     console.log('sendResponse', sendResponse)
-    if (request.action === 'DO_DAILY_TASK') {
+    const {word, url} = request.data
+    if (request.action === 'send_input_message') {
+        // 发送常用词
+        sendMessage(url, word, {}, sendResponse)
+    } else if (request.action === 'send_comment') {
+        // 发送评论
+        sendMessage(url, word, {}, sendResponse)
+    } else if (request.action === 'DO_DAILY_TASK') {
         // 执行每日任务，当前时间
+
         console.log('DO_DAILY_TASK___执行每日任务：' + cur_time)
         get_punish_list().then((res) => {
             console.log('punish_list', res)
@@ -44,6 +52,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 // 监听直播间变化
 document.addEventListener('DOMContentLoaded', () => {
     console.log('页面加载完成 DOMContentLoaded')
+
 
     let timeoutId = null
     // 使用 MutationObserver 替代 setTimeout
@@ -72,6 +81,8 @@ document.addEventListener('DOMContentLoaded', () => {
     injectFetchInterceptor()
     // 立即同步一次
     syncPunishList();
+
+
 })
 
 
@@ -353,6 +364,40 @@ async function sendProductsListToBackground() {
 }
 
 
+// 启动定时器
+// function startTimer() {
+//     if (isTimerRunning) return; // 已运行则直接返回
+//     stopTimer(); // 清理旧定时器（仅在首次启动时生效）
+//
+//     timerId = setInterval(() => {
+//         getActiveCommentData().then(data => {
+//             console.log('定时任务执行成功:', data)
+//             const commentReply = data?.commentReply || ''
+//             createTopTips('评论区回复消息:', commentReply)
+//             if (commentReply) {
+//                 // 评论区回复消息
+//                 sendMessage(window.location.href, commentReply, data, (result) => {
+//                     console.log('评论区回复消息发送成功的返回结果' + JSON.stringify(result))
+//                 })
+//             }
+//         }).catch(error => {
+//             console.error('定时任务执行失败:', error);
+//         });
+//     }, 10000);
+//
+//     isTimerRunning = true;
+//     console.log('定时器已启动');
+// }
+
+// 停止定时器
+// function stopTimer() {
+//     if (!isTimerRunning) return; // 未运行则直接返回
+//     clearInterval(timerId);
+//     timerId = null;
+//     isTimerRunning = false;
+//     console.log('定时器已停止');
+// }
+
 // 每5秒检查一次是否在直播
 setInterval(() => {
     const modal_wrapper = document.querySelector('.okee-main-modal-wrapper .okee-main-modal-body .okee-main-content-container .okee-main-content-header.okee-main-modal-content-header');
@@ -361,6 +406,25 @@ setInterval(() => {
         getModalText()
     }
 
+    // const currentUrl = new URL(window.location.href);
+    // // const pathName = currentUrl.pathname;
+
+    // let isLiving = false;
+    // try {
+    //     const liveMenus = document.querySelectorAll('.okee-main-menu-line-title');
+    //     isLiving = Array.from(liveMenus).some(menu => menu.textContent.includes('正在直播'));
+    // } catch (e) {
+    //     isLiving = false;
+    //     console.error('获取直播状态失败:', e);
+    // }
+
+    // const shouldStart = (pathName === '/livesite/live/current') && isLiving;
+    // console.log('当前直播状态:', shouldStart)
+    // if (shouldStart && !isTimerRunning) {
+    //     startTimer();
+    // } else if (!shouldStart && isTimerRunning) {
+    //     stopTimer();
+    // }
 }, 3000);
 
 // 每个小时同步一次违规记录
@@ -386,6 +450,10 @@ setInterval(() => {
     console.log(hour + ':' + minute, '定时器执行')
     syncPunishList();
 }, 3600000);
+
+
+// 获取主动评论数据
+let debounceTimeout = null;
 
 
 // 获取抖音账号信息
@@ -652,7 +720,7 @@ async function get_live_history_list() {
         const data_result = data.data_result?.map(it => {
             return {
                 ...it,
-                pay_gmv: Number(it.pay_gmv.replace(/[^0-9.-]+/g, "")),
+                pay_gmv: it.pay_gmv ? Number(it.pay_gmv.replace('¥', '')) : 0,
             }
         }) || []
         console.log('保存参数：', data_result);
@@ -712,6 +780,87 @@ async function get_live_core_data(postData) {
         workTimeCallBack(() => {
             closeTabByUrl('https://compass.jinritemai.com/screen/live/talent?live_room_id=' + postData.live_id)
         }, 2000)
+    }
+}
+
+function getActiveCommentData() {
+    return new Promise(async (resolve, reject) => {
+        // 防抖逻辑：500ms内仅执行一次
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(async () => {
+            try {
+                const params = {
+                    roomNo: localStorage.getItem('dyAccountNo'), roomName: localStorage.getItem('dyRoomName')
+                };
+                const result = await $Request(API.pullAdminComment + '?roomNo=' + localStorage.getItem('dyAccountNo'), {params});
+                console.log('主动评论数据', result)
+                resolve(result);
+            } catch (error) {
+                reject(error);
+            }
+        }, 500); // 500ms防抖
+    });
+}
+
+// 发送消息
+function sendMessage(url, word, data, sendResponse) {
+    // 查找输入框元素
+    if (url.startsWith('https://live.kuaishou.com/')) {
+        const textarea = document.querySelector('textarea.box-boder')
+        if (textarea) {
+            // 输入框塞数据
+            textarea.value = word
+            // 触发输入事件
+            const inputEvent = new Event('input', {bubbles: true})
+            textarea.dispatchEvent(inputEvent)
+            // 触发发送
+            const send_btn = document.querySelector('.submit-button')
+            // 创建一个 mouseclick 事件
+            const mouseEvent = new MouseEvent('click', {
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
+            })
+            send_btn.dispatchEvent(mouseEvent)
+            sendResponse({action: 'send_input_message', data: data, status: 1})
+        } else {
+            sendResponse({action: 'send_input_message', data: data, status: 0})
+        }
+    } else if (url.startsWith('https://live.douyin.com/')) {
+        const textarea = document.querySelector('textarea.webcast-chatroom___textarea')
+        if (textarea) {
+            // 输入框塞数据
+            textarea.value = word
+            // 触发输入事件
+            const inputEvent = new Event('input', {bubbles: true})
+            textarea.dispatchEvent(inputEvent)
+            // 触发发送
+            const svg_send = document.querySelector('.webcast-chatroom___send-btn')
+            // 创建一个 mouseclick 事件
+            const mouseEvent = new MouseEvent('click', {
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
+            })
+            svg_send.dispatchEvent(mouseEvent)
+            sendResponse({action: 'send_input_message', data: data, status: 1})
+        } else {
+            sendResponse({action: 'send_input_message', data: data, status: 0})
+        }
+    } else if (url.startsWith('https://eos.douyin.com/')) {
+        const textarea = document.querySelector("textarea[class*='input-']")
+        if (textarea) {
+            // 输入框塞数据
+            textarea.value = word
+            // 触发输入事件
+            const inputEvent = new Event('input', {bubbles: true})
+            textarea.dispatchEvent(inputEvent)
+            // 触发发送
+            const parentEle = document.querySelector('div[class*="input-wrap-"]')
+            const svg_send = parentEle.querySelector('div[class*="button-"]')
+            // 创建一个 mouseclick 事件
+            const mouseEvent = new MouseEvent('click', {
+                bubbles: true, cancelable: true, view: window, button: 0 // 左键点击
+            })
+            svg_send.dispatchEvent(mouseEvent)
+            sendResponse({action: 'send_input_message', data: data, status: 1})
+        }
     }
 }
 
@@ -780,6 +929,8 @@ function getBeginDate(offsetDays = 7) {
         begin_date_format: formatted   // 格式化字符串
     };
 }
+
+// ... existing code ...
 
 // 关闭指定URL的标签页
 async function closeTabByUrl(targetUrl) {
