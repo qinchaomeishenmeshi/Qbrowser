@@ -693,7 +693,7 @@ async function get_live_history_list() {
             // 递归调用下一个元素
             setTimeout(() => {
                 openLinksSequentially(items, index + 1);
-            }, 2000); // 每个间隔 2 秒
+            }, 5000); // 每个间隔 5 秒
         }
 
 

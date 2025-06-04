@@ -97,6 +97,10 @@ class BrowserManager:
                 .set_user_data_path(str(self.user_data_dir))
                 .set_argument("--disable-features=MediaSource")
             )
+            # 加载扩展
+            logger.info(f"Loading extension from: {self.config.extension_path}")
+            logger.info(f"Loading extension from: {self.config.block_videos_extension_path}")
+
             co.add_extension(self.config.extension_path)
             co.add_extension(self.config.block_videos_extension_path)
             # 如需加载扩展，可用 co.set_args([...])
