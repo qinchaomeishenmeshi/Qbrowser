@@ -92,7 +92,7 @@ function injectFetchInterceptor() {
 
 // 事件监听处理
 window.addEventListener('fetchResponse', (event) => {
-    const {url, status, body} = event.detail
+    const { url, status, body } = event.detail
     console.log('接口监听-test:', url, status, body)
     if (url.includes('/data/life/live/plan/detail/') && status === 200) {
         try {
@@ -349,7 +349,7 @@ async function sendProductsListToBackground() {
     }
 
     console.log('发送商品数据到后台', params)
-    return await $Request(API.saveProductListApi, {params})
+    return await $Request(API.saveProductListApi, { params })
 }
 
 
@@ -447,7 +447,7 @@ async function getModalText() {
             return
         }
         console.log('params', params)
-        await $Request(API.liveviolationrecordsdealSaveApi, {params});
+        await $Request(API.liveviolationrecordsdealSaveApi, { params });
         createTopTips(`账号：${dyAccountNo},违规记录保存成功`)
     }
 
@@ -494,13 +494,13 @@ async function get_punish_list() {
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
         const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
                 user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
             })
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data: list = []} = await res.json();
+        const { data: list = [] } = await res.json();
 
         if (!list || list.length === 0) {
             createTopTips('同步完成：无违规记录');
@@ -518,7 +518,7 @@ async function get_punish_list() {
                     name: dyRoomName
                 };
                 console.log('保存参数：', params);
-                await $Request(API.liveviolationrecordsdealSaveApi, {params});
+                await $Request(API.liveviolationrecordsdealSaveApi, { params });
             } catch (e) {
                 console.error('⚠️ 单条保存失败：', e, item);
             }
@@ -572,13 +572,13 @@ async function get_live_goods_list() {
     try {
         // TODO: user_id都是一样的，原因未知，不影响对应账号数据获取  1258293549605997
         const res = await fetch('https://eos.douyin.com/life/api/live_screen/v4/replay/live_room_list', {
-            method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
                 user_id: '1258293549605997', begin_date, end_date, compare_begin_date, compare_end_date
             })
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data: list = []} = await res.json();
+        const { data: list = [] } = await res.json();
 
         if (!list || list.length === 0) {
             createTopTips('无复盘记录');
@@ -607,7 +607,7 @@ async function get_live_goods_list() {
             }
         }
         console.log('保存参数：', params);
-        const result = await $Request(API.livebroadcastreviewSaveApi, {params});
+        const result = await $Request(API.livebroadcastreviewSaveApi, { params });
         console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步复盘记录——完成');
     } catch (err) {
@@ -620,6 +620,12 @@ async function get_live_goods_list() {
 async function get_live_history_list() {
     console.log('每天执行一次-get_live_history_list');
     createTopTips('同步直播间明细——开始');
+    // 未登录不执行https://buyin.jinritemai.com/mpa/account/login
+    if (window.location.href.includes('/login')) {
+        createTopTips('未登录，无法获取直播间明细');
+        return
+    }
+
     if (window.location.origin !== "https://buyin.jinritemai.com") {
         // 非eos 不执行
         console.log('非buyin 不执行')
@@ -636,7 +642,7 @@ async function get_live_history_list() {
     }
     try {
         const getUserRes = await fetch('https://buyin.jinritemai.com/index/getUser', {
-            method: 'GET', headers: {'Content-Type': 'application/json'},
+            method: 'GET', headers: { 'Content-Type': 'application/json' },
         });
 
         const getUserResult = await getUserRes.json();
@@ -645,11 +651,11 @@ async function get_live_history_list() {
         const buyinAccountId = getUserResult?.data?.buyin_account_id
         const dyAccountName = getUserResult?.data?.user_name
         const res = await fetch(`https://buyin.jinritemai.com/compass_api/content_live/author/live_detail/history_live?is_asc=false&page_no=1&page_size=10&date_type=21&begin_date=${begin_date}&begin_date_format=${begin_date_format}`, {
-            method: 'GET', headers: {'Content-Type': 'application/json'},
+            method: 'GET', headers: { 'Content-Type': 'application/json' },
         });
         console.log(`接口状态 ${res.status}`);
         console.log(`接口resp `, res);
-        const {data = {}} = await res.json();
+        const { data = {} } = await res.json();
         const data_result = data?.data_result?.map(it => {
             return {
                 ...it,
@@ -694,7 +700,7 @@ async function get_live_history_list() {
         // 调用函数
         openLinksSequentially(data_result);
         console.log('保存参数：', params);
-        const result = await $Request(API.livereplaydatasynmessageApi, {params});
+        const result = await $Request(API.livereplaydatasynmessageApi, { params });
         console.log('✅ 全部记录已处理完毕,保存结果：', result)
         createTopTips('同步直播间明细——完成');
 
@@ -706,7 +712,7 @@ async function get_live_history_list() {
 
 async function get_live_core_data(postData) {
     try {
-        await $Request(API.livereplaydatadetailsynmessageApi, {params: postData})
+        await $Request(API.livereplaydatadetailsynmessageApi, { params: postData })
         console.log('✅ 保存直播间大屏数据成功')
         createTopTips(`保存直播间大屏数据成功`)
     } catch (error) {
@@ -756,7 +762,7 @@ function createTopTips(text, timeOut = 5000) {
     }, timeOut)
 
     // 返回定时器 ID，便于外部操作（如取消自动移除）
-    return {fixedTipBox, autoRemoveTimer}
+    return { fixedTipBox, autoRemoveTimer }
 }
 
 function getBeginDate(offsetDays = 7) {
