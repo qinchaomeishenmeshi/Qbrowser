@@ -1,12 +1,13 @@
 import asyncio
 from typing import Dict, Any
 
-import requests
+import aiohttp
 
 from browser.browser_operator import browser_operator, BrowserOperator
 from utils.common_logger import get_logger
 from utils.common_response import PublicResponse
 from utils.util import get_date_range
+from utils.get_ab import get_douyin_tokens_async
 
 logger = get_logger(__name__)
 
@@ -39,46 +40,70 @@ class LivingClient:
         self.core_data_url = "https://compass.jinritemai.com/compass_api/author/live/live_screen/core_data"
 
     @staticmethod
-    async def _get_cookies_for_user(user_id: str) -> Dict[str, str]:
+    async def _get_cookies_for_user(user_id: str,site_key='baiying') -> Dict[str, str]:
         """
         从 mapping 中提取指定 user_id 的 cookies 列表，并转换为 requests 可用的 dict
+        确保包含所有必要的认证和会话 cookies
         """
-        cookies_list = await browser_operator.get_user_cookies(user_id)
+        cookies_list = await browser_operator.get_user_cookies(user_id,site_key)
         # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
         cookies_dict = {
             c["name"]: c["value"] for c in cookies_list if "name" in c and "value" in c
         }
+        
+        # 确保包含关键的认证和会话 cookies（参考 core_data.py 中的成功配置）
+        required_cookies = [
+            'passport_csrf_token', 'passport_csrf_token_default', 'is_staff_user',
+            's_v_web_id', 'ttwid', 'uid_tt', 'uid_tt_ss', 'sid_tt', 'sessionid', 
+            'sessionid_ss', 'odin_tt', 'BUYIN_SASID', 'ucas_c0_compass', 
+            'ucas_c0_ss_compass', 'sid_guard', 'sid_ucp_v1', 'ssid_ucp_v1',
+            'LUOPAN_DT', 'COMPASS_LUOPAN_DT', 'Hm_lvt_b6520b076191ab4b36812da4c90f7a5e',
+            'Hm_lpvt_b6520b076191ab4b36812da4c90f7a5e', 'HMACCOUNT', 'csrf_session_id'
+        ]
+        
+        # 记录缺失的关键 cookies
+        missing_cookies = [cookie for cookie in required_cookies if cookie not in cookies_dict]
+        if missing_cookies:
+            logger.warning(f"用户 {user_id} 缺失关键 cookies: {missing_cookies}")
+            logger.info(f"当前可用 cookies: {list(cookies_dict.keys())}")
+        
         return cookies_dict
 
     @staticmethod
-    async def _get_headers_for_user(user_id: str) -> Dict[str, Any]:
+    async def _get_headers_for_user(user_id: str,site_key='baiying') -> Dict[str, Any]:
         """
         从 mapping 中提取指定 user_id 的 headers 字段作为请求头，
         并仅保留 default_headers 中定义的键，优先使用保存的值，缺失则用默认值。
+        参考 core_data.py 中成功的 headers 配置
         """
-        # 默认 headers
+        # 默认 headers（参考 core_data.py 中的成功配置）
         default_headers = {
             "accept": "application/json, text/plain, */*",
             "accept-language": "zh-CN,zh;q=0.9",
             "priority": "u=1, i",
             "referer": "https://buyin.jinritemai.com/dashboard/compass-home/live-list?pre_universal_page_params_id=&universal_page_params_id=31994513-4957-4b8c-8091-3f0988367d33",
-            "sec-ch-ua": '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+            "sec-ch-ua": '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',  
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"macOS"',
             "sec-fetch-dest": "empty",
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36", 
         }
 
-        saved_headers = await browser_operator.get_user_headers(user_id)
+        saved_headers = await browser_operator.get_user_headers(user_id,site_key)
         if saved_headers is None:
-            return {}
+            logger.warning(f"用户 {user_id} 未找到保存的 headers，使用默认配置")
+            return default_headers
+        
         # 只保留 default_headers 中的 key，并优先使用 saved_headers 中的值
         filtered_headers = {
             key: saved_headers.get(key, default_value)
             for key, default_value in default_headers.items()
         }
+        
+        # 记录关键 headers 的状态
+        logger.info(f"用户 {user_id} headers 配置完成，User-Agent: {filtered_headers.get('user-agent', 'N/A')}")
 
         return filtered_headers
 
@@ -94,11 +119,12 @@ class LivingClient:
             }
 
             logger.info(f"发送请求：{self.get_user_url} params={params}")
-            resp = requests.get(
-                self.get_user_url, params=params, cookies=cookies, headers=headers
-            )
-            resp.raise_for_status()
-            return resp.json()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.get_user_url, params=params, cookies=cookies, headers=headers
+                ) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
         except Exception as e:
             logger.error(f"获取直播间用户信息失败: {e}")
             return {"code": -1, "msg": f"获取直播间用户信息失败: {str(e)}"}
@@ -123,11 +149,12 @@ class LivingClient:
             }
 
             logger.info(f"发送请求：{self.history_live_url} params={params}")
-            resp = requests.get(
-                self.history_live_url, params=params, cookies=cookies, headers=headers
-            )
-            resp.raise_for_status()
-            return resp.json()
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.history_live_url, params=params, cookies=cookies, headers=headers
+                ) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
         except Exception as e:
             logger.error(f"获取直播商品列表失败: {e}")
             return {"code": -1, "msg": f"获取直播商品列表失败: {str(e)}"}
@@ -135,23 +162,45 @@ class LivingClient:
     async def get_core_data(self, user_id: str, room_id: str):
         """获取直播间详情数据"""
         try:
-            cookies = await self._get_cookies_for_user(user_id)
-            headers = await self._get_headers_for_user(user_id)
+            # 再获取直播间详情数据 - 使用 screen 站点的 cookies（包含 LUOPAN_DT）
+            cookies = await self._get_cookies_for_user(user_id, 'screen')
+            headers = await self._get_headers_for_user(user_id, 'screen')
+            a_bogus, ms_token = await get_douyin_tokens_async()
             headers['referer'] = f'https://compass.jinritemai.com/screen/live/talent?live_room_id={room_id}'
+            
+            # 检查关键认证 cookies 是否存在
+            critical_cookies = ['COMPASS_LUOPAN_DT', 'LUOPAN_DT']
+            missing_critical = [cookie for cookie in critical_cookies if not cookies.get(cookie)]
+            if missing_critical:
+                logger.error(f"用户 {user_id} 缺失关键认证 cookies: {missing_critical}")
+                logger.error(f"这可能导致请求失败，请检查浏览器登录状态")
+
             params = {
                 'room_id': room_id,
                 'index_selected': 'gpm,pay_ucnt,pay_combo_cnt,watch_pay_ucnt_ratio,product_click_pay_ucnt_ratio,online_user_cnt,live_show_watch_cnt_ratio,avg_watch_duration,watch_interact_ucnt_ratio,follow_anchor_ucnt',
-                "verifyFp": cookies.get("s_v_web_id", ""),
-                "fp": cookies.get("s_v_web_id", ""),
-
+                # '_lid': cookies.get('_lid', '174900436'),  # 添加_lid参数，从cookies获取或使用默认值
+                'verifyFp': cookies.get('s_v_web_id', ''),
+                'fp': cookies.get('s_v_web_id', ''),
+                'msToken': ms_token, 
+                'a_bogus': a_bogus,
             }
 
-            logger.info(f"发送请求：{self.core_data_url} params={params}")
-            resp = requests.get(
-                self.core_data_url, params=params, cookies=cookies, headers=headers
-            )
-            resp.raise_for_status()
-            return resp.json()
+            logger.info(f"用户 {user_id} 请求 room_id: {room_id}")
+            logger.info(f"关键 cookies 状态: COMPASS_LUOPAN_DT={cookies.get('COMPASS_LUOPAN_DT')}, LUOPAN_DT={cookies.get('LUOPAN_DT')}")
+            logger.info(f"请求参数: {params}")
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.core_data_url, params=params, cookies=cookies, headers=headers
+                ) as resp:
+                    logger.info(f"响应状态码: {resp.status}")
+                    if resp.status != 200:
+                        response_text = await resp.text()
+                        logger.error(f"请求失败，响应内容: {response_text}")
+                    resp.raise_for_status()
+                    result = await resp.json()
+                    logger.info(f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}")
+                    return result
         except Exception as e:
             logger.error(f"获取直播间详情数据失败: {e}")
             return {"code": -1, "msg": f"获取直播间详情数据失败: {str(e)}"}
@@ -208,7 +257,7 @@ async def get_core_data_main(data) -> PublicResponse:
     logger.info(f"直播间大屏明细入口: {data}")
 
     print("准备抓取cookies")
-    await BrowserOperator().attach_get_cookies(user_ids=[data.get("userId")])
+    await BrowserOperator().attach_get_cookies(user_ids=[data.get("userId")],site_key="screen")
     print("抓取cookies完成")
 
     client = LivingClient()
@@ -221,7 +270,7 @@ async def get_core_data_main(data) -> PublicResponse:
 # 示例使用
 if __name__ == "__main__":
     sample_data = {
-        "deviceNoList": "wh001,wh002,wh003",
+        "deviceNoList": "test001,001",
     }
 
     asyncio.run(get_history_live_main(sample_data))

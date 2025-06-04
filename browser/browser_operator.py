@@ -19,6 +19,14 @@ SITE_CONFIGS = {
         "api_paths": ["/selection/common/btm_mapping"],
         "required_cookies": ["MSESSIONID", "passport_csrf_token"],
         "required_headers": ["x-secsdk-csrf-token", "user-agent"]
+    }, 
+    "screen": {
+        "name": "百应大屏",
+        "login_url": "",
+        "target_url": "https://compass.jinritemai.com/screen/live/talent",
+        "api_paths": ["/config_center/common/config"],
+        "required_cookies": ["COMPASS_LUOPAN_DT", "LUOPAN_DT"],
+        "required_headers": ["referer", "user-agent"]
     },
     # 可以添加其他站点的配置
 }

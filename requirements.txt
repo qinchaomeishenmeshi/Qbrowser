@@ -8,6 +8,7 @@ httpx~=0.28.1
 ujson~=5.10.0
 loguru~=0.7.3
 requests~=2.32.3
+aiohttp>=3.12.8
 
 uvicorn~=0.34.2
 fastapi~=0.115.12
