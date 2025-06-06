@@ -1,6 +1,73 @@
 [
   {
     "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_160600",
+    "status": "success",
+    "start_time": "2025-06-06T16:06:00.002864",
+    "end_time": "2025-06-06T16:06:30.067195",
+    "duration": 30.064331,
+    "result_data": {
+      "status": "failed",
+      "message": "未知错误: ",
+      "data": null
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_152700",
+    "status": "success",
+    "start_time": "2025-06-06T15:27:00.000697",
+    "end_time": "2025-06-06T15:27:30.964362",
+    "duration": 30.963665,
+    "result_data": {
+      "status": "failed",
+      "message": "未知错误: ",
+      "data": null
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying06062",
+    "execution_id": "baiying06062_20250606_152400",
+    "status": "success",
+    "start_time": "2025-06-06T15:24:00.011287",
+    "end_time": "2025-06-06T15:24:00.021657",
+    "duration": 0.01037,
+    "result_data": {
+      "status": "failed",
+      "message": "未知错误: Cannot connect to host 127.0.0.1:6001 ssl:default [Connect call failed ('127.0.0.1', 6001)]",
+      "data": null
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_152100",
+    "status": "failed",
+    "start_time": "2025-06-06T15:21:00.000844",
+    "end_time": "2025-06-06T15:21:00.008365",
+    "duration": 0.007521,
+    "result_data": null,
+    "error_message": "catching classes that do not inherit from BaseException is not allowed",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_151300",
+    "status": "failed",
+    "start_time": "2025-06-06T15:13:00.000220",
+    "end_time": "2025-06-06T15:13:00.009512",
+    "duration": 0.009292,
+    "result_data": null,
+    "error_message": "catching classes that do not inherit from BaseException is not allowed",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
     "execution_id": "baiying0606_20250606_145800",
     "status": "failed",
     "start_time": "2025-06-06T14:58:00.001416",

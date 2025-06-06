@@ -164,6 +164,17 @@ class InternalApiClient:
         endpoint = "/aiplay/admin/livereplaydata/synmessage"
         return await self.post(endpoint, data)
     
+    async def sync_live_core_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        同步直播间大屏数据到后端
+        
+        :param data: 直播间大屏数据，包含live_id、core_data、other_data等字段
+        :return: 同步结果
+        """
+        endpoint = "/aiplay/admin/livereplaydatadetail/synmessage"
+        return await self.post(endpoint, data)
+
+    
     async def sync_coupon_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         同步优惠券数据到后端

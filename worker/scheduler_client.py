@@ -11,10 +11,11 @@
 5. 任务配置的动态管理
 """
 
+import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, asdict
 from enum import Enum
 import aiohttp
@@ -429,7 +430,7 @@ scheduler_client = SchedulerClient()
 class LocalApiClient:
     """本地 API 客户端，用于调用本地业务接口"""
     
-    def __init__(self, base_url: str = "http://127.0.0.1:6001", timeout: int = 300):
+    def __init__(self, base_url: str = "http://127.0.0.1:6001", timeout: int = 30):
         self.base_url = base_url.rstrip('/')
         self.timeout = timeout
         self.default_headers = {
@@ -490,20 +491,7 @@ class LocalApiClient:
                             "data": result.get("data")
                         }
                         
-        except aiohttp.ClientTimeout:
-            logger.error(f"API调用超时: {url}")
-            return {
-                "status": "failed",
-                "message": "请求超时",
-                "data": None
-            }
-        except aiohttp.ClientError as e:
-            logger.error(f"API调用网络错误: {e}")
-            return {
-                "status": "failed",
-                "message": f"网络错误: {str(e)}",
-                "data": None
-            }
+
         except Exception as e:
             logger.error(f"API调用未知错误: {e}", exc_info=True)
             return {
@@ -512,3 +500,147 @@ class LocalApiClient:
                 "data": None
             }
     
+
+
+# 便捷函数
+async def create_cron_task(
+    task_id: str,
+    name: str,
+    description: str,
+    cron_expression: str,
+    target_function: str,
+    function_params: Dict[str, Any],
+    enabled: bool = True
+) -> bool:
+    """创建 cron 定时任务
+    
+    Args:
+        task_id: 任务唯一标识
+        name: 任务名称
+        description: 任务描述
+        cron_expression: cron 表达式，如 "0 */30 * * * *" (每30分钟)
+        target_function: 目标函数名 (get_core_data, get_history_live_list, get_core_data_main)
+        function_params: 函数参数
+        enabled: 是否启用
+    
+    Returns:
+        bool: 创建是否成功
+    """
+    # 解析 cron 表达式
+    parts = cron_expression.split()
+    if len(parts) == 6:
+        second, minute, hour, day, month, day_of_week = parts
+    elif len(parts) == 5:
+        minute, hour, day, month, day_of_week = parts
+        second = "0"
+    else:
+        raise ValueError("cron 表达式格式错误")
+    
+    trigger_config = {
+        "second": second,
+        "minute": minute,
+        "hour": hour,
+        "day": day,
+        "month": month,
+        "day_of_week": day_of_week
+    }
+    
+    task_config = TaskConfig(
+        task_id=task_id,
+        name=name,
+        description=description,
+        trigger_type=TriggerType.CRON,
+        trigger_config=trigger_config,
+        target_function=target_function,
+        function_params=function_params,
+        enabled=enabled
+    )
+    
+    return await scheduler_client.add_task(task_config)
+
+
+async def create_interval_task(
+    task_id: str,
+    name: str,
+    description: str,
+    interval_seconds: int,
+    target_function: str,
+    function_params: Dict[str, Any],
+    enabled: bool = True
+) -> bool:
+    """创建固定间隔定时任务
+    
+    Args:
+        task_id: 任务唯一标识
+        name: 任务名称
+        description: 任务描述
+        interval_seconds: 间隔秒数
+        target_function: 目标函数名
+        function_params: 函数参数
+        enabled: 是否启用
+    
+    Returns:
+        bool: 创建是否成功
+    """
+    trigger_config = {
+        "seconds": interval_seconds
+    }
+    
+    task_config = TaskConfig(
+        task_id=task_id,
+        name=name,
+        description=description,
+        trigger_type=TriggerType.INTERVAL,
+        trigger_config=trigger_config,
+        target_function=target_function,
+        function_params=function_params,
+        enabled=enabled
+    )
+    
+    return await scheduler_client.add_task(task_config)
+
+
+if __name__ == "__main__":
+    async def main():
+        """测试示例"""
+        try:
+            # 启动调度器
+            await scheduler_client.start()
+            
+            # 创建测试任务 - 每30分钟获取直播间数据
+            await create_cron_task(
+                task_id="live_data_monitor",
+                name="直播间数据监控",
+                description="每30分钟获取指定直播间的核心数据",
+                cron_expression="0 */30 * * * *",  # 每30分钟执行
+                target_function="get_core_data",
+                function_params={
+                    "user_id": "001",
+                    "room_id": "7512002735768865571"
+                }
+            )
+            
+            # 创建测试任务 - 每小时获取历史直播列表
+            await create_interval_task(
+                task_id="history_live_monitor",
+                name="历史直播监控",
+                description="每小时获取用户的历史直播列表",
+                interval_seconds=3600,  # 1小时
+                target_function="get_history_live_list",
+                function_params={
+                    "user_id": "001"
+                }
+            )
+            
+            logger.info("定时任务已创建，调度器运行中...")
+            
+            # 保持运行
+            while True:
+                await asyncio.sleep(60)
+                
+        except KeyboardInterrupt:
+            logger.info("收到停止信号")
+        finally:
+            await scheduler_client.stop()
+    
+    asyncio.run(main())

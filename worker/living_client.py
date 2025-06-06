@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Dict, Any
 
 import aiohttp
@@ -239,6 +240,108 @@ async def save_history_list_fn(data):
         logger.error(f"保存直播间明细数据时发生异常: {e}", exc_info=True)
         return False
 
+
+async def save_core_data_fn(live_id: str, core_data: dict, other_data: str) -> bool:
+    """
+    保存直播间大屏数据到后端系统
+    
+    :param live_id: 直播间ID
+    :param core_data: 核心数据
+    :param other_data: 其他数据（JSON字符串格式）
+    :return: 保存结果，成功返回True，失败返回False
+    """
+    from utils.api_client import default_api_client
+    
+    try:
+        # 构造请求数据，参考JavaScript代码中的postData结构
+        post_data = {
+            "live_id": live_id,
+            "core_data": core_data,
+            "other_data": other_data
+        }
+        
+        logger.info(f"保存直播间大屏数据: live_id={live_id}")
+        logger.debug(f"保存的数据内容: {post_data}")
+        
+        # 调用后端接口同步直播间大屏数据
+        result = await default_api_client.sync_live_core_data(post_data)
+        
+        # 检查响应结果
+        if result.get("code") == 0 or result.get("code") == 200:
+            logger.info(f"直播间大屏数据保存成功: live_id={live_id}")
+            return True
+        else:
+            logger.error(f"直播间大屏数据保存失败: {result.get('msg', '未知错误')}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"保存直播间大屏数据时发生异常: {e}", exc_info=True)
+        return False
+
+
+async def get_core_data_for_live_rooms(response_json_data):
+    """
+    在保存直播间明细数据成功后，获取每个直播间的大屏明细数据
+    
+    :param response_json_data: 直播间明细数据列表
+    """
+    logger.info("开始获取直播间大屏明细数据")
+    
+    for user_data in response_json_data:
+        user_id = user_data.get("user_id")
+        data_result = user_data.get("dataResult", [])
+        
+        if not user_id or not data_result:
+            logger.warning(f"用户 {user_id} 数据不完整，跳过大屏明细获取")
+            continue
+            
+        # 遍历每个直播间数据
+        for live_data in data_result:
+            room_id = live_data.get("operation",{}).get("live_id")
+            if not room_id:
+                logger.warning(f"用户 {user_id} 的直播间数据缺少 room_id，跳过")
+                continue
+                
+            try:
+                logger.info(f"获取用户 {user_id} 直播间 {room_id} 的大屏明细数据")
+                
+                # 调用 get_core_data_main 获取大屏明细
+                core_data_request = {
+                    "userId": user_id,
+                    "roomId": room_id
+                }
+                
+                core_data_response = await get_core_data_main(core_data_request)
+                logger.info(f"get_core_data_main 响应数据: {core_data_response}")
+                if core_data_response.get('status') == 'success':
+                    logger.info(f"成功获取用户 {user_id} 直播间 {room_id} 的大屏明细数据")
+                    
+                    # 提取核心数据并保存到后端
+                    response_data = core_data_response.get('data',{}).get('data',{})
+                    if response_data and isinstance(response_data, dict):
+                        core_data = response_data.get('core_data', {})
+                        other_data = json.dumps(response_data, ensure_ascii=False)
+                        
+                        # 调用保存方法
+                        save_success = await save_core_data_fn(room_id, core_data, other_data)
+                        if save_success:
+                            logger.info(f"直播间 {room_id} 大屏数据保存成功")
+                        else:
+                            logger.error(f"直播间 {room_id} 大屏数据保存失败")
+                    else:
+                        logger.warning(f"直播间 {room_id} 返回数据格式异常，无法保存")
+                else:
+                    logger.error(f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据失败: {core_data_response.message}")
+                    
+                
+                
+            except Exception as e:
+                logger.error(f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据时发生异常: {e}", exc_info=True)
+                continue
+    
+    logger.info("所有直播间大屏明细数据获取完成")
+
+
 async def get_history_live_main(data) -> PublicResponse:
     """批量直播间明细入口 (串行执行)"""
     logger.info(f"批量直播间明细入口: {data}")
@@ -263,7 +366,12 @@ async def get_history_live_main(data) -> PublicResponse:
 
     logger.info(f"批量直播间明细结果: {response_json_data}")
     # 调用api接口传递给后端
-    await save_history_list_fn(response_json_data)
+    save_success = await save_history_list_fn(response_json_data)
+    
+    # 如果保存成功，获取每个直播间的大屏明细数据
+    if save_success:
+        await get_core_data_for_live_rooms(response_json_data)
+    
     return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
@@ -294,6 +402,8 @@ async def get_core_data_main(data) -> PublicResponse:
     print("准备抓取cookies")
     await BrowserOperator().attach_get_cookies(user_ids=[data.get("userId")],site_key="screen")
     print("抓取cookies完成")
+    # 每个直播间处理完成后等待一段时间，降低API调用频率
+    await asyncio.sleep(2)  # 设置2秒的间隔
 
     client = LivingClient()
     response_json_data = await client.get_core_data(data.get("userId"), data.get("roomId"))
