@@ -23,6 +23,8 @@ from ui.config import THEMES, CURRENT_THEME, LAYOUT, FONTS
 # UI模块导入
 from ui.pages import DashboardPage
 from utils.common_logger import get_logger
+# 导入定时任务相关模块
+from worker.scheduler_client import scheduler_client
 
 # 日志
 logger = get_logger(__name__)
@@ -46,6 +48,7 @@ class ModernApp(QMainWindow):
         self.browser_service = browser_service
         self.browser_operator = browser_operator
         self.frpc_process = None
+        self.scheduler_client = scheduler_client
 
         # 初始化UI
         self.setup_fonts()
@@ -744,6 +747,17 @@ class ModernApp(QMainWindow):
                 logger.error(f"FastAPI服务启动失败: {e}")
                 self.log_signal.log_updated.emit(f"FastAPI服务启动失败: {e}")
 
+            # 启动定时任务服务
+            try:
+                await self.scheduler_client.start()
+                task_count = len(self.scheduler_client.task_configs)
+                enabled_count = sum(1 for config in self.scheduler_client.task_configs.values() if config.enabled)
+                logger.info(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+                self.log_signal.log_updated.emit(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+            except Exception as e:
+                logger.error(f"定时任务调度器启动失败: {e}")
+                self.log_signal.log_updated.emit(f"定时任务调度器启动失败: {e}")
+
             # 仅在Windows系统上尝试启动frpc服务
             if sys.platform == 'win32':
                 try:
@@ -836,7 +850,22 @@ class ModernApp(QMainWindow):
             logger.error(f"加载user_ids.txt失败: {e}")
             
     def closeEvent(self, event):
-        """窗口关闭时自动关闭 frpc 服务"""
+        """窗口关闭时自动关闭 frpc 服务和定时任务服务"""
+        # 停止定时任务服务
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果事件循环正在运行，创建任务来停止调度器
+                loop.create_task(self._stop_scheduler())
+            else:
+                # 如果事件循环未运行，直接运行停止操作
+                asyncio.run(self.scheduler_client.stop())
+            self.log_signal.log_updated.emit("定时任务调度器已停止")
+        except Exception as e:
+            logger.error(f"停止定时任务调度器失败: {e}")
+            self.log_signal.log_updated.emit(f"停止定时任务调度器失败: {e}")
+        
+        # 停止 frpc 服务
         if self.frpc_process is not None:
             try:
                 self.frpc_process.terminate()
@@ -845,3 +874,11 @@ class ModernApp(QMainWindow):
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭 frpc 失败: {e}")
         event.accept()
+
+    async def _stop_scheduler(self):
+        """异步停止定时任务调度器"""
+        try:
+            await self.scheduler_client.stop()
+            logger.info("定时任务调度器已停止")
+        except Exception as e:
+            logger.error(f"停止定时任务调度器失败: {e}")

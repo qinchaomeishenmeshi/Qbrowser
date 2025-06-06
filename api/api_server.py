@@ -3,10 +3,14 @@ from threading import Thread
 from typing import List
 
 import uvicorn
-from fastapi import FastAPI, APIRouter, HTTPException, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 from api.api_business import business_router
+from api.scheduler_api import router as scheduler_router
 from browser.browser_manager import BrowserManager
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
@@ -15,6 +19,15 @@ logger = get_logger(__name__)
 
 app = FastAPI()
 api_router = APIRouter()
+
+# 配置模板和静态文件
+templates = Jinja2Templates(directory="templates")
+
+# 挂载静态文件（如果存在）
+try:
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+except Exception:
+    pass  # 静态文件目录不存在时忽略
 
 app.add_middleware(
     CORSMiddleware,
@@ -114,6 +127,20 @@ async def start_all_browsers(
 
 app.include_router(api_router)  # 浏览器管理接口
 app.include_router(business_router)  # 业务接口
+app.include_router(scheduler_router)  # 定时任务管理接口
+
+
+# 定时任务管理界面路由
+@app.get("/", response_class=HTMLResponse)
+async def dashboard_redirect(request: Request):
+    """根路径重定向到定时任务管理界面"""
+    return templates.TemplateResponse("scheduler_dashboard.html", {"request": request})
+
+
+@app.get("/scheduler/dashboard", response_class=HTMLResponse)
+async def scheduler_dashboard(request: Request):
+    """定时任务管理界面"""
+    return templates.TemplateResponse("scheduler_dashboard.html", {"request": request})
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000):
