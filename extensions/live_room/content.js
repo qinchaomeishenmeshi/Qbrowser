@@ -127,29 +127,6 @@ window.addEventListener('fetchResponse', (event) => {
     }
 
 
-    if (url.includes('/compass_api/author/live/live_screen/core_data') && status === 200) {
-        try {
-            const data = JSON.parse(body)
-            console.log('直播大屏数据:', data.data)
-            const core_data = data?.data?.core_data
-            const other_data = JSON.stringify(data.data)
-            // 获取search中的live_room_id 参数
-            const params = new URLSearchParams(window.location.search);
-            // 获取指定参数值（自动处理URL编码）
-            const live_id = params.get('live_room_id');
-            console.log('liveRoomId:', live_id)
-            const postData = {
-                live_id,
-                other_data,
-                core_data
-            }
-            get_live_core_data(postData)
-
-        } catch (e) {
-            console.error('解析 live_room_id 或存储时出错:', e);
-        }
-    }
-
 
 })
 
@@ -369,7 +346,6 @@ async function syncPunishList() {
     try {
         const res = await get_punish_list();
         const res_goods_list = await get_live_goods_list();
-        workTimeCallBack(get_live_history_list)
     } catch (error) {
         console.error('Error syncing punish list:', error);
     }
@@ -616,8 +592,9 @@ async function get_live_goods_list() {
     }
 }
 
+// 废弃-不再使用
 // 获取baiying 直播间数据
-async function get_live_history_list() {
+async function _get_live_history_list() {
     console.log('每天执行一次-get_live_history_list');
     createTopTips('同步直播间明细——开始');
     // 未登录不执行https://buyin.jinritemai.com/mpa/account/login
@@ -710,7 +687,8 @@ async function get_live_history_list() {
     }
 }
 
-async function get_live_core_data(postData) {
+// 废弃-不再使用
+async function _get_live_core_data(postData) {
     try {
         await $Request(API.livereplaydatadetailsynmessageApi, { params: postData })
         console.log('✅ 保存直播间大屏数据成功')

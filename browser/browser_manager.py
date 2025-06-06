@@ -1,3 +1,4 @@
+import codecs
 import json
 import time
 from dataclasses import dataclass
@@ -13,19 +14,30 @@ from utils.common_logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_absolute_extension_path(relative_path: str) -> Path:
-    # 以项目根目录为基准
+def get_absolute_extension_path(relative_path: str) -> str:
+    # 兼容打包exe后的情况，使用resource_path确保路径正确
+    try:
+        # 首先尝试使用resource_path（兼容打包后的情况）
+        extension_path = Path(resource_path(relative_path))
+        if extension_path.exists():
+            return str(extension_path.resolve())
+    except Exception as e:
+        logger.debug(f"resource_path方式失败: {e}")
+    
+    # 回退到BASE_DIR方式
     extension_path = Path(BASE_DIR) / relative_path
-    return extension_path.resolve(strict=True)
+    return str(extension_path.resolve())
 
 
 @dataclass
 class BrowserConfig:
-    extension_path: str = get_absolute_extension_path("extensions/live_room")
-    block_videos_extension_path: str = get_absolute_extension_path(
-        "extensions/block_videos"
-    )
+    def __post_init__(self):
+        # 在实例化时动态计算路径，避免类定义时的路径问题
+        self.live_room_extension_path = get_absolute_extension_path("extensions/live_room")
+        self.block_videos_extension_path = get_absolute_extension_path("extensions/block_videos")
+    
     data_dir_base: Path = Path("browser_data") / "douyin"
+ 
 
 
 class BrowserManager:
@@ -90,21 +102,39 @@ class BrowserManager:
 
     def initialize(self) -> bool:
         try:
+            # 检查插件路径是否存在
+            valid_extensions = []
+            
+            if Path(self.config.live_room_extension_path).exists():
+                valid_extensions.append(self.config.live_room_extension_path)
+                logger.info(f"✅ Live Room 插件路径有效: {self.config.live_room_extension_path}")
+            else:
+                logger.warning(f"⚠️ Live Room 插件路径不存在: {self.config.live_room_extension_path}")
+            
+            if Path(self.config.block_videos_extension_path).exists():
+                valid_extensions.append(self.config.block_videos_extension_path)
+                logger.info(f"✅ Block Videos 插件路径有效: {self.config.block_videos_extension_path}")
+            else:
+                logger.warning(f"⚠️ Block Videos 插件路径不存在: {self.config.block_videos_extension_path}")
+            
             # 配置并启动 Chromium（持久化用户数据）
             co = (
                 ChromiumOptions()
                 .set_local_port(self.port)
                 .set_user_data_path(str(self.user_data_dir))
-                .set_argument("--disable-features=MediaSource")
+                .set_argument("--enable-extensions")
+                .set_argument("--window-size", "1910,1070")
             )
-            # 加载扩展
-            logger.info(f"Loading extension from: {self.config.extension_path}")
-            logger.info(f"Loading extension from: {self.config.block_videos_extension_path}")
-
-            co.add_extension(self.config.extension_path)
-            co.add_extension(self.config.block_videos_extension_path)
-            # 如需加载扩展，可用 co.set_args([...])
-            co.set_argument("--window-size", "1910,1070")
+            
+            # 使用--load-extension参数加载插件（更可靠的方式）
+            if valid_extensions:
+                extension_paths = ",".join(valid_extensions)
+                co.set_argument(f"--load-extension={extension_paths}")
+                co.set_argument(f"--disable-extensions-except={extension_paths}")
+                logger.info(f"✅ 使用--load-extension加载插件: {len(valid_extensions)}个")
+            else:
+                logger.warning("⚠️ 没有有效的插件可以加载")
+            
             self.browser = Chromium(co)
             logger.info(f"Browser started for user: {self.user_id}")
 
@@ -185,6 +215,11 @@ class BrowserManager:
     @property
     def is_running(self) -> bool:
         return self.browser is not None
+
+    def close(self):
+        if self.browser:
+            self.browser.quit()
+            logger.info(f"Browser closed for user: {self.user_id}")
 
     @property
     def uptime(self) -> Optional[float]:
