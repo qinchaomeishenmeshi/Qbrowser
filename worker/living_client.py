@@ -206,6 +206,39 @@ class LivingClient:
             return {"code": -1, "msg": f"获取直播间详情数据失败: {str(e)}"}
 
 
+async def save_history_list_fn(data):
+    """
+    保存直播间明细数据到后端系统
+    
+    :param data: 直播间明细数据，包含直播回放相关信息
+    :return: 保存结果，成功返回True，失败返回False
+    """
+    from utils.api_client import default_api_client
+    
+    try:
+
+        # 修改data数据结构，将所有dataResult的内容合并到一个大数组中
+        flattened_data = []
+        for item in data:
+            data_result = item.get("dataResult", [])
+            flattened_data.extend(data_result)
+        data = flattened_data
+        logger.info(f"保存的数据内容: {data}")
+        # 调用后端接口同步直播回放数据
+        result = await default_api_client.sync_live_replay_data(data)
+        
+        # 检查响应结果
+        if result.get("code") == 0 or result.get("code") == 200:
+            logger.info("直播间明细数据保存成功")
+            return True
+        else:
+            logger.error(f"直播间明细数据保存失败: {result.get('msg', '未知错误')}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"保存直播间明细数据时发生异常: {e}", exc_info=True)
+        return False
+
 async def get_history_live_main(data) -> PublicResponse:
     """批量直播间明细入口 (串行执行)"""
     logger.info(f"批量直播间明细入口: {data}")
@@ -229,7 +262,9 @@ async def get_history_live_main(data) -> PublicResponse:
         await asyncio.sleep(1.5)  # 设置1.5秒的间隔，可根据实际情况调整
 
     logger.info(f"批量直播间明细结果: {response_json_data}")
-    return PublicResponse(status="success", message="操作成功", data=response_json_data)
+    # 调用api接口传递给后端
+    await save_history_list_fn(response_json_data)
+    return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
 async def process_user_history_live(client, user_id):
@@ -264,13 +299,13 @@ async def get_core_data_main(data) -> PublicResponse:
     response_json_data = await client.get_core_data(data.get("userId"), data.get("roomId"))
 
     logger.info(f"直播间大屏明细结果: {response_json_data}")
-    return PublicResponse(status="success", message="操作成功", data=response_json_data)
+    return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
 # 示例使用
 if __name__ == "__main__":
     sample_data = {
-        "deviceNoList": "test001,001",
+        "deviceNoList": "test003,test004",
     }
 
     asyncio.run(get_history_live_main(sample_data))

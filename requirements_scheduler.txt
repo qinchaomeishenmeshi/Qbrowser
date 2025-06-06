@@ -1,0 +1,40 @@
+# 定时任务功能依赖包
+# 安装命令：pip install -r requirements_scheduler.txt
+
+# 定时任务调度器
+apscheduler>=3.10.4
+
+# Web 框架和 API
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+
+# 模板引擎
+jinja2>=3.1.2
+
+# HTTP 客户端（用于 API 调用）
+httpx>=0.25.2
+
+# 数据验证
+pydantic>=2.5.0
+
+# 异步支持
+aiofiles>=23.2.1
+
+# 日志和配置
+python-multipart>=0.0.6
+
+# 时间处理
+python-dateutil>=2.8.2
+
+# JSON 处理增强
+orjson>=3.9.10
+
+# 类型检查（开发时使用）
+mypy>=1.7.1
+
+# 代码格式化（开发时使用）
+black>=23.11.0
+
+# 测试框架（开发时使用）
+pytest>=7.4.3
+pytest-asyncio>=0.21.1

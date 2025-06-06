@@ -311,7 +311,7 @@ async def anchor_coupon_create_main(data) -> PublicResponse:
         await asyncio.sleep(1.5)  # 设置1.5秒的间隔，可根据实际情况调整
 
     logger.info(f"批量创建达人券结果: {response_json_data}")
-    return PublicResponse(status="success", message="操作成功", data=response_json_data)
+    return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
 async def process_user_coupon(client, user_id, data):

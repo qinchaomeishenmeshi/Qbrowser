@@ -698,7 +698,7 @@ async function get_live_history_list() {
 
 
         // 调用函数
-        openLinksSequentially(data_result);
+        // openLinksSequentially(data_result);
         console.log('保存参数：', params);
         const result = await $Request(API.livereplaydatasynmessageApi, { params });
         console.log('✅ 全部记录已处理完毕,保存结果：', result)
@@ -817,7 +817,7 @@ function workTimeCallBack(callback, timeOut = 5000) {
     const minute = now.getMinutes();
     console.log('workTimeCallBack:', hour, minute, callback);
 
-    if ((hour === 15 || hour === 9) && minute >= 0 && minute <= 59) {
+    if ((hour === 15 || hour === 10) && minute >= 0 && minute <= 59) {
         setTimeout(() => {
             callback && callback()
         }, timeOut);

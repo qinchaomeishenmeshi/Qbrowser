@@ -1,0 +1,1179 @@
+[
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_145800",
+    "status": "failed",
+    "start_time": "2025-06-06T14:58:00.001416",
+    "end_time": "2025-06-06T14:58:00.019303",
+    "duration": 0.017887,
+    "result_data": null,
+    "error_message": "catching classes that do not inherit from BaseException is not allowed",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_145100",
+    "status": "failed",
+    "start_time": "2025-06-06T14:51:00.009981",
+    "end_time": "2025-06-06T14:51:00.018688",
+    "duration": 0.008707,
+    "result_data": null,
+    "error_message": "catching classes that do not inherit from BaseException is not allowed",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_140000",
+    "status": "failed",
+    "start_time": "2025-06-06T14:00:00.001772",
+    "end_time": "2025-06-06T14:01:00.248464",
+    "duration": 60.246692,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_134700",
+    "status": "failed",
+    "start_time": "2025-06-06T13:47:00.011179",
+    "end_time": "2025-06-06T13:48:00.297979",
+    "duration": 60.2868,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_133600",
+    "status": "failed",
+    "start_time": "2025-06-06T13:36:00.001432",
+    "end_time": "2025-06-06T13:37:00.381635",
+    "duration": 60.380203,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_131200",
+    "status": "failed",
+    "start_time": "2025-06-06T13:12:00.017231",
+    "end_time": "2025-06-06T13:13:00.094244",
+    "duration": 60.077013,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_115700",
+    "status": "failed",
+    "start_time": "2025-06-06T11:57:00.001066",
+    "end_time": "2025-06-06T11:58:00.173120",
+    "duration": 60.172054,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_114800",
+    "status": "failed",
+    "start_time": "2025-06-06T11:48:00.001815",
+    "end_time": "2025-06-06T11:49:00.358601",
+    "duration": 60.356786,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_113000",
+    "status": "failed",
+    "start_time": "2025-06-06T11:30:00.001219",
+    "end_time": "2025-06-06T11:31:00.258301",
+    "duration": 60.257082,
+    "result_data": null,
+    "error_message": "浏览器启动失败: ['test003', 'test004']",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_111000",
+    "status": "success",
+    "start_time": "2025-06-06T11:10:00.003505",
+    "end_time": "2025-06-06T11:11:05.976552",
+    "duration": 65.973047,
+    "result_data": {
+      "status": "success",
+      "message": "操作成功",
+      "data": [
+        {
+          "buyinAccountId": "7494162655989989666",
+          "dyAccountName": "谛森文-味蕾探险家",
+          "dataResult": [
+            {
+              "avg_watch_duration": "5秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181261&x-signature=JyDanMfTIh23%2F5CG%2FbsM6zdHYm0%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002538919119650",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "2小时53分8秒",
+                "start_time": "2025/06/04 16:06"
+              },
+              "watch_ucnt": "9",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "3分12秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181261&x-signature=JyDanMfTIh23%2F5CG%2FbsM6zdHYm0%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "diagnose_flow_low": true,
+                "live_app_id": 1128,
+                "live_id": "7511912303776860968",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时43分48秒",
+                "start_time": "2025/06/04 10:16"
+              },
+              "watch_ucnt": "18",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181261&x-signature=JyDanMfTIh23%2F5CG%2FbsM6zdHYm0%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511635869816834825",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时38分27秒",
+                "start_time": "2025/06/03 16:23"
+              },
+              "watch_ucnt": "21",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "9秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181261&x-signature=JyDanMfTIh23%2F5CG%2FbsM6zdHYm0%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542966989654819",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时13分54秒",
+                "start_time": "2025/06/03 10:23"
+              },
+              "watch_ucnt": "33",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181261&x-signature=JyDanMfTIh23%2F5CG%2FbsM6zdHYm0%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542630818204450",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "28秒",
+                "start_time": "2025/06/03 10:22"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            }
+          ],
+          "user_id": "test003"
+        },
+        {
+          "buyinAccountId": "7494123808296452404",
+          "dyAccountName": "谛森文-花花的觅食之旅",
+          "dataResult": [
+            {
+              "avg_watch_duration": "26秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002735768865571",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "3小时3分14秒",
+                "start_time": "2025/06/04 16:07"
+              },
+              "watch_ucnt": "15",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511910886676777762",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时49分3秒",
+                "start_time": "2025/06/04 10:11"
+              },
+              "watch_ucnt": "37",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "7秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511635425095174964",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时39分31秒",
+                "start_time": "2025/06/03 16:22"
+              },
+              "watch_ucnt": "48",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "4秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511634383390608162",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "1分58秒",
+                "start_time": "2025/06/03 16:18"
+              },
+              "watch_ucnt": "2",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "16秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542372258319104",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥65",
+              "pay_order_cnt": "1",
+              "start_time": {
+                "live_duration": "5小时16分43秒",
+                "start_time": "2025/06/03 10:21"
+              },
+              "watch_ucnt": "20",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749181264&x-signature=8nsegexsAJnMub7vAQrS68F4RcQ%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542121174747919",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "23秒",
+                "start_time": "2025/06/03 10:20"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            }
+          ],
+          "user_id": "test004"
+        }
+      ]
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_110300",
+    "status": "success",
+    "start_time": "2025-06-06T11:03:00.003053",
+    "end_time": "2025-06-06T11:03:12.811003",
+    "duration": 12.80795,
+    "result_data": {
+      "status": "success",
+      "message": "操作成功",
+      "data": [
+        {
+          "buyinAccountId": "7494162655989989666",
+          "dyAccountName": "谛森文-味蕾探险家",
+          "dataResult": [
+            {
+              "avg_watch_duration": "5秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180788&x-signature=IhioDQcYgpYrDcA%2FTa2bLEAAokE%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002538919119650",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "2小时53分8秒",
+                "start_time": "2025/06/04 16:06"
+              },
+              "watch_ucnt": "9",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "3分12秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180788&x-signature=IhioDQcYgpYrDcA%2FTa2bLEAAokE%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "diagnose_flow_low": true,
+                "live_app_id": 1128,
+                "live_id": "7511912303776860968",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时43分48秒",
+                "start_time": "2025/06/04 10:16"
+              },
+              "watch_ucnt": "18",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180788&x-signature=IhioDQcYgpYrDcA%2FTa2bLEAAokE%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511635869816834825",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时38分27秒",
+                "start_time": "2025/06/03 16:23"
+              },
+              "watch_ucnt": "21",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "9秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180788&x-signature=IhioDQcYgpYrDcA%2FTa2bLEAAokE%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542966989654819",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时13分54秒",
+                "start_time": "2025/06/03 10:23"
+              },
+              "watch_ucnt": "33",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180788&x-signature=IhioDQcYgpYrDcA%2FTa2bLEAAokE%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542630818204450",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "28秒",
+                "start_time": "2025/06/03 10:22"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            }
+          ],
+          "user_id": "test003"
+        },
+        {
+          "buyinAccountId": "7494123808296452404",
+          "dyAccountName": "谛森文-花花的觅食之旅",
+          "dataResult": [
+            {
+              "avg_watch_duration": "26秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002735768865571",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "3小时3分14秒",
+                "start_time": "2025/06/04 16:07"
+              },
+              "watch_ucnt": "15",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511910886676777762",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时49分3秒",
+                "start_time": "2025/06/04 10:11"
+              },
+              "watch_ucnt": "37",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "7秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511635425095174964",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时39分31秒",
+                "start_time": "2025/06/03 16:22"
+              },
+              "watch_ucnt": "48",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "4秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511634383390608162",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "1分58秒",
+                "start_time": "2025/06/03 16:18"
+              },
+              "watch_ucnt": "2",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "16秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542372258319104",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥65",
+              "pay_order_cnt": "1",
+              "start_time": {
+                "live_duration": "5小时16分43秒",
+                "start_time": "2025/06/03 10:21"
+              },
+              "watch_ucnt": "20",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180791&x-signature=imISGpyUD0xa4KlXXpZ7oc8jQLM%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542121174747919",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "23秒",
+                "start_time": "2025/06/03 10:20"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            }
+          ],
+          "user_id": "test004"
+        }
+      ]
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_105700",
+    "status": "success",
+    "start_time": "2025-06-06T10:57:00.001950",
+    "end_time": "2025-06-06T10:57:12.241667",
+    "duration": 12.239717,
+    "result_data": {
+      "status": "success",
+      "message": "操作成功",
+      "data": [
+        {
+          "buyinAccountId": "7494162655989989666",
+          "dyAccountName": "谛森文-味蕾探险家",
+          "dataResult": [
+            {
+              "avg_watch_duration": "5秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180428&x-signature=lVCBdbb7tvq37sINhDm29zNNe14%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002538919119650",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "2小时53分8秒",
+                "start_time": "2025/06/04 16:06"
+              },
+              "watch_ucnt": "9",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "3分12秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180428&x-signature=lVCBdbb7tvq37sINhDm29zNNe14%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "diagnose_flow_low": true,
+                "live_app_id": 1128,
+                "live_id": "7511912303776860968",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时43分48秒",
+                "start_time": "2025/06/04 10:16"
+              },
+              "watch_ucnt": "18",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180428&x-signature=lVCBdbb7tvq37sINhDm29zNNe14%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511635869816834825",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时38分27秒",
+                "start_time": "2025/06/03 16:23"
+              },
+              "watch_ucnt": "21",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "9秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180428&x-signature=lVCBdbb7tvq37sINhDm29zNNe14%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542966989654819",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时13分54秒",
+                "start_time": "2025/06/03 10:23"
+              },
+              "watch_ucnt": "33",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180428&x-signature=lVCBdbb7tvq37sINhDm29zNNe14%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542630818204450",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "28秒",
+                "start_time": "2025/06/03 10:22"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            }
+          ],
+          "user_id": "test003"
+        },
+        {
+          "buyinAccountId": "7494123808296452404",
+          "dyAccountName": "谛森文-花花的觅食之旅",
+          "dataResult": [
+            {
+              "avg_watch_duration": "26秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002735768865571",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "3小时3分14秒",
+                "start_time": "2025/06/04 16:07"
+              },
+              "watch_ucnt": "15",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511910886676777762",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时49分3秒",
+                "start_time": "2025/06/04 10:11"
+              },
+              "watch_ucnt": "37",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "7秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511635425095174964",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时39分31秒",
+                "start_time": "2025/06/03 16:22"
+              },
+              "watch_ucnt": "48",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "4秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511634383390608162",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "1分58秒",
+                "start_time": "2025/06/03 16:18"
+              },
+              "watch_ucnt": "2",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "16秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542372258319104",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥65",
+              "pay_order_cnt": "1",
+              "start_time": {
+                "live_duration": "5小时16分43秒",
+                "start_time": "2025/06/03 10:21"
+              },
+              "watch_ucnt": "20",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749180430&x-signature=BrsQIQLC88hV%2FawQKaJorzXf9zI%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542121174747919",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "23秒",
+                "start_time": "2025/06/03 10:20"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            }
+          ],
+          "user_id": "test004"
+        }
+      ]
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_104600",
+    "status": "success",
+    "start_time": "2025-06-06T10:46:00.000862",
+    "end_time": "2025-06-06T10:46:13.367186",
+    "duration": 13.366324,
+    "result_data": {
+      "status": "success",
+      "message": "操作成功",
+      "data": [
+        {
+          "buyinAccountId": "7494162655989989666",
+          "dyAccountName": "谛森文-味蕾探险家",
+          "dataResult": [
+            {
+              "avg_watch_duration": "5秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179769&x-signature=rHZ9r2rBVWt4XMv5y3u5eqdo%2FqA%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002538919119650",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "2小时53分8秒",
+                "start_time": "2025/06/04 16:06"
+              },
+              "watch_ucnt": "9",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "3分12秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179769&x-signature=rHZ9r2rBVWt4XMv5y3u5eqdo%2FqA%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "diagnose_flow_low": true,
+                "live_app_id": 1128,
+                "live_id": "7511912303776860968",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时43分48秒",
+                "start_time": "2025/06/04 10:16"
+              },
+              "watch_ucnt": "18",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179769&x-signature=rHZ9r2rBVWt4XMv5y3u5eqdo%2FqA%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511635869816834825",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时38分27秒",
+                "start_time": "2025/06/03 16:23"
+              },
+              "watch_ucnt": "21",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "9秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179769&x-signature=rHZ9r2rBVWt4XMv5y3u5eqdo%2FqA%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542966989654819",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时13分54秒",
+                "start_time": "2025/06/03 10:23"
+              },
+              "watch_ucnt": "33",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p3-compass-sign.byteimg.com/webcast-cover/7497144799015947042~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179769&x-signature=rHZ9r2rBVWt4XMv5y3u5eqdo%2FqA%3D",
+              "live_room": "小江茶叶正在直播中",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542630818204450",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "28秒",
+                "start_time": "2025/06/03 10:22"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494162655989989666",
+              "dyAccountName": "谛森文-味蕾探险家"
+            }
+          ],
+          "user_id": "test003"
+        },
+        {
+          "buyinAccountId": "7494123808296452404",
+          "dyAccountName": "谛森文-花花的觅食之旅",
+          "dataResult": [
+            {
+              "avg_watch_duration": "26秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7512002735768865571",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "3小时3分14秒",
+                "start_time": "2025/06/04 16:07"
+              },
+              "watch_ucnt": "15",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "8秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511910886676777762",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "4小时49分3秒",
+                "start_time": "2025/06/04 10:11"
+              },
+              "watch_ucnt": "37",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "7秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511635425095174964",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "5小时39分31秒",
+                "start_time": "2025/06/03 16:22"
+              },
+              "watch_ucnt": "48",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "4秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "diagnose_gpm_decline": true,
+                "live_app_id": 1128,
+                "live_id": "7511634383390608162",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "1分58秒",
+                "start_time": "2025/06/03 16:18"
+              },
+              "watch_ucnt": "2",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "16秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542372258319104",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥65",
+              "pay_order_cnt": "1",
+              "start_time": {
+                "live_duration": "5小时16分43秒",
+                "start_time": "2025/06/03 10:21"
+              },
+              "watch_ucnt": "20",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            },
+            {
+              "avg_watch_duration": "0秒",
+              "cover_img_uri": "https://p9-compass-sign.byteimg.com/webcast-cover/7509019537061301031~tplv-r3822kbksp-image.image?lk3s=c23a45d5&x-expires=1749179771&x-signature=NXL16kX3beaYXe99BpjJbDYTO4c%3D",
+              "live_room": "德庄正在直播",
+              "operation": {
+                "live_app_id": 1128,
+                "live_id": "7511542121174747919",
+                "show_big_screen": true,
+                "show_detail": true
+              },
+              "pay_gmv": "¥0",
+              "pay_order_cnt": "0",
+              "start_time": {
+                "live_duration": "23秒",
+                "start_time": "2025/06/03 10:20"
+              },
+              "watch_ucnt": "0",
+              "buyinAccountId": "7494123808296452404",
+              "dyAccountName": "谛森文-花花的觅食之旅"
+            }
+          ],
+          "user_id": "test004"
+        }
+      ]
+    },
+    "error_message": null,
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_100800",
+    "status": "failed",
+    "start_time": "2025-06-06T10:08:00.004246",
+    "end_time": "2025-06-06T10:09:04.192442",
+    "duration": 64.188196,
+    "result_data": null,
+    "error_message": "PublicResponse() takes no arguments",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying0606",
+    "execution_id": "baiying0606_20250606_095300",
+    "status": "failed",
+    "start_time": "2025-06-06T09:53:00.004027",
+    "end_time": "2025-06-06T09:53:53.941202",
+    "duration": 53.937175,
+    "result_data": null,
+    "error_message": "PublicResponse() takes no arguments",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying",
+    "execution_id": "baiying_20250605_112700",
+    "status": "failed",
+    "start_time": "2025-06-05T11:27:00.001729",
+    "end_time": "2025-06-05T11:28:00.483354",
+    "duration": 60.481625,
+    "result_data": null,
+    "error_message": "PublicResponse() takes no arguments",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying",
+    "execution_id": "baiying_20250605_112000",
+    "status": "failed",
+    "start_time": "2025-06-05T11:20:00.002531",
+    "end_time": "2025-06-05T11:20:00.002873",
+    "duration": 0.000342,
+    "result_data": null,
+    "error_message": "'LivingClient' object has no attribute 'get_history_live_main'",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying",
+    "execution_id": "baiying_20250605_105200",
+    "status": "failed",
+    "start_time": "2025-06-05T10:52:00.001652",
+    "end_time": "2025-06-05T10:52:00.002221",
+    "duration": 0.000569,
+    "result_data": null,
+    "error_message": "不支持的目标函数: get_history_live_main",
+    "retry_count": 0
+  },
+  {
+    "task_id": "baiying",
+    "execution_id": "baiying_20250605_100300",
+    "status": "failed",
+    "start_time": "2025-06-05T10:03:00.000231",
+    "end_time": "2025-06-05T10:03:00.000408",
+    "duration": 0.000177,
+    "result_data": null,
+    "error_message": "get_history_live_list 需要 user_id 参数",
+    "retry_count": 0
+  }
+]

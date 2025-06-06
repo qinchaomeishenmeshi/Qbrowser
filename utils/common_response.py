@@ -15,3 +15,39 @@ def PublicResponse(status: str, message: str, data: Any = None) -> Dict[str, Any
         "message": message,
         "data": data
     })
+
+
+class PublicResponse:
+    """
+    统一响应格式类
+    """
+    
+    @staticmethod
+    def success(data: Any = None, message: str = "操作成功") -> Dict[str, Any]:
+        """
+        返回成功响应
+        
+        :param data: 返回的数据
+        :param message: 成功消息
+        :return: 成功响应字典
+        """
+        return {
+            "status": "success",
+            "message": message,
+            "data": data
+        }
+    
+    @staticmethod
+    def error(message: str = "操作失败", data: Any = None) -> Dict[str, Any]:
+        """
+        返回错误响应
+        
+        :param message: 错误消息
+        :param data: 错误相关数据
+        :return: 错误响应字典
+        """
+        return {
+            "status": "error",
+            "message": message,
+            "data": data
+        }

@@ -23,32 +23,30 @@ class BrowserService:
     async def start_browsers(self, user_ids: List[str]) -> List[Dict]:
         results = []
         for idx, user_id in enumerate(user_ids, 1):
-            manager = await self.browser_store.get(user_id)
-            if manager and manager.is_running:
-                results.append(
-                    {
-                        "user_id": user_id,
-                        "status": "already_running",
-                        "port": manager.port,
-                    }
-                )
-                continue
-
             try:
-                port = await self.port_manager.allocate_port()
-                manager = BrowserManager(user_id, port)
-                ok = await asyncio.to_thread(manager.initialize)
-                if ok:
-                    await self.browser_store.add(manager)
-                    results.append(
-                        {
-                            "user_id": user_id,
-                            "status": "started",
-                            "port": port,
-                        }
-                    )
+                # 使用get_or_create_browser统一处理浏览器实例获取和创建
+                manager = await self.get_or_create_browser(user_id)
+                
+                if manager and manager.is_running:
+                    # 检查是否是已存在的实例
+                    existing_manager = await self.browser_store.get(user_id)
+                    if existing_manager and existing_manager.is_running:
+                        results.append(
+                            {
+                                "user_id": user_id,
+                                "status": "already_running",
+                                "port": manager.port,
+                            }
+                        )
+                    else:
+                        results.append(
+                            {
+                                "user_id": user_id,
+                                "status": "started",
+                                "port": manager.port,
+                            }
+                        )
                 else:
-                    await self.port_manager.release_port(port)
                     results.append(
                         {
                             "user_id": user_id,
@@ -56,6 +54,7 @@ class BrowserService:
                             "port": None,
                         }
                     )
+                    
             except Exception as e:
                 logger.error(f"启动浏览器失败 {user_id}: {e}")
                 results.append(
@@ -90,7 +89,7 @@ class BrowserService:
 
     async def load_ports(self):
         """
-        从文件加载端口映射
+        从文件加载端口映射并尝试恢复浏览器实例
         """
         if os.path.exists(PORTS_FILE):
             try:
@@ -103,7 +102,46 @@ class BrowserService:
                     if isinstance(v, dict) and "port" in v
                 }
                 await self.port_manager.load_ports(ports)
-                logger.info(f"加载端口映射成功: {mapping}")
+                
+                # 尝试恢复浏览器实例
+                recovered_count = 0
+                invalid_entries = []
+                
+                for user_id, config in mapping.items():
+                    if isinstance(config, dict) and "port" in config:
+                        port = config["port"]
+                        try:
+                            # 检查端口是否真的在使用中
+                            if await self._is_browser_running_on_port(port):
+                                # 创建浏览器管理器实例但不初始化（连接到现有进程）
+                                manager = BrowserManager(user_id, port)
+                                if await self._try_connect_existing_browser(manager):
+                                    await self.browser_store.add(manager)
+                                    recovered_count += 1
+                                    logger.info(f"恢复浏览器实例成功: {user_id} (端口: {port})")
+                                else:
+                                    invalid_entries.append(user_id)
+                                    await self.port_manager.release_port(port)
+                            else:
+                                invalid_entries.append(user_id)
+                                await self.port_manager.release_port(port)
+                        except Exception as e:
+                            logger.warning(f"恢复浏览器实例失败 {user_id}: {e}")
+                            invalid_entries.append(user_id)
+                            await self.port_manager.release_port(port)
+                
+                # 清理无效的缓存条目
+                if invalid_entries:
+                    for user_id in invalid_entries:
+                        mapping.pop(user_id, None)
+                    
+                    # 更新缓存文件
+                    with open(PORTS_FILE, "w", encoding="utf-8") as f:
+                        json.dump(mapping, f, ensure_ascii=False, indent=2)
+                    
+                    logger.info(f"清理无效缓存条目: {invalid_entries}")
+                
+                logger.info(f"加载端口映射成功: {mapping}, 恢复实例: {recovered_count}个")
             except Exception as e:
                 logger.error(f"加载端口映射失败: {e}")
 
@@ -152,21 +190,64 @@ class BrowserService:
         print(f"获取或创建浏览器实例 {manager}")
         if manager and manager.is_running:
             return manager
+        
+        # 如果存在但未运行的实例，先清理掉
+        if manager and not manager.is_running:
+            await self.browser_store.remove(user_id)
+            logger.warning(f"清理未运行的浏览器实例: {user_id}")
 
         try:
             port = await self.port_manager.allocate_port()
             manager = BrowserManager(user_id, port)
             ok = await asyncio.to_thread(manager.initialize)
-            if ok:
+            if ok and manager.is_running:
                 await self.browser_store.add(manager)
                 await self.save_ports()
+                logger.info(f"成功创建浏览器实例: {user_id} (端口: {port})")
                 return manager
             else:
                 await self.port_manager.release_port(port)
                 raise RuntimeError(f"初始化浏览器失败: {user_id}")
         except Exception as e:
             logger.error(f"创建浏览器实例失败 {user_id}: {e}")
-            raise
+            raise RuntimeError(f"无法为用户 {user_id} 创建或获取浏览器实例: {e}")
 
+    async def _is_browser_running_on_port(self, port: int) -> bool:
+        """
+        检查指定端口是否有浏览器进程在运行
+        """
+        try:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex(('localhost', port))
+            sock.close()
+            return result == 0
+        except Exception:
+            return False
+    
+    async def _try_connect_existing_browser(self, manager: BrowserManager) -> bool:
+        """
+        尝试连接到现有的浏览器进程
+        """
+        try:
+            from DrissionPage import ChromiumPage, ChromiumOptions
+            
+            # 创建连接选项
+            co = ChromiumOptions()
+            co.set_local_port(manager.port)
+            
+            # 尝试连接到现有浏览器
+            browser = ChromiumPage(addr_or_opts=co)
+            
+            # 验证连接是否成功
+            if browser and hasattr(browser, 'tabs_count'):
+                manager.browser = browser
+                return True
+            else:
+                return False
+        except Exception as e:
+            logger.debug(f"连接现有浏览器失败 (端口 {manager.port}): {e}")
+            return False
 
 browser_service = BrowserService()

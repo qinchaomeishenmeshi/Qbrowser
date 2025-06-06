@@ -38,7 +38,7 @@ def is_admin():
         return (
             ctypes.windll.shell32.IsUserAnAdmin() if sys.platform == "win32" else True
         )
-    except:
+    except Exception:
         return False
 
 

@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定时任务管理面板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #1d1d1f;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .status-card h3 {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-card .value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+        
+        .status-card.success .value {
+            color: #34C759;
+        }
+        
+        .status-card.warning .value {
+            color: #FF9500;
+        }
+        
+        .status-card.error .value {
+            color: #FF3B30;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .panel-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+        
+        .panel-content {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #007AFF;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #007AFF;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #34C759;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #28a745;
+        }
+        
+        .btn-danger {
+            background: #FF3B30;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc3545;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-item {
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-info h4 {
+            font-size: 16px;
+            margin-bottom: 5px;
+            color: #1d1d1f;
+        }
+        
+        .task-info p {
+            font-size: 12px;
+            color: #666;
+            margin: 2px 0;
+        }
+        
+        .task-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        
+        .status-enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .results-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            padding: 10px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 12px;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-success {
+            border-left: 3px solid #34C759;
+        }
+        
+        .result-error {
+            border-left: 3px solid #FF3B30;
+        }
+        
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .scheduler-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🕐 定时任务管理面板</h1>
+            <p>管理和监控直播间数据采集定时任务</p>
+        </div>
+        
+        <!-- 状态卡片 -->
+        <div class="status-cards">
+            <div class="status-card">
+                <h3>调度器状态</h3>
+                <div class="value" id="scheduler-status">-</div>
+            </div>
+            <div class="status-card">
+                <h3>总任务数</h3>
+                <div class="value" id="total-tasks">0</div>
+            </div>
+            <div class="status-card success">
+                <h3>启用任务</h3>
+                <div class="value" id="enabled-tasks">0</div>
+            </div>
+            <div class="status-card warning">
+                <h3>禁用任务</h3>
+                <div class="value" id="disabled-tasks">0</div>
+            </div>
+        </div>
+        
+        <!-- 调度器控制 -->
+        <div class="scheduler-controls">
+            <button class="btn btn-success" onclick="startScheduler()">启动调度器</button>
+            <button class="btn btn-danger" onclick="stopScheduler()">停止调度器</button>
+            <button class="btn btn-secondary" onclick="refreshStatus()">刷新状态</button>
+        </div>
+        
+        <!-- 主要内容 -->
+        <div class="main-content">
+            <!-- 创建任务面板 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>创建新任务</h2>
+                </div>
+                <div class="panel-content">
+                    <div id="alert-container"></div>
+                    
+                    <form id="task-form">
+                        <div class="form-group">
+                            <label for="task-type">任务类型</label>
+                            <select id="task-type" onchange="toggleTaskType()">
+                                <option value="cron">Cron 定时任务</option>
+                                <option value="interval">间隔定时任务</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task-id">任务ID</label>
+                            <input type="text" id="task-id" placeholder="唯一任务标识" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task-name">任务名称</label>
+                            <input type="text" id="task-name" placeholder="任务名称" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="task-description">任务描述</label>
+                            <input type="text" id="task-description" placeholder="任务描述（可选）">
+                        </div>
+                        
+                        <div class="form-group" id="cron-group">
+                            <label for="cron-expression">Cron 表达式</label>
+                            <input type="text" id="cron-expression" placeholder="0 */30 * * * *">
+                            <small>格式：秒 分 时 日 月 周</small>
+                        </div>
+                        
+                        <div class="form-group hidden" id="interval-group">
+                            <label for="interval-seconds">间隔时间（秒）</label>
+                            <input type="number" id="interval-seconds" placeholder="1800">
+                            <small>例如：1800 = 30分钟</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="target-function">目标函数</label>
+                            <select id="target-function">
+                                <option value="get_history_live_main">获取历史直播列表</option>
+                                <option value="get_core_data_main">批量获取直播大屏数据</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="function-params">函数参数（JSON格式）</label>
+                            <textarea id="function-params" rows="4" placeholder='{"user_id": "001", "room_id": "123456"}'></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">创建任务</button>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 任务列表面板 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>任务列表</h2>
+                </div>
+                <div class="panel-content">
+                    <div class="task-list" id="task-list">
+                        <!-- 任务列表将在这里动态加载 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 执行结果面板 -->
+        <div class="panel" style="margin-top: 20px;">
+            <div class="panel-header">
+                <h2>最近执行结果</h2>
+            </div>
+            <div class="panel-content">
+                <div class="results-list" id="results-list">
+                    <!-- 执行结果将在这里动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = '/scheduler';
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshStatus();
+            loadTasks();
+            loadResults();
+            
+            // 设置定时刷新
+            setInterval(() => {
+                refreshStatus();
+                loadResults();
+            }, 30000); // 每30秒刷新一次
+        });
+        
+        // 表单提交处理
+        document.getElementById('task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            createTask();
+        });
+        
+        // 切换任务类型
+        function toggleTaskType() {
+            const taskType = document.getElementById('task-type').value;
+            const cronGroup = document.getElementById('cron-group');
+            const intervalGroup = document.getElementById('interval-group');
+            
+            if (taskType === 'cron') {
+                cronGroup.classList.remove('hidden');
+                intervalGroup.classList.add('hidden');
+            } else {
+                cronGroup.classList.add('hidden');
+                intervalGroup.classList.remove('hidden');
+            }
+        }
+        
+        // 显示提示信息
+        function showAlert(message, type = 'success') {
+            const container = document.getElementById('alert-container');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            
+            container.innerHTML = `
+                <div class="alert ${alertClass}">
+                    ${message}
+                </div>
+            `;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // API 请求封装
+        async function apiRequest(url, options = {}) {
+            try {
+                const response = await fetch(API_BASE + url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('API请求失败:', error);
+                throw error;
+            }
+        }
+        
+        // 刷新状态
+        async function refreshStatus() {
+            try {
+                const response = await apiRequest('/status');
+                if (response.status === 'success') {
+                    const data = response.data;
+                    document.getElementById('scheduler-status').textContent = data.is_running ? '运行中' : '已停止';
+                    document.getElementById('total-tasks').textContent = data.total_tasks;
+                    document.getElementById('enabled-tasks').textContent = data.enabled_tasks;
+                    document.getElementById('disabled-tasks').textContent = data.disabled_tasks;
+                }
+            } catch (error) {
+                console.error('获取状态失败:', error);
+            }
+        }
+        
+        // 启动调度器
+        async function startScheduler() {
+            try {
+                const response = await apiRequest('/start', { method: 'POST' });
+                if (response.status === 'success') {
+                    showAlert('调度器启动成功');
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert('启动调度器失败', 'error');
+            }
+        }
+        
+        // 停止调度器
+        async function stopScheduler() {
+            try {
+                const response = await apiRequest('/stop', { method: 'POST' });
+                if (response.status === 'success') {
+                    showAlert('调度器停止成功');
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert('停止调度器失败', 'error');
+            }
+        }
+        
+        // 创建任务
+        async function createTask() {
+            try {
+                const taskType = document.getElementById('task-type').value;
+                const taskData = {
+                    task_id: document.getElementById('task-id').value,
+                    name: document.getElementById('task-name').value,
+                    description: document.getElementById('task-description').value,
+                    target_function: document.getElementById('target-function').value,
+                    function_params: JSON.parse(document.getElementById('function-params').value || '{}'),
+                    enabled: true
+                };
+                
+                if (taskType === 'cron') {
+                    taskData.cron_expression = document.getElementById('cron-expression').value;
+                } else {
+                    taskData.interval_seconds = parseInt(document.getElementById('interval-seconds').value);
+                }
+                
+                const endpoint = taskType === 'cron' ? '/tasks/cron' : '/tasks/interval';
+                const response = await apiRequest(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (response.status === 'success') {
+                    showAlert('任务创建成功');
+                    document.getElementById('task-form').reset();
+                    loadTasks();
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert('创建任务失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 加载任务列表
+        async function loadTasks() {
+            try {
+                const response = await apiRequest('/tasks');
+                if (response.status === 'success') {
+                    const tasks = response.data;
+                    const taskList = document.getElementById('task-list');
+                    
+                    if (tasks.length === 0) {
+                        taskList.innerHTML = '<p style="text-align: center; color: #666;">暂无任务</p>';
+                        return;
+                    }
+                    
+                    taskList.innerHTML = tasks.map(task => `
+                        <div class="task-item">
+                            <div class="task-info">
+                                <h4>${task.name}</h4>
+                                <p>ID: ${task.task_id}</p>
+                                <p>函数: ${task.target_function}</p>
+                                <p>触发器: ${task.trigger_type === 'cron' ? 
+                                    `${task.trigger_config.minute} ${task.trigger_config.hour} ${task.trigger_config.day} ${task.trigger_config.month} ${task.trigger_config.day_of_week}` : 
+                                    task.trigger_config.interval_seconds + '秒'}</p>
+                                <p>参数: ${task.function_params ? JSON.stringify(task.function_params) : '无'}</p>
+                                <span class="status-badge ${task.enabled ? 'status-enabled' : 'status-disabled'}">
+                                    ${task.enabled ? '启用' : '禁用'}
+                                </span>
+                            </div>
+                            <div class="task-actions">
+                                <button class="btn btn-sm ${task.enabled ? 'btn-secondary' : 'btn-success'}" 
+                                        onclick="toggleTask('${task.task_id}', ${!task.enabled})">
+                                    ${task.enabled ? '禁用' : '启用'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">
+                                    删除
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载任务列表失败:', error);
+            }
+        }
+        
+        // 切换任务状态
+        async function toggleTask(taskId, enable) {
+            try {
+                const endpoint = enable ? '/tasks/enable' : '/tasks/disable';
+                const response = await apiRequest(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify({ task_id: taskId })
+                });
+                
+                if (response.status === 'success') {
+                    showAlert(`任务${enable ? '启用' : '禁用'}成功`);
+                    loadTasks();
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert(`${enable ? '启用' : '禁用'}任务失败`, 'error');
+            }
+        }
+        
+        // 删除任务
+        async function deleteTask(taskId) {
+            if (!confirm('确定要删除这个任务吗？')) {
+                return;
+            }
+            
+            try {
+                const response = await apiRequest(`/tasks/${taskId}`, { method: 'DELETE' });
+                if (response.status === 'success') {
+                    showAlert('任务删除成功');
+                    loadTasks();
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert('删除任务失败', 'error');
+            }
+        }
+        
+        // 加载执行结果
+        async function loadResults() {
+            try {
+                const response = await apiRequest('/results?limit=20');
+                if (response.status === 'success') {
+                    const results = response.data;
+                    const resultsList = document.getElementById('results-list');
+                    
+                    if (results.length === 0) {
+                        resultsList.innerHTML = '<p style="text-align: center; color: #666;">暂无执行结果</p>';
+                        return;
+                    }
+                    
+                    resultsList.innerHTML = results.map(result => `
+                        <div class="result-item ${result.status === 'success' ? 'result-success' : 'result-error'}">
+                            <div><strong>${result.task_id}</strong> - ${result.status}</div>
+                            <div>开始时间: ${new Date(result.start_time).toLocaleString()}</div>
+                            <div>结束时间: ${new Date(result.end_time).toLocaleString()}</div>
+                            <div>执行耗时: ${result.duration ? result.duration.toFixed(2) + '秒' : '未知'}</div>
+                            ${result.error_message ? `<div style="color: #FF3B30;">错误: ${result.error_message}</div>` : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载执行结果失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>
