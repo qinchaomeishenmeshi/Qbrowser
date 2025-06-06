@@ -195,6 +195,25 @@ class InternalApiClient:
         endpoint = "/aiplay/admin/userdata/sync"
         return await self.post(endpoint, data)
 
+    async def sync_live_room_list(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        同步eos直播复盘数据到后端
+        
+        :param data: 直播回放数据
+        :return: 同步结果
+        """
+        endpoint = "/aiplay/admin/livebroadcastreview/batchSave"
+        return await self.post(endpoint, data)
+
+    async def sync_punish_list(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        同步eos直播违规数据到后端
+        
+        :param data: 直播违规记录数据
+        :return: 同步结果
+        """
+        endpoint = "/aiplay/admin/liveviolationrecordsdeal/save"
+        return await self.post(endpoint, data)
 
 # 创建默认的API客户端实例
 default_api_client = InternalApiClient()

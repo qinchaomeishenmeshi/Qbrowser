@@ -27,6 +27,14 @@ SITE_CONFIGS = {
         "api_paths": ["/config_center/common/config"],
         "required_cookies": ["COMPASS_LUOPAN_DT", "LUOPAN_DT"],
         "required_headers": ["referer", "user-agent"]
+    }, 
+    "eos": {
+        "name": "EOS抖音",
+        "login_url": "",
+        "target_url": "https://eos.douyin.com/livesite/live/history?tab=diagnosis",
+        "api_paths": ["/life/api/live_screen/v4/replay/anchor_info"],
+        "required_cookies": ["eos_s_token"],
+        "required_headers": ["referer", "user-agent","x-secsdk-csrf-token"]
     },
     # 可以添加其他站点的配置
 }

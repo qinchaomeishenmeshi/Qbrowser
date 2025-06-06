@@ -29,12 +29,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.action === 'DO_DAILY_TASK') {
         // 执行每日任务，当前时间
         console.log('DO_DAILY_TASK___执行每日任务：' + cur_time)
-        get_punish_list().then((res) => {
+        get_replay_punish_list().then((res) => {
             console.log('punish_list', res)
         })
-        get_live_goods_list().then((res) => {
-            console.log('live_goods_list', res)
-        })
+        // get_replay_live_room_list().then((res) => {
+        //     console.log('live_goods_list', res)
+        // })
 
     } else {
         console.log('其他消息', request)
@@ -344,8 +344,8 @@ setInterval(() => {
 async function syncPunishList() {
     console.log('每个小时同步一次违规记录')
     try {
-        const res = await get_punish_list();
-        const res_goods_list = await get_live_goods_list();
+        const res = await get_replay_punish_list();
+        const res_goods_list = await get_replay_live_room_list();
     } catch (error) {
         console.error('Error syncing punish list:', error);
     }
@@ -430,8 +430,8 @@ async function getModalText() {
 }
 
 // 获取eos违规记录
-async function get_punish_list() {
-    console.log('每天执行一次-get_punish_list');
+async function get_replay_punish_list() {
+    console.log('每天执行一次-get_replay_punish_list');
     createTopTips('同步违规记录——开始');
     if (window.location.origin !== "https://eos.douyin.com") {
         // 非eos 不执行
@@ -509,8 +509,8 @@ async function get_punish_list() {
 }
 
 // 获取eos直播复盘
-async function get_live_goods_list() {
-    console.log('每天执行一次-get_live_goods_list');
+async function _get_replay_live_room_list() {
+    console.log('每天执行一次-get_replay_live_room_list');
     createTopTips('同步直播复盘——开始');
     if (window.location.origin !== "https://eos.douyin.com") {
         // 非eos 不执行
