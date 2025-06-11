@@ -330,11 +330,11 @@ async def save_punish_list_fn(data):
             try:
                 # 按照前端格式构造单条记录参数
                 params = {
-                    "violationReason": violation_item.get("violation_reason", ""),
-                    "violationTime": violation_item.get("time", ""),
-                    "punishmentType": violation_item.get("punish_result", ""),
-                    "dyAccountNo": dy_account_no,
-                    "name": dy_room_name
+                    "violationReason": violation_item.get("violationReason", ""),
+                    "violationTime": violation_item.get("violationTime", ""),
+                    "punishmentType": violation_item.get("punishmentType", ""),
+                    "dyAccountNo": violation_item.get("dyAccountNo"),
+                    "name": violation_item.get("name")
                 }
 
                 logger.info(f"保存单条违规记录参数: {params}")
