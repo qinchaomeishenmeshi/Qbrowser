@@ -101,7 +101,12 @@ jobs:
         New-Item -ItemType Directory -Force -Path "data"
         New-Item -ItemType Directory -Force -Path "data\cookies"
         New-Item -ItemType Directory -Force -Path "data\user_static"
+        New-Item -ItemType Directory -Force -Path "data\scheduler"
+        New-Item -ItemType Directory -Force -Path "data\results"
+        New-Item -ItemType Directory -Force -Path "data\tasks"
         New-Item -ItemType Directory -Force -Path "static"
+        New-Item -ItemType Directory -Force -Path "logs"
+        New-Item -ItemType Directory -Force -Path "templates"
         
         # 创建缓存文件
         if (-not (Test-Path "user_ids_cache.json")) {
@@ -216,6 +221,25 @@ jobs:
         # 使用 uv sync 安装依赖（包括 scheduler 和 dev 依赖）
         echo "📦 Installing dependencies with uv sync..."
         uv sync --extra scheduler --extra dev
+        
+    - name: Create necessary directories
+      run: |
+        mkdir -p data/cookies
+        mkdir -p data/user_static
+        mkdir -p data/scheduler
+        mkdir -p data/results
+        mkdir -p data/tasks
+        mkdir -p static
+        mkdir -p logs
+        mkdir -p templates
+        
+        # 创建缓存文件
+        if [ ! -f "user_ids_cache.json" ]; then
+          echo '{}' > user_ids_cache.json
+        fi
+        if [ ! -f "user_ports_cache.json" ]; then
+          echo '{}' > user_ports_cache.json
+        fi
         
     - name: Build macOS app
       run: |

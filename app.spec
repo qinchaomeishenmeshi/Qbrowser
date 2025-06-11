@@ -16,6 +16,9 @@ datas = [
     ('user_ids_cache.json', '.'),
     ('user_ports_cache.json', '.'),
     ('static', 'static'),
+    ('templates', 'templates'),
+    ('data', 'data'),
+    ('logs', 'logs'),
 ]
 
 # 添加 PyQt6 相关模块
