@@ -1,24 +1,68 @@
 [
   {
-    "task_id": "baiying",
-    "name": "百应直播间列表同步",
+    "task_id": "eos1",
+    "name": "eos直播复盘记录",
     "description": "",
     "trigger_type": "cron",
     "trigger_config": {
       "second": "0",
-      "minute": "10",
-      "hour": "11",
+      "minute": "0",
+      "hour": "10",
+      "day": "*",
+      "month": "*",
+      "day_of_week": "*"
+    },
+    "target_function": "get_live_room_list_main",
+    "function_params": {
+      "deviceNoList": "wh041,wh042,wh043,wh044,wh045,wh046,wh047,wh048,wh049,wh050,wh051,wh052,wh053,wh054,wh055,wh056,wh057,wh058,wh059,wh060"
+    },
+    "enabled": true,
+    "max_instances": 1,
+    "created_at": "2025-06-11T20:02:05.340424",
+    "updated_at": "2025-06-11T20:02:05.340434"
+  },
+  {
+    "task_id": "eos2",
+    "name": "eos直播违规记录",
+    "description": "",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "second": "0",
+      "minute": "0",
+      "hour": "*",
+      "day": "*",
+      "month": "*",
+      "day_of_week": "*"
+    },
+    "target_function": "get_replay_punish_list_main",
+    "function_params": {
+      "deviceNoList": "wh041,wh042,wh043,wh044,wh045,wh046,wh047,wh048,wh049,wh050,wh051,wh052,wh053,wh054,wh055,wh056,wh057,wh058,wh059,wh060"
+    },
+    "enabled": true,
+    "max_instances": 1,
+    "created_at": "2025-06-11T20:02:46.105127",
+    "updated_at": "2025-06-11T20:02:46.105134"
+  },
+  {
+    "task_id": "baiying",
+    "name": "百应直播复盘列表同步",
+    "description": "",
+    "trigger_type": "cron",
+    "trigger_config": {
+      "second": "0",
+      "minute": "30",
+      "hour": "9",
       "day": "*",
       "month": "*",
       "day_of_week": "*"
     },
     "target_function": "get_history_live_main",
     "function_params": {
-      "deviceList": "test001,test002"
+      "deviceNoList": "wh041,wh042,wh043,wh044,wh045,wh046,wh047,wh048,wh049,wh050,wh051,wh052,wh053,wh054,wh055,wh056,wh057,wh058,wh059,wh060"
     },
     "enabled": true,
     "max_instances": 1,
-    "created_at": "2025-06-06T20:59:54.619035",
-    "updated_at": "2025-06-06T20:59:54.619046"
+    "created_at": "2025-06-11T20:03:03.556129",
+    "updated_at": "2025-06-11T20:03:03.556136"
   }
 ]
