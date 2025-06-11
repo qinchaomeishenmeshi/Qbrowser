@@ -27,18 +27,44 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: '3.12'
+    
+    # 添加 Python 依赖缓存
+    - name: Cache Python dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt', 'uv.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-python-
+    
+    # 添加 uv 安装缓存
+    - name: Cache uv installation
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ env.USERPROFILE }}\.local\bin
+          ${{ env.LOCALAPPDATA }}\uv
+        key: ${{ runner.os }}-uv-installation-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-installation-
         
     - name: Install uv
       run: |
-        # 使用官方推荐的安装方法
-        Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
-        # uv 实际安装到 .local\bin 目录
+        # 检查缓存中是否已有 uv
         $uvPath = "$env:USERPROFILE\.local\bin"
+        if (Test-Path "$uvPath\uv.exe") {
+          Write-Host "✅ uv found in cache"
+        } else {
+          Write-Host "📥 Installing uv..."
+          Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+        }
         # 刷新环境变量
         $env:PATH = "$uvPath;$env:PATH"
         # 验证安装
         if (Test-Path "$uvPath\uv.exe") {
-          Write-Host "✅ uv installed successfully at $uvPath\uv.exe"
+          Write-Host "✅ uv available at $uvPath\uv.exe"
         } else {
           Write-Host "❌ uv installation failed"
           exit 1
@@ -51,10 +77,27 @@ jobs:
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
         uv --version
         
+    # 添加 PyInstaller 构建缓存
+    - name: Cache PyInstaller build
+      uses: actions/cache@v4
+      with:
+        path: |
+          build/
+          __pycache__/
+        key: ${{ runner.os }}-pyinstaller-${{ hashFiles('app.spec', '**/*.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pyinstaller-
+        
     - name: Install dependencies
       run: |
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        uv venv
+        # 检查虚拟环境是否已缓存
+        if (-not (Test-Path ".venv")) {
+          Write-Host "📦 Creating virtual environment..."
+          uv venv
+        } else {
+          Write-Host "✅ Virtual environment found in cache"
+        }
         uv pip install -r requirements.txt
         uv pip install pyinstaller
         
