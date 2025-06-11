@@ -203,7 +203,7 @@ class LivingClient:
                 async with session.post(
                     self.live_room_list_url, json=json_data, cookies=cookies, headers=headers
                 ) as resp:
-                    print(f"resp={resp}")
+                    logger.info(f"resp={resp}")
                     resp.raise_for_status()
                     return await resp.json()
         except Exception as e:
@@ -336,7 +336,7 @@ async def save_punish_list_fn(data):
                     "dyAccountNo": dy_account_no,
                     "name": dy_room_name
                 }
-                
+
                 logger.info(f"保存单条违规记录参数: {params}")
                 
                 # 调用后端接口保存单条记录
@@ -370,9 +370,9 @@ async def get_live_room_list_main(data) -> PublicResponse:
 
     # 分割用户ID列表
     device_no_list = data.get("deviceNoList", "").split(",")
-    print("准备抓取cookies")
+    logger.info("准备抓取cookies")
     await BrowserOperator().attach_get_cookies(user_ids=device_no_list, site_key="eos")
-    print("抓取cookies完成")
+    logger.info("抓取cookies完成")
 
     client = LivingClient()
     response_json_data = []
@@ -381,7 +381,7 @@ async def get_live_room_list_main(data) -> PublicResponse:
     for user_id in device_no_list:
         logger.info(f"开始处理用户 {user_id} 的直播复盘创建请求")
         result = await process_user_history_live(client, user_id)
-        print(f"处理结果[{user_id}] ：", result)
+        logger.info(f"处理结果[{user_id}] ：", result)
         response_json_data.append(result)
         # 每个用户处理完成后等待一段时间，降低API调用频率
         await asyncio.sleep(1.5)  # 设置1.5秒的间隔，可根据实际情况调整
@@ -389,7 +389,7 @@ async def get_live_room_list_main(data) -> PublicResponse:
     logger.info(f"批量直播复盘结果: {response_json_data}")
     # # 调用api接口传递给后端
     save_success = await save_live_room_list_fn(response_json_data)
-    print("保存结果：", save_success)
+    logger.info("保存结果：", save_success)
     
     return PublicResponse.success(data=response_json_data, message="操作成功")
 
@@ -400,9 +400,9 @@ async def get_replay_punish_list_main(data) -> PublicResponse:
 
     # 分割用户ID列表
     device_no_list = data.get("deviceNoList", "").split(",")
-    print("准备抓取cookies")
+    logger.info("准备抓取cookies")
     await BrowserOperator().attach_get_cookies(user_ids=device_no_list, site_key="eos")
-    print("抓取cookies完成")
+    logger.info("抓取cookies完成")
 
     client = LivingClient()
     response_json_data = []
@@ -411,7 +411,7 @@ async def get_replay_punish_list_main(data) -> PublicResponse:
     for user_id in device_no_list:
         logger.info(f"开始处理用户 {user_id} 的违规记录请求")
         result = await process_user_punish_list(client, user_id)
-        print(f"处理结果[{user_id}] ：", result)
+        logger.info(f"处理结果[{user_id}] ：", result)
         response_json_data.append(result)
         # 每个用户处理完成后等待一段时间，降低API调用频率
         await asyncio.sleep(1.5)  # 设置1.5秒的间隔，可根据实际情况调整
@@ -419,7 +419,7 @@ async def get_replay_punish_list_main(data) -> PublicResponse:
     logger.info(f"批量违规记录结果: {response_json_data}")
     # 调用api接口传递给后端
     save_success = await save_punish_list_fn(response_json_data)
-    print("保存结果：", save_success)
+    logger.info("保存结果：", save_success)
     
     return PublicResponse.success(data=response_json_data, message="操作成功")
 
@@ -431,15 +431,15 @@ async def process_user_history_live(client, user_id):
     result = await client.get_index_user(user_id)
     code = int(result.get("status_code", -1))
 
-    print("获取直播间用户信息结果: ", result)
+    logger.info("获取直播间用户信息结果: ", result)
     user_name = result.get("username", "")
     douyin_unique_id = result.get("douyin_unique_id", "")
-    print('douyin_unique_id: ',douyin_unique_id)
+    logger.info('douyin_unique_id: ',douyin_unique_id)
     if code != 0 or douyin_unique_id == "":
         data = format_data(result, user_name, douyin_unique_id)
         return {**data, "user_id": user_id}
     history_live_result = await client.get_live_room_list(user_id)
-    print("获取直播间复盘列表结果: ", history_live_result)
+    logger.info("获取直播间复盘列表结果: ", history_live_result)
     # 处理商品列表
     format_data_result = format_data(history_live_result, user_name, douyin_unique_id)
     logger.info(f"处理后的直播复盘数据==format_data: {format_data_result}")
@@ -453,10 +453,11 @@ async def process_user_punish_list(client, user_id):
     result = await client.get_index_user(user_id)
     code = int(result.get("status_code", -1))
 
-    print("获取直播间用户信息结果: ", result)
+    logger.info("获取直播间用户信息结果: ", result)
     user_name = result.get("username", "")
+    logger.info('user_name: ',user_name)
     douyin_unique_id = result.get("douyin_unique_id", "")
-    print('douyin_unique_id: ',douyin_unique_id)
+    logger.info('douyin_unique_id: ',douyin_unique_id)
     
     if code != 0 or douyin_unique_id == "":
         data = format_punish_data({"data": []}, user_name, douyin_unique_id)
@@ -464,7 +465,7 @@ async def process_user_punish_list(client, user_id):
     
     # 获取违规记录列表
     punish_result = await client.get_replay_punish_list(user_id)
-    print("获取违规记录列表结果: ", punish_result)
+    logger.info("获取违规记录列表结果: ", punish_result)
     
     # 处理违规记录列表
     format_data_result = format_punish_data(punish_result, user_name, douyin_unique_id)
@@ -481,9 +482,9 @@ if __name__ == "__main__":
     }
 
     # 测试直播复盘数据获取
-    print("=== 测试直播复盘数据获取 ===")
+    logger.info("=== 测试直播复盘数据获取 ===")
     asyncio.run(get_live_room_list_main(sample_data))
     
     # 测试违规记录数据获取
-    print("\n=== 测试违规记录数据获取 ===")
+    logger.info("\n=== 测试违规记录数据获取 ===")
     asyncio.run(get_replay_punish_list_main(sample_data))
