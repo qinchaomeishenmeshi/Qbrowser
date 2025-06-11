@@ -27,6 +27,7 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from utils.common_logger import get_logger
 from worker.living_client import LivingClient
+from conf import resource_path
 
 logger = get_logger(__name__)
 
@@ -84,8 +85,10 @@ class TaskResult:
 class SchedulerClient:
     """定时任务调度器客户端"""
     
-    def __init__(self, data_dir: str = "data/scheduler"):
-        self.data_dir = Path(data_dir)
+    def __init__(self, data_dir: str = None):
+        if data_dir is None:
+            data_dir = "data/scheduler"
+        self.data_dir = Path(resource_path(data_dir))
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         self.config_file = self.data_dir / "task_configs.json"

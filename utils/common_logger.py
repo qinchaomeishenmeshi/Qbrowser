@@ -1,19 +1,25 @@
 # 公共的logger配置
-
-import os
 import sys
+import os
+import os
 from typing import Optional
 from loguru import logger
 
-# 移除默认的logger配置
-logger.remove()
+# 导入资源路径函数
+try:
+    from conf import resource_path
+except ImportError:
+    # 如果导入失败，使用默认的相对路径
+    def resource_path(relative_path):
+        return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
 
+# 日志配置
 LOG_FORMAT = (
     "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {name}:{function}:{line} - {message}"
 )
 LOG_LEVEL = "INFO"
 # 日志文件名带日期，每天一个文件
-LOG_FILE = os.path.join(os.path.dirname(__file__), "../logs/app_{time:YYYY-MM-DD}.log")
+LOG_FILE = os.path.join(resource_path("logs"), "app_{time:YYYY-MM-DD}.log")
 
 # 确保日志目录存在
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)

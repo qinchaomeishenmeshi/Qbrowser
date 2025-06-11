@@ -9,6 +9,7 @@ sys.path.append('/Users/cherishxn/工作项目/2024/短视频生产系统/qw-bro
 
 from browser.browser_operator import browser_operator, SITE_CONFIGS
 from utils.common_logger import get_logger
+from conf import resource_path
 
 logger = get_logger(__name__)
 
@@ -26,7 +27,7 @@ async def debug_cookies():
     
     # 2. 直接读取cookie文件
     print(f"\n2. 直接读取cookie文件:")
-    cookie_file = Path('/Users/cherishxn/工作项目/2024/短视频生产系统/qw-browser/data/cookies/test001_eos_cookies.json')
+    cookie_file = Path(resource_path('data/cookies/test001_eos_cookies.json'))
     if cookie_file.exists():
         with open(cookie_file, 'r') as f:
             file_data = json.load(f)

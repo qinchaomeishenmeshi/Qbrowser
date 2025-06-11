@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
-from conf import BASE_DIR
+from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from utils.common_logger import get_logger
 from utils.cookies_manager import CookiesManager
@@ -79,7 +79,7 @@ class BrowserOperator:
     """
 
     def __init__(self):
-        self.cookies_manager = CookiesManager(Path(BASE_DIR) / "data" / "cookies")
+        self.cookies_manager = CookiesManager(Path(resource_path("data/cookies")))
 
     def fetch_cookies_and_headers(
             self,

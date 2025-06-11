@@ -8,12 +8,12 @@
 import asyncio
 from pathlib import Path
 from DrissionPage import ChromiumOptions, Chromium
-from conf import BASE_DIR
+from conf import BASE_DIR, resource_path
 
 
 def get_extension_path(extension_name: str) -> str:
     """获取插件绝对路径"""
-    extension_path = Path(BASE_DIR) / "extensions" / extension_name
+    extension_path = Path(resource_path(f"extensions/{extension_name}"))
     return str(extension_path)
 
 
@@ -51,7 +51,7 @@ async def test_extension_loading():
     print(f"Block Videos manifest存在: {block_videos_manifest.exists()}")
     
     # 配置Chromium选项
-    user_data_dir = Path(BASE_DIR) / "data" / "user_static" / "test_browser"
+    user_data_dir = Path(resource_path("data/user_static/test_browser"))
     user_data_dir.mkdir(parents=True, exist_ok=True)
     
     options = (

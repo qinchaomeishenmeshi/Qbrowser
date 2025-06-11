@@ -58,7 +58,7 @@ class BrowserManager:
         - 模板和生成的 html 都放在 BASE_DIR/static 下，避免 PyInstaller 路径混乱。
         - 返回生成的本地 html 文件的 file:// URI 路径。
         """
-        static_dir = Path(BASE_DIR) / "static"
+        static_dir = Path(resource_path("static"))
         static_dir.mkdir(parents=True, exist_ok=True)
 
         template_path = static_dir / "blank.html"
@@ -201,7 +201,7 @@ class BrowserManager:
                 self.browser.quit()
 
             # 清理 user_blank_path 文件
-            static_dir = Path(BASE_DIR) / "static"
+            static_dir = Path(resource_path("static"))
             user_blank_path = static_dir / f"blank_{self.user_id}.html"
             if user_blank_path.exists():
                 try:

@@ -4,7 +4,7 @@ import httpx
 import ujson as json
 
 from utils.util import save_json
-
+from conf import resource_path
 from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
@@ -19,11 +19,11 @@ def get_cookie_dict(cookie='') -> dict:
         else:
             cookie = cookies_str_to_dict(cookie)
         save_cookie(cookie)
-    elif os.path.exists('config/cookie.json'):
-        with open('config/cookie.json', 'r', encoding='utf-8') as f:
+    elif os.path.exists(resource_path('config/cookie.json')):
+        with open(resource_path('config/cookie.json'), 'r', encoding='utf-8') as f:
             cookie = json.load(f)
-    elif os.path.exists('config/cookie.txt'):
-        with open('config/cookie.txt', 'r', encoding='utf-8') as f:
+    elif os.path.exists(resource_path('config/cookie.txt')):
+        with open(resource_path('config/cookie.txt'), 'r', encoding='utf-8') as f:
             cookie = cookies_str_to_dict(f.read())
     else:
         cookie = cookies_str_to_dict(input('请输入cookie:'))
@@ -32,7 +32,7 @@ def get_cookie_dict(cookie='') -> dict:
 
 
 def save_cookie(cookie: dict):
-    save_json('config/cookie', cookie)
+    save_json(resource_path('config/cookie'), cookie)
 
 
 def test_cookie(cookie):

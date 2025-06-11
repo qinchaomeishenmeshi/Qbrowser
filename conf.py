@@ -18,5 +18,5 @@ BASE_DIR = resource_path("")
 DATA_DIR = resource_path("data")
 
 # 缓存和端口文件都在根目录
-CACHE_FILE = os.path.join(BASE_DIR, "user_ids_cache.json")
-PORTS_FILE = os.path.join(BASE_DIR, "user_ports_cache.json")
+CACHE_FILE = resource_path("user_ids_cache.json")
+PORTS_FILE = resource_path("user_ports_cache.json")

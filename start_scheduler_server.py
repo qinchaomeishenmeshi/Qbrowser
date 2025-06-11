@@ -14,6 +14,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 # 添加项目根目录到 Python 路径
@@ -24,11 +25,12 @@ sys.path.insert(0, str(project_root))
 from api.scheduler_api import router as scheduler_router
 from worker.scheduler_client import scheduler_client
 from utils.common_logger import get_logger
+from conf import resource_path
 
 logger = get_logger(__name__)
 
 # 设置模板目录
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=resource_path("templates"))
 
 # 定义 lifespan 生命周期处理函数
 @asynccontextmanager
@@ -66,8 +68,9 @@ app = FastAPI(
 
 # 注册路由和静态资源
 app.include_router(scheduler_router)
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+static_path = resource_path("static")
+if os.path.exists(static_path):
+    app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -101,10 +104,10 @@ def main():
     print("🔍 健康检查: http://localhost:8000/health")
     print("=" * 60 + "\n")
 
-    # 确保必要的目录存在
-    os.makedirs("data/tasks", exist_ok=True)
-    os.makedirs("data/results", exist_ok=True)
-    os.makedirs("logs", exist_ok=True)
+    # 确保数据目录存在
+    os.makedirs(resource_path("data/tasks"), exist_ok=True)
+    os.makedirs(resource_path("data/results"), exist_ok=True)
+    os.makedirs(resource_path("logs"), exist_ok=True)
 
     # 启动 FastAPI 服务
     uvicorn.run(

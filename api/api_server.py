@@ -14,6 +14,7 @@ from api.scheduler_api import router as scheduler_router
 from browser.browser_manager import BrowserManager
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
+from conf import resource_path
 
 logger = get_logger(__name__)
 
@@ -21,11 +22,11 @@ app = FastAPI()
 api_router = APIRouter()
 
 # 配置模板和静态文件
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=resource_path("templates"))
 
 # 挂载静态文件（如果存在）
 try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory=resource_path("static")), name="static")
 except Exception:
     pass  # 静态文件目录不存在时忽略
 

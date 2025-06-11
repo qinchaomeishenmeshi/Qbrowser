@@ -17,7 +17,7 @@ from qasync import asyncSlot
 from api.api_server import run_server
 from app import LogSignal, is_admin, App
 from browser.browser_operator import browser_operator
-from conf import BASE_DIR
+from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from ui.config import THEMES, CURRENT_THEME, LAYOUT, FONTS
 # UI模块导入
@@ -835,7 +835,7 @@ class ModernApp(QMainWindow):
         """加载用户ID配置文件 - 基于App类但改进UI交互"""
         try:
             # 使用与App类相同的方式加载user_ids.txt
-            file_path = os.path.join(BASE_DIR, "user_ids.txt")
+            file_path = resource_path("user_ids.txt")
 
             if os.path.exists(file_path):
                 with open(file_path, "r", encoding="utf-8") as f:
