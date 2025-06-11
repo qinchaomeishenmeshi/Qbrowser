@@ -16,7 +16,44 @@ dependencies = [
     "uvicorn~=0.34.2",
     "fastapi~=0.115.12",
     "pydantic~=2.11.4",
+    "psutil~=6.1.0",
 ]
+
+[project.optional-dependencies]
+# 调度器相关依赖
+scheduler = [
+    "apscheduler>=3.10.4",
+    "jinja2>=3.1.2",
+    "aiofiles>=23.2.1",
+    "python-multipart>=0.0.6",
+    "python-dateutil>=2.8.2",
+    "orjson>=3.9.10",
+]
+
+# 数据分析相关依赖（可选）
+data-analysis = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+# 图像处理相关依赖（可选）
+image-processing = [
+    "pillow>=10.0.0",
+]
+
+# 开发工具依赖
+dev = [
+    "mypy>=1.7.1",
+    "black>=23.11.0",
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+]
+
+# 完整安装（包含所有可选依赖）
+full = [
+    "qw-browser[scheduler,data-analysis,image-processing,dev]",
+]
+
 [[tool.uv.index]]
 url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
 default = true
