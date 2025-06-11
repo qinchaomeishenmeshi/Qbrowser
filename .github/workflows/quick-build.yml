@@ -1,0 +1,95 @@
+name: Quick Build EXE
+
+# 仅手动触发的快速构建
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+        - release
+        - debug
+      upload_artifact:
+        description: '上传构建产物'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  quick-build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install uv
+      run: |
+        # 使用官方推荐的安装方法
+        Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+        # uv 实际安装到 .local\bin 目录
+        $uvPath = "$env:USERPROFILE\.local\bin"
+        # 刷新环境变量
+        $env:PATH = "$uvPath;$env:PATH"
+        # 验证安装
+        if (Test-Path "$uvPath\uv.exe") {
+          Write-Host "✅ uv installed successfully at $uvPath\uv.exe"
+        } else {
+          Write-Host "❌ uv installation failed"
+          exit 1
+        }
+        # 添加到 PATH
+        echo "$uvPath" >> $env:GITHUB_PATH
+        
+    - name: Quick setup
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv --version
+        uv venv
+        .venv\Scripts\activate
+        uv pip install pyinstaller PyQt6 qasync DrissionPage fastapi jinja2 uvicorn
+        
+    - name: Prepare build
+      run: |
+        # 创建必要文件
+        @{} | ConvertTo-Json | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
+        @{} | ConvertTo-Json | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
+        
+        # 创建目录
+        New-Item -ItemType Directory -Force -Path "data", "static"
+        
+    - name: Build with PyInstaller
+      run: |
+        .venv\Scripts\activate
+        if ("${{ github.event.inputs.build_type }}" -eq "debug") {
+          pyinstaller app.spec --clean --debug all
+        } else {
+          pyinstaller app.spec --clean
+        }
+        
+    - name: Check build result
+      run: |
+        if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
+          Write-Host "✅ 构建成功!"
+          $size = (Get-Item "dist\全网直播浏览器\全网直播浏览器.exe").Length / 1MB
+          Write-Host "📦 文件大小: $([math]::Round($size, 2)) MB"
+        } else {
+          Write-Host "❌ 构建失败!"
+          Get-ChildItem "dist" -Recurse -ErrorAction SilentlyContinue
+          exit 1
+        }
+        
+    - name: Upload build artifact
+      if: ${{ github.event.inputs.upload_artifact == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}
+        path: dist/全网直播浏览器/
+        retention-days: 7

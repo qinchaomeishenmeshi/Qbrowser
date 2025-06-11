@@ -1,0 +1,195 @@
+name: Build Windows EXE
+
+# 添加权限配置
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
+# 触发条件
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install uv
+      run: |
+        # 使用官方推荐的安装方法
+        Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+        # uv 实际安装到 .local\bin 目录
+        $uvPath = "$env:USERPROFILE\.local\bin"
+        # 刷新环境变量
+        $env:PATH = "$uvPath;$env:PATH"
+        # 验证安装
+        if (Test-Path "$uvPath\uv.exe") {
+          Write-Host "✅ uv installed successfully at $uvPath\uv.exe"
+        } else {
+          Write-Host "❌ uv installation failed"
+          exit 1
+        }
+        # 添加到 PATH
+        echo "$uvPath" >> $env:GITHUB_PATH
+        
+    - name: Verify uv installation
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv --version
+        
+    - name: Install dependencies
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv venv
+        uv pip install -r requirements.txt
+        uv pip install pyinstaller
+        
+    - name: Create missing directories and files
+      run: |
+        # 创建必要的目录
+        New-Item -ItemType Directory -Force -Path "data"
+        New-Item -ItemType Directory -Force -Path "data\cookies"
+        New-Item -ItemType Directory -Force -Path "data\user_static"
+        New-Item -ItemType Directory -Force -Path "static"
+        
+        # 创建缓存文件
+        if (-not (Test-Path "user_ids_cache.json")) {
+          '{}' | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
+        }
+        if (-not (Test-Path "user_ports_cache.json")) {
+          '{}' | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
+        }
+        
+    - name: Test dependencies
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        Write-Host "测试基础依赖..."
+        uv run python test_dependencies.py
+        
+    - name: Test APScheduler
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv run python test_apscheduler.py
+        
+    - name: Test All Dependencies
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv run python test_all_dependencies.py
+        
+    - name: Build EXE
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        Write-Host "开始构建EXE文件..."
+        uv run pyinstaller app.spec --clean --noconfirm --log-level DEBUG
+        Write-Host "构建完成"
+        
+    - name: Verify build
+      run: |
+        Write-Host "检查构建结果..."
+        
+        # 检查dist目录
+        if (Test-Path "dist") {
+          Write-Host "✅ dist目录存在"
+          Get-ChildItem "dist" -Recurse | Select-Object Name, Length, FullName
+        } else {
+          Write-Host "❌ dist目录不存在"
+        }
+        
+        # 检查具体的EXE文件
+        if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
+          Write-Host "✅ EXE文件构建成功"
+          $exeInfo = Get-Item "dist\全网直播浏览器\全网直播浏览器.exe"
+          Write-Host "EXE文件大小: $($exeInfo.Length) 字节"
+          Write-Host "EXE文件路径: $($exeInfo.FullName)"
+        } else {
+          Write-Host "❌ EXE文件构建失败"
+          
+          # 检查可能的错误日志
+          if (Test-Path "build") {
+            Write-Host "build目录内容:"
+            Get-ChildItem "build" -Recurse | Select-Object Name, FullName
+          }
+          
+          # 检查PyInstaller日志
+          if (Test-Path "*.log") {
+            Write-Host "发现日志文件:"
+            Get-ChildItem "*.log" | ForEach-Object {
+              Write-Host "=== $($_.Name) ==="
+              Get-Content $_.FullName -Tail 50
+            }
+          }
+          
+          exit 1
+        }
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: qw-browser-windows-exe
+        path: dist/全网直播浏览器/
+        retention-days: 30
+        
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/全网直播浏览器/全网直播浏览器.exe
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  # 可选：macOS 构建（生成 .app 文件）
+  build-macos:
+    runs-on: macos-latest
+    if: false  # 默认禁用，需要时设为 true
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        
+    - name: Install dependencies
+      run: |
+        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+        uv venv
+        uv pip install -r requirements.txt
+        uv pip install pyinstaller
+        
+    - name: Build macOS app
+      run: |
+        # 修改 app.spec 为 macOS 版本
+        sed -i '' 's/\.exe//g' app.spec
+        uv run pyinstaller app.spec --clean --noconfirm
+        
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: qw-browser-macos-app
+        path: dist/
+        retention-days: 30
