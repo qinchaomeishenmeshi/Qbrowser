@@ -294,6 +294,7 @@ async def save_live_room_list_fn(data):
 async def save_punish_list_fn(data):
     """
     保存违规记录数据到后端系统
+    按照前端逐条保存的方式，每次保存单个违规记录
     
     :param data: 违规记录数据，包含违规相关信息
     :return: 保存结果，成功返回True，失败返回False
@@ -301,25 +302,62 @@ async def save_punish_list_fn(data):
     from utils.api_client import default_api_client
     
     try:
+        # 获取账号信息（模拟前端从localStorage获取的数据）
+        # 这里需要从data中提取或者从其他地方获取账号信息
+        dy_account_no = None
+        dy_room_name = None
+        
+        # 尝试从data中提取账号信息
+        if data and len(data) > 0:
+            first_item = data[0]
+            if isinstance(first_item, dict) and 'dataResult' in first_item:
+                # 如果有dataResult，可能包含账号信息
+                pass
+        
         # 修改data数据结构，将所有dataResult的内容合并到一个大数组中
         flattened_data = []
         for item in data:
             data_result = item.get("dataResult", [])
             flattened_data.extend(data_result)
-        data = flattened_data
-        logger.info(f"保存的违规记录数据内容: {data}")
-
-        # 调用后端接口同步违规记录数据
-        # 注意：这里需要根据实际的API接口名称进行调整
-        result = await default_api_client.sync_punish_list(data)
         
-        # 检查响应结果
-        if result.get("code") == 0 or result.get("code") == 200:
-            logger.info("eos违规记录数据保存成功")
-            return True
-        else:
-            logger.error(f"eos违规记录数据保存失败: {result.get('msg', '未知错误')}")
-            return False
+        logger.info(f"准备保存 {len(flattened_data)} 条违规记录")
+        
+        # 按照前端方式逐条保存违规记录
+        success_count = 0
+        failed_count = 0
+        
+        for violation_item in flattened_data:
+            try:
+                # 按照前端格式构造单条记录参数
+                params = {
+                    "violationReason": violation_item.get("violation_reason", ""),
+                    "violationTime": violation_item.get("time", ""),
+                    "punishmentType": violation_item.get("punish_result", ""),
+                    "dyAccountNo": dy_account_no,
+                    "name": dy_room_name
+                }
+                
+                logger.info(f"保存单条违规记录参数: {params}")
+                
+                # 调用后端接口保存单条记录
+                result = await default_api_client.sync_punish_list(params)
+                
+                # 检查响应结果
+                if result.get("code") == 0 or result.get("code") == 200:
+                    success_count += 1
+                    logger.info(f"违规记录保存成功: {violation_item.get('violation_reason', '')}")
+                else:
+                    failed_count += 1
+                    logger.error(f"违规记录保存失败: {result.get('msg', '未知错误')}, 记录: {violation_item}")
+                    
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"单条违规记录保存异常: {e}, 记录: {violation_item}")
+        
+        logger.info(f"违规记录保存完成: 成功 {success_count} 条, 失败 {failed_count} 条")
+        
+        # 如果有成功保存的记录就认为整体成功
+        return success_count > 0
             
     except Exception as e:
         logger.error(f"保存eos违规记录数据时发生异常: {e}", exc_info=True)
