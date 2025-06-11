@@ -35,7 +35,7 @@ jobs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ runner.os }}-python-${{ hashFiles('requirements.txt', 'uv.lock') }}
+        key: ${{ runner.os }}-python-${{ hashFiles('pyproject.toml', 'uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-python-
     
@@ -46,7 +46,7 @@ jobs:
         path: |
           ${{ env.USERPROFILE }}\.local\bin
           ${{ env.LOCALAPPDATA }}\uv
-        key: ${{ runner.os }}-uv-installation-${{ hashFiles('requirements.txt') }}
+        key: ${{ runner.os }}-uv-installation-${{ hashFiles('pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-installation-
         
@@ -91,15 +91,9 @@ jobs:
     - name: Install dependencies
       run: |
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        # 检查虚拟环境是否已缓存
-        if (-not (Test-Path ".venv")) {
-          Write-Host "📦 Creating virtual environment..."
-          uv venv
-        } else {
-          Write-Host "✅ Virtual environment found in cache"
-        }
-        uv pip install -r requirements.txt
-        uv pip install pyinstaller
+        # 使用 uv sync 安装依赖（包括 scheduler 和 dev 依赖）
+        Write-Host "📦 Installing dependencies with uv sync..."
+        uv sync --extra scheduler --extra dev
         
     - name: Create missing directories and files
       run: |
@@ -131,7 +125,7 @@ jobs:
     - name: Test All Dependencies
       run: |
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        uv run python test_all_dependencies.py
+        uv run python test_dependencies.py
         
     - name: Build EXE
       run: |
@@ -219,10 +213,9 @@ jobs:
         
     - name: Install dependencies
       run: |
-        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        uv venv
-        uv pip install -r requirements.txt
-        uv pip install pyinstaller
+        # 使用 uv sync 安装依赖（包括 scheduler 和 dev 依赖）
+        echo "📦 Installing dependencies with uv sync..."
+        uv sync --extra scheduler --extra dev
         
     - name: Build macOS app
       run: |
