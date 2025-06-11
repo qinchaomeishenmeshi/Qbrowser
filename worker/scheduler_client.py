@@ -13,6 +13,7 @@
 
 import asyncio
 import json
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Callable
@@ -27,7 +28,6 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from utils.common_logger import get_logger
 from worker.living_client import LivingClient
-from conf import resource_path
 
 logger = get_logger(__name__)
 
@@ -85,10 +85,16 @@ class TaskResult:
 class SchedulerClient:
     """定时任务调度器客户端"""
     
-    def __init__(self, data_dir: str = None):
-        if data_dir is None:
-            data_dir = "data/scheduler"
-        self.data_dir = Path(resource_path(data_dir))
+    def __init__(self, data_dir: str = "data/scheduler"):
+        # 使用绝对路径，兼容打包后的环境
+        if getattr(sys, "frozen", False):
+            # 打包后的环境：数据目录在exe同级
+            base_dir = Path(sys.executable).parent
+        else:
+            # 开发环境：数据目录在项目根目录
+            base_dir = Path(__file__).parent.parent
+        
+        self.data_dir = base_dir / data_dir
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         self.config_file = self.data_dir / "task_configs.json"
@@ -334,6 +340,14 @@ class SchedulerClient:
             # 调用历史直播数据接口
             return await api_client.post("/live/data", params)
         
+        elif function_name == "get_replay_punish_list_main":
+            # 调用获取eos违规列表接口
+            return await api_client.post("/live/eos/punish", params)
+        
+        elif function_name == "get_live_room_list_main":
+            # 调用获取eos历史直播列表接口
+            return await api_client.post("/live/eos/data", params)
+        
         else:
             raise ValueError(f"不支持的目标函数: {function_name}")
     
@@ -351,7 +365,7 @@ class SchedulerClient:
             logger.error("触发器配置不能为空")
             return False
         
-        if task_config.target_function not in [ "get_core_data_main", "get_history_live_main"]:
+        if task_config.target_function not in ["get_replay_punish_list_main","get_live_room_list_main", "get_core_data_main", "get_history_live_main"]:
             logger.error(f"不支持的目标函数: {task_config.target_function}")
             return False
         
