@@ -103,7 +103,7 @@
 | 技术类别 | 具体实现 |
 |--------|-----------------|
 | GUI框架 | PyQt6 |
-| 浏览器自动化 | DrissionPage/Playwright |
+| 浏览器自动化 | DrissionPage |
 | API服务 | FastAPI + uvicorn |
 | 异步支持 | qasync + asyncio |
 | 网络请求 | httpx/requests |

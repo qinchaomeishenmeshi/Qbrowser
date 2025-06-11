@@ -1,7 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
-from PyInstaller.utils.hooks import collect_submodules
 from pathlib import Path
 
 # 脚本路径
@@ -20,8 +19,8 @@ datas = [
 ]
 
 # 添加 PyQt6 相关模块
-hiddenimports = collect_submodules('playwright') + [
-    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets','DrissionPage'
+hiddenimports = [
+    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'DrissionPage'
 ]
 
 # 打包选项

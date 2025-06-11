@@ -102,7 +102,7 @@ python tools/migrate_cookies.py
 
 ## 技术栈
 - GUI框架：PyQt6
-- 浏览器自动化：Playwright
+- 浏览器自动化：DrissionPage
 - API服务：FastAPI
 - 网络请求：httpx/requests
 - 日志系统：loguru

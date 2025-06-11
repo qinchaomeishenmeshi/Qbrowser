@@ -1077,6 +1077,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "aiohttp" },
+    { name = "apscheduler" },
     { name = "drissionpage" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -1105,6 +1106,7 @@ full = [
     { name = "aiofiles" },
     { name = "apscheduler" },
     { name = "black" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "mypy" },
     { name = "numpy" },
@@ -1122,6 +1124,7 @@ image-processing = [
 scheduler = [
     { name = "aiofiles" },
     { name = "apscheduler" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "orjson" },
     { name = "python-dateutil" },
@@ -1132,11 +1135,13 @@ scheduler = [
 requires-dist = [
     { name = "aiofiles", marker = "extra == 'scheduler'", specifier = ">=23.2.1" },
     { name = "aiohttp", specifier = ">=3.12.8" },
+    { name = "apscheduler", specifier = ">=3.11.0" },
     { name = "apscheduler", marker = "extra == 'scheduler'", specifier = ">=3.10.4" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.11.0" },
     { name = "drissionpage", specifier = "~=4.1.0.18" },
     { name = "fastapi", specifier = "~=0.115.12" },
     { name = "httpx", specifier = "~=0.28.1" },
+    { name = "httpx", marker = "extra == 'scheduler'", specifier = ">=0.25.2" },
     { name = "jinja2", marker = "extra == 'scheduler'", specifier = ">=3.1.2" },
     { name = "loguru", specifier = "~=0.7.3" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.7.1" },
