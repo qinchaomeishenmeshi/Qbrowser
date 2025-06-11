@@ -122,7 +122,25 @@ class BrowserOperator:
             time.sleep(1)  # 等待页面加载
 
             # 获取cookies (不依赖于API监听)
-            results["cookies"] = tab.cookies()
+            raw_cookies = tab.cookies()
+            # 处理 DrissionPage cookies 格式转换
+            if hasattr(raw_cookies, 'as_dict'):
+                # 如果是 CookiesList 对象，转换为字典格式
+                results["cookies"] = raw_cookies.as_dict()
+            elif isinstance(raw_cookies, list):
+                # 如果是列表格式，转换为字典
+                results["cookies"] = {c.get('name', ''): c.get('value', '') for c in raw_cookies if isinstance(c, dict) and 'name' in c}
+            elif isinstance(raw_cookies, dict):
+                # 如果已经是字典格式，直接使用
+                results["cookies"] = raw_cookies
+            else:
+                # 其他情况，尝试转换为字典
+                try:
+                    results["cookies"] = dict(raw_cookies)
+                except (TypeError, ValueError):
+                    logger.warning(f"无法转换 cookies 格式，类型: {type(raw_cookies)}")
+                    results["cookies"] = {}
+            
             logger.info(f"已获取用户 {user_id} 的 cookies，共 {len(results['cookies'])} 项")
 
             # 监听每个API路径

@@ -84,10 +84,25 @@ class LivingClient:
         确保包含所有必要的认证和会话 cookies
         """
         cookies_list = await browser_operator.get_user_cookies(user_id,site_key)
-        # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
-        cookies_dict = {
-            c["name"]: c["value"] for c in cookies_list if "name" in c and "value" in c
-        }
+        
+        # 处理不同的 cookies 数据格式
+        cookies_dict = {}
+        if cookies_list is None:
+            logger.warning(f"用户 {user_id} 的 cookies 为空")
+            return cookies_dict
+            
+        if isinstance(cookies_list, dict):
+            # 如果已经是字典格式，直接使用
+            cookies_dict = cookies_list
+        elif isinstance(cookies_list, list):
+            # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
+            cookies_dict = {
+                c["name"]: c["value"] for c in cookies_list 
+                if isinstance(c, dict) and "name" in c and "value" in c
+            }
+        else:
+            logger.error(f"用户 {user_id} 的 cookies 格式不支持，类型: {type(cookies_list)}")
+            return cookies_dict
         
         # 记录缺失的关键 cookies
         missing_cookies = [cookie for cookie in SITE_CONFIGS[site_key]['required_cookies'] if cookie not in cookies_dict]
