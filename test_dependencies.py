@@ -33,7 +33,7 @@ def main():
     """
     主测试函数
     """
-    print("🔍 开始测试基础依赖...")
+    print("[INFO] Starting dependency tests...")
     
     # 核心依赖列表（基于 pyproject.toml 和 requirements.txt）
     core_dependencies = [
@@ -73,64 +73,64 @@ def main():
     failed_optional = []
     
     # 测试核心依赖
-    print("\n📦 测试核心依赖:")
+    print("\n[CORE] Testing core dependencies:")
     for dep in core_dependencies:
         success, error = test_import(dep)
         if success:
-            print(f"  ✅ {dep}")
+            print(f"  [OK] {dep}")
         else:
-            print(f"  ❌ {dep}: {error}")
+            print(f"  [FAIL] {dep}: {error}")
             failed_core.append(dep)
     
     # 测试调度器依赖
-    print("\n📦 测试调度器依赖:")
+    print("\n[SCHEDULER] Testing scheduler dependencies:")
     for dep in scheduler_dependencies:
         success, error = test_import(dep)
         if success:
-            print(f"  ✅ {dep}")
+            print(f"  [OK] {dep}")
         else:
-            print(f"  ❌ {dep}: {error}")
+            print(f"  [FAIL] {dep}: {error}")
             failed_scheduler.append(dep)
     
     # 测试可选依赖
-    print("\n📦 测试可选依赖:")
+    print("\n[OPTIONAL] Testing optional dependencies:")
     for dep in optional_dependencies:
         success, error = test_import(dep)
         if success:
-            print(f"  ✅ {dep}")
+            print(f"  [OK] {dep}")
         else:
-            print(f"  ⚠️  {dep}: {error}")
+            print(f"  [WARN] {dep}: {error}")
             failed_optional.append(dep)
     
     # 测试 Python 版本
-    print(f"\n🐍 Python 版本: {sys.version}")
+    print(f"\n[PYTHON] Version: {sys.version}")
     
     # 结果汇总
-    print("\n📊 测试结果汇总:")
-    print(f"  核心依赖: {len(core_dependencies) - len(failed_core)}/{len(core_dependencies)} 通过")
-    print(f"  调度器依赖: {len(scheduler_dependencies) - len(failed_scheduler)}/{len(scheduler_dependencies)} 通过")
-    print(f"  可选依赖: {len(optional_dependencies) - len(failed_optional)}/{len(optional_dependencies)} 通过")
+    print("\n[SUMMARY] Test results:")
+    print(f"  Core dependencies: {len(core_dependencies) - len(failed_core)}/{len(core_dependencies)} passed")
+    print(f"  Scheduler dependencies: {len(scheduler_dependencies) - len(failed_scheduler)}/{len(scheduler_dependencies)} passed")
+    print(f"  Optional dependencies: {len(optional_dependencies) - len(failed_optional)}/{len(optional_dependencies)} passed")
     
     # 检查核心依赖失败
     if failed_core:
-        print(f"\n❌ 核心依赖失败: {', '.join(failed_core)}")
-        print("请运行以下命令安装缺失的核心依赖:")
+        print(f"\n[ERROR] Core dependencies failed: {', '.join(failed_core)}")
+        print("Please run the following command to install missing core dependencies:")
         print(f"  uv add {' '.join(failed_core)}")
         sys.exit(1)
     
     # 检查调度器依赖失败
     if failed_scheduler:
-        print(f"\n❌ 调度器依赖失败: {', '.join(failed_scheduler)}")
-        print("请运行以下命令安装缺失的调度器依赖:")
+        print(f"\n[ERROR] Scheduler dependencies failed: {', '.join(failed_scheduler)}")
+        print("Please run the following command to install missing scheduler dependencies:")
         print(f"  uv add {' '.join(failed_scheduler)}")
-        print("注意: 调度器依赖失败可能影响定时任务功能")
+        print("Note: Scheduler dependency failures may affect scheduled task functionality")
         # 调度器依赖失败不退出，但给出警告
     
     if failed_optional:
-        print(f"\n⚠️  可选依赖失败: {', '.join(failed_optional)}")
-        print("这些依赖不是必需的，但可能影响某些功能")
+        print(f"\n[WARN] Optional dependencies failed: {', '.join(failed_optional)}")
+        print("These dependencies are not required, but may affect some functionality")
     
-    print("\n🎉 基础依赖测试完成!")
+    print("\n[SUCCESS] Dependency tests completed!")
     return 0
 
 
