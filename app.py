@@ -5,19 +5,19 @@ import subprocess
 import sys
 import threading
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTextEdit,
-    QPushButton,
-    QProgressBar,
     QFileDialog,
+    QHBoxLayout,
+    QMainWindow,
     QMessageBox,
+    QProgressBar,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 from qasync import QEventLoop, asyncSlot
 
@@ -26,7 +26,6 @@ from browser.browser_operator import browser_operator
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from utils.common_logger import get_logger
-# 导入定时任务相关模块
 from worker.scheduler_client import scheduler_client
 
 logger = get_logger(__name__)
