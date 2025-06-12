@@ -49,6 +49,23 @@ async def get_status():
     return {"running": True, "user_count": count}
 
 
+@api_router.get("/active_instances")
+async def get_active_instances():
+    """获取所有激活的浏览器实例"""
+    # 从 browser_store 获取所有浏览器管理器实例
+    managers = await browser_store.get_all()
+    
+    # 筛选出正在运行的浏览器实例的 user_id
+    active_devices = [manager.user_id for manager in managers if manager.is_running]
+    
+    logger.info(f"获取到 {len(active_devices)} 个活跃浏览器实例: {active_devices}")
+    return {
+        "status": "success",
+        "active_count": len(active_devices),
+        "active_instances": active_devices
+    }
+
+
 async def launch_browser(user_id: str, url: str = "") -> dict:
     manager = await browser_store.get(user_id)
     if manager is not None and manager.is_running:

@@ -193,7 +193,7 @@
         }
         
         .task-list {
-            max-height: 400px;
+            max-height: 600px;
             overflow-y: auto;
         }
         
@@ -201,29 +201,62 @@
             padding: 15px;
             border-bottom: 1px solid #e9ecef;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            gap: 15px;
         }
         
         .task-item:last-child {
             border-bottom: none;
         }
         
+        .task-info {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+        
         .task-info h4 {
             font-size: 16px;
             margin-bottom: 5px;
             color: #1d1d1f;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .task-info p {
             font-size: 12px;
             color: #666;
             margin: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .task-info .task-params {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
         }
         
         .task-actions {
             display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+            min-width: 120px;
+        }
+        
+        .task-actions .btn {
+            padding: 6px 12px;
+            font-size: 11px;
+            white-space: nowrap;
         }
         
         .status-badge {
@@ -346,7 +379,7 @@
             <!-- 创建任务面板 -->
             <div class="panel">
                 <div class="panel-header">
-                    <h2>创建新任务</h2>
+                    <h2 id="panel-title">创建新任务</h2>
                 </div>
                 <div class="panel-content">
                     <div id="alert-container"></div>
@@ -399,10 +432,15 @@
                         
                         <div class="form-group">
                             <label for="function-params">函数参数（JSON格式）</label>
-                            <textarea id="function-params" rows="4" placeholder='{"user_id": "001", "room_id": "123456"}'></textarea>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <textarea id="function-params" rows="4" placeholder='{"user_id": "001", "room_id": "123456"}'></textarea>
+                                <button type="button" class="btn btn-secondary" onclick="autoFillDeviceList()" style="white-space: nowrap; height: fit-content;">📱 自动获取设备</button>
+                            </div>
+                            <small>点击按钮自动获取当前活跃的浏览器实例作为 deviceNoList 参数</small>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">创建任务</button>
+                        <button type="submit" class="btn btn-primary" id="submit-btn">创建任务</button>
+                        <button type="button" class="btn btn-secondary" id="cancel-btn" onclick="cancelEdit()" style="display: none; margin-left: 10px;">取消编辑</button>
                     </form>
                 </div>
             </div>
@@ -435,6 +473,8 @@
     
     <script>
         const API_BASE = '/scheduler';
+        let currentTasks = []; // 存储当前任务列表
+        let editingTaskId = null; // 当前编辑的任务ID
         
         // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
@@ -452,7 +492,12 @@
         // 表单提交处理
         document.getElementById('task-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            createTask();
+            const isEditing = document.getElementById('task-form').dataset.editing === 'true';
+            if (isEditing) {
+                updateTask();
+            } else {
+                createTask();
+            }
         });
         
         // 切换任务类型
@@ -595,6 +640,7 @@
                 const response = await apiRequest('/tasks');
                 if (response.status === 'success') {
                     const tasks = response.data;
+                    currentTasks = tasks; // 保存任务数据
                     const taskList = document.getElementById('task-list');
                     
                     if (tasks.length === 0) {
@@ -611,14 +657,18 @@
                                 <p>触发器: ${task.trigger_type === 'cron' ? 
                                     `${task.trigger_config.minute} ${task.trigger_config.hour} ${task.trigger_config.day} ${task.trigger_config.month} ${task.trigger_config.day_of_week}` : 
                                     task.trigger_config.interval_seconds + '秒'}</p>
-                                <p>参数: ${task.function_params ? JSON.stringify(task.function_params) : '无'}</p>
+                                <div class="task-params" title="${task.function_params ? JSON.stringify(task.function_params, null, 2) : '无参数'}">
+                                    参数: ${task.function_params ? JSON.stringify(task.function_params) : '无'}
+                                </div>
                                 <span class="status-badge ${task.enabled ? 'status-enabled' : 'status-disabled'}">
                                     ${task.enabled ? '启用' : '禁用'}
                                 </span>
                             </div>
                             <div class="task-actions">
-                                <button class="btn btn-sm ${task.enabled ? 'btn-secondary' : 'btn-success'}" 
-                                        onclick="toggleTask('${task.task_id}', ${!task.enabled})">
+                                <button class="btn btn-sm btn-primary" onclick="editTask('${task.task_id}')">
+                                    编辑
+                                </button>
+                                <button class="btn btn-sm btn-secondary" onclick="toggleTask('${task.task_id}', ${!task.enabled})">
                                     ${task.enabled ? '禁用' : '启用'}
                                 </button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">
@@ -654,6 +704,136 @@
             }
         }
         
+        // 编辑任务
+        function editTask(taskId) {
+            const task = currentTasks.find(t => t.task_id === taskId);
+            if (!task) {
+                showAlert('找不到要编辑的任务', 'error');
+                return;
+            }
+            
+            // 切换到编辑模式
+            editingTaskId = taskId;
+            document.getElementById('task-form').dataset.editing = 'true';
+            document.getElementById('panel-title').textContent = '编辑任务';
+            document.getElementById('submit-btn').textContent = '更新任务';
+            document.getElementById('cancel-btn').style.display = 'inline-block';
+            
+            // 填充表单数据
+            document.getElementById('task-id').value = task.task_id;
+            document.getElementById('task-id').disabled = true; // 编辑时不允许修改ID
+            document.getElementById('task-name').value = task.name;
+            document.getElementById('task-description').value = task.description || '';
+            document.getElementById('target-function').value = task.target_function;
+            document.getElementById('function-params').value = JSON.stringify(task.function_params, null, 2);
+            
+            // 根据触发器类型设置表单
+            if (task.trigger_type === 'cron') {
+                document.getElementById('task-type').value = 'cron';
+                const config = task.trigger_config;
+                document.getElementById('cron-expression').value = `${config.second || '*'} ${config.minute || '*'} ${config.hour || '*'} ${config.day || '*'} ${config.month || '*'} ${config.day_of_week || '*'}`;
+            } else {
+                document.getElementById('task-type').value = 'interval';
+                document.getElementById('interval-seconds').value = task.trigger_config.interval_seconds;
+            }
+            
+            toggleTaskType(); // 显示正确的表单字段
+            
+            // 滚动到表单顶部
+            document.getElementById('panel-title').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // 取消编辑
+        function cancelEdit() {
+            editingTaskId = null;
+            document.getElementById('task-form').dataset.editing = 'false';
+            document.getElementById('panel-title').textContent = '创建新任务';
+            document.getElementById('submit-btn').textContent = '创建任务';
+            document.getElementById('cancel-btn').style.display = 'none';
+            document.getElementById('task-id').disabled = false;
+            document.getElementById('task-form').reset();
+            toggleTaskType(); // 重置表单显示
+        }
+        
+        // 更新任务
+        async function updateTask() {
+            try {
+                const taskType = document.getElementById('task-type').value;
+                const taskData = {
+                    task_id: editingTaskId,
+                    name: document.getElementById('task-name').value,
+                    description: document.getElementById('task-description').value,
+                    target_function: document.getElementById('target-function').value,
+                    function_params: JSON.parse(document.getElementById('function-params').value || '{}'),
+                    enabled: true
+                };
+                
+                if (taskType === 'cron') {
+                    taskData.cron_expression = document.getElementById('cron-expression').value;
+                } else {
+                    taskData.interval_seconds = parseInt(document.getElementById('interval-seconds').value);
+                }
+                
+                const response = await apiRequest(`/tasks/${editingTaskId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (response.status === 'success') {
+                    showAlert('任务更新成功');
+                    cancelEdit();
+                    loadTasks();
+                    refreshStatus();
+                } else {
+                    showAlert(response.message, 'error');
+                }
+            } catch (error) {
+                showAlert('更新任务失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 自动获取设备列表并填充参数
+        async function autoFillDeviceList() {
+            try {
+                const response = await fetch('/active_instances');
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data.active_instances.length > 0) {
+                    const deviceList = data.data.active_instances.join(',');
+                    const newParams = { "deviceNoList": deviceList };
+                    
+                    // 获取当前参数内容
+                    const currentParamsText = document.getElementById('function-params').value.trim();
+                    let finalParams;
+                    
+                    if (currentParamsText === '' || currentParamsText === '{}') {
+                        // 如果参数为空，直接使用新参数
+                        finalParams = newParams;
+                    } else {
+                        try {
+                            // 智能合并：解析现有参数并合并
+                            const currentParams = JSON.parse(currentParamsText);
+                            finalParams = { ...currentParams, ...newParams };
+                        } catch (error) {
+                            // 如果解析失败，提示用户
+                            if (confirm('当前参数格式有误，是否覆盖为设备列表参数？')) {
+                                finalParams = newParams;
+                            } else {
+                                return;
+                            }
+                        }
+                    }
+                    
+                    document.getElementById('function-params').value = JSON.stringify(finalParams, null, 2);
+                    showAlert(`已自动填充 ${data.data.active_instances.length} 个活跃设备: ${data.data.active_instances.join(', ')}`);
+                } else {
+                    showAlert('当前没有活跃的浏览器实例', 'error');
+                }
+            } catch (error) {
+                showAlert('获取设备列表失败: ' + error.message, 'error');
+            }
+        }
+        
         // 删除任务
         async function deleteTask(taskId) {
             if (!confirm('确定要删除这个任务吗？')) {
@@ -661,7 +841,10 @@
             }
             
             try {
-                const response = await apiRequest(`/tasks/${taskId}`, { method: 'DELETE' });
+                const response = await apiRequest(`/tasks/${taskId}`, {
+                    method: 'DELETE'
+                });
+                
                 if (response.status === 'success') {
                     showAlert('任务删除成功');
                     loadTasks();

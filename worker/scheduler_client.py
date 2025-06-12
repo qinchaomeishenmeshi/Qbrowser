@@ -28,6 +28,7 @@ from apscheduler.events import EVENT_JOB_EXECUTED, EVENT_JOB_ERROR
 
 from utils.common_logger import get_logger
 from worker.living_client import LivingClient
+from browser.browser_store import browser_store
 
 logger = get_logger(__name__)
 
@@ -325,8 +326,44 @@ class SchedulerClient:
             self.task_results.append(task_result)
             self._save_results()
     
+    async def _get_active_device_list(self) -> List[str]:
+        """获取当前活跃的浏览器实例设备列表
+        
+        Returns:
+            List[str]: 活跃设备的 user_id 列表，例如 ['test001', 'test002', 'wh001']
+        """
+        try:
+            # 从 browser_store 获取所有浏览器管理器实例
+            managers = await browser_store.get_all()
+            
+            # 筛选出正在运行的浏览器实例的 user_id
+            active_devices = [manager.user_id for manager in managers if manager.is_running]
+            
+            logger.info(f"获取到 {len(active_devices)} 个活跃浏览器实例: {active_devices}")
+            return active_devices
+            
+        except Exception as e:
+            logger.error(f"获取活跃设备列表失败: {e}")
+            return []
+    
     async def _call_target_function(self, function_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """调用目标函数 - 通过 HTTP API 接口"""
+        
+        # 动态获取活跃设备列表（如果需要）
+        if "deviceNoList" in params:
+            device_list = params["deviceNoList"]
+            
+            # 检查是否需要自动检测活跃设备
+            if device_list == "{{AUTO_DETECT}}" or (isinstance(device_list, list) and len(device_list) == 1 and device_list[0] == "{{DEVICE_LIST}}"):
+                active_devices = await self._get_active_device_list()
+                
+                if not active_devices:
+                    logger.warning("未找到活跃的浏览器实例，任务可能无法正常执行")
+                    # 可以选择返回错误或使用空列表继续执行
+                    # return {"status": "failed", "message": "未找到活跃的浏览器实例", "data": None}
+                
+                params["deviceNoList"] = active_devices
+                logger.info(f"自动检测到活跃设备列表: {active_devices}")
         
         # 创建本地 API 客户端
         api_client = LocalApiClient()

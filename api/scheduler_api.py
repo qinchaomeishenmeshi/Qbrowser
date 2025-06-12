@@ -11,7 +11,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from datetime import datetime
 
 from worker.scheduler_client import (
@@ -207,6 +207,49 @@ async def disable_task(request: TaskToggleRequest):
     except Exception as e:
         logger.error(f"禁用任务失败: {e}")
         return PublicResponse.error(message=f"禁用失败: {str(e)}")
+
+
+@router.put("/tasks/{task_id}", summary="更新任务")
+async def update_task(task_id: str, request: Union[CronTaskRequest, IntervalTaskRequest]):
+    """更新指定任务"""
+    try:
+        # 先删除原任务
+        await scheduler_client.remove_task(task_id)
+        
+        # 根据请求类型创建新任务
+        if hasattr(request, 'cron_expression'):
+            # Cron任务
+            success = await create_cron_task(
+                task_id=task_id,
+                name=request.name,
+                description=request.description,
+                cron_expression=request.cron_expression,
+                target_function=request.target_function,
+                function_params=request.function_params,
+                enabled=request.enabled
+            )
+        else:
+            # 间隔任务
+            success = await create_interval_task(
+                task_id=task_id,
+                name=request.name,
+                description=request.description,
+                interval_seconds=request.interval_seconds,
+                target_function=request.target_function,
+                function_params=request.function_params,
+                enabled=request.enabled
+            )
+        
+        if success:
+            return PublicResponse.success(
+                data={"task_id": task_id},
+                message="任务更新成功"
+            )
+        else:
+            return PublicResponse.error(message="任务更新失败")
+    except Exception as e:
+        logger.error(f"更新任务失败: {e}")
+        return PublicResponse.error(message=f"更新失败: {str(e)}")
 
 
 @router.delete("/tasks/{task_id}", summary="删除任务")
