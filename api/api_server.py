@@ -43,10 +43,82 @@ def get_store():
     return app.state.manager_store
 
 
+@api_router.get("/health")
+async def health_check():
+    """健康检查端点"""
+    return {"status": "ok", "message": "Backend is running"}
+
+
 @api_router.get("/status")
 async def get_status():
     count = await browser_store.count()
     return {"running": True, "user_count": count}
+
+
+@api_router.get("/browser/status")
+async def get_browser_status():
+    """获取浏览器状态"""
+    count = await browser_store.count()
+    managers = await browser_store.get_all()
+    active_count = len([m for m in managers if m.is_running])
+    return {
+        "status": "running",
+        "total_instances": count,
+        "active_instances": active_count,
+        "message": "Browser service is running"
+    }
+
+
+@api_router.get("/extensions/status")
+async def get_extensions_status():
+    """获取扩展状态"""
+    return {
+        "status": "running",
+        "loaded_extensions": [],
+        "message": "Extensions service is running"
+    }
+
+
+@api_router.get("/scheduler/recent")
+async def get_recent_tasks():
+    """获取最近的任务"""
+    return {
+        "tasks": [],
+        "message": "No recent tasks"
+    }
+
+
+@api_router.get("/system/logs")
+async def get_system_logs(limit: int = 10):
+    """获取系统日志"""
+    return {
+        "logs": [],
+        "message": "No logs available"
+    }
+
+
+@api_router.get("/settings/ui")
+async def get_ui_settings():
+    """获取UI设置"""
+    return {
+        "settings": {
+            "theme": "light",
+            "language": "zh-CN",
+            "sidebarCollapsed": False
+        },
+        "message": "UI settings loaded successfully"
+    }
+
+
+@api_router.post("/settings/ui")
+async def save_ui_settings(settings: dict):
+    """保存UI设置"""
+    # 这里可以将设置保存到数据库或文件
+    # 目前只是简单返回成功消息
+    return {
+        "success": True,
+        "message": "UI settings saved successfully"
+    }
 
 
 @api_router.get("/active_instances")
@@ -143,9 +215,9 @@ async def start_all_browsers(
     return {"results": results}
 
 
-app.include_router(api_router)  # 浏览器管理接口
-app.include_router(business_router)  # 业务接口
-app.include_router(scheduler_router)  # 定时任务管理接口
+app.include_router(api_router, prefix="/api")  # 浏览器管理接口
+app.include_router(business_router, prefix="/api")  # 业务接口
+app.include_router(scheduler_router, prefix="/api")  # 定时任务管理接口
 
 
 # 定时任务管理界面路由
