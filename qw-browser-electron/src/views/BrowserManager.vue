@@ -1,7 +1,6 @@
 <template>
   <div class="browser-manager">
     <div class="page-header">
-      <h1 class="page-title">浏览器管理</h1>
       <div class="page-actions">
         <button @click="createBrowser" class="btn btn-primary">
           <span>➕</span>
@@ -37,155 +36,75 @@
             <h3>暂无浏览器实例</h3>
             <p>点击上方按钮创建第一个浏览器实例</p>
           </div>
-          <div v-else class="browser-grid">
-            <div 
-              v-for="browser in browsers" 
-              :key="browser.id" 
-              class="browser-card"
-              :class="{ active: browser.status === 'running' }"
-            >
-              <div class="browser-header">
-                <div class="browser-info">
-                  <h3 class="browser-name">{{ browser.name || `浏览器 ${browser.id}` }}</h3>
-                  <div class="browser-status" :class="browser.status">
-                    <span class="status-dot"></span>
-                    {{ getStatusText(browser.status) }}
-                  </div>
-                </div>
-                <div class="browser-actions">
-                  <button 
-                    v-if="browser.status === 'stopped'"
-                    @click="startBrowser(browser.id)"
-                    class="btn btn-small btn-success"
-                    :disabled="isOperating"
-                  >
-                    ▶️ 启动
-                  </button>
-                  <button 
-                    v-if="browser.status === 'running'"
-                    @click="stopBrowser(browser.id)"
-                    class="btn btn-small btn-warning"
-                    :disabled="isOperating"
-                  >
-                    ⏸️ 停止
-                  </button>
-                  <button 
-                    @click="deleteBrowser(browser.id)"
-                    class="btn btn-small btn-danger"
-                    :disabled="isOperating || browser.status === 'running'"
-                  >
-                    🗑️ 删除
-                  </button>
-                </div>
-              </div>
-              
-              <div class="browser-details">
-                <div class="detail-item">
-                  <span class="detail-label">用户数据目录:</span>
-                  <span class="detail-value">{{ browser.userDataDir || '-' }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">端口:</span>
-                  <span class="detail-value">{{ browser.port || '-' }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">创建时间:</span>
-                  <span class="detail-value">{{ formatTime(browser.createdAt) }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">最后活动:</span>
-                  <span class="detail-value">{{ formatTime(browser.lastActivity) }}</span>
-                </div>
-              </div>
-              
-              <div v-if="browser.status === 'running'" class="browser-tabs">
-                <h4>活跃标签页 ({{ browser.tabs?.length || 0 }})</h4>
-                <div v-if="browser.tabs?.length" class="tab-list">
-                  <div v-for="tab in browser.tabs.slice(0, 3)" :key="tab.id" class="tab-item">
-                    <span class="tab-title">{{ tab.title || tab.url }}</span>
-                  </div>
-                  <div v-if="browser.tabs.length > 3" class="tab-more">
-                    +{{ browser.tabs.length - 3 }} 更多
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div v-else class="browser-table-container">
+            <table class="browser-table">
+              <thead>
+                <tr>
+                  <th>用户ID</th>
+                  <th>状态</th>
+                  <th>端口</th>
+                  <th>创建时间</th>
+                  <th>最后活动</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="browser in browsers" :key="browser.user_id" :class="{ 'active-row': browser.status === 'running' }">
+                  <td class="browser-id">
+                    <div class="id-cell">
+                      <span class="id-text">{{ browser.user_id || 'undefined' }}</span>
+                    </div>
+                  </td>
+                  <td class="browser-status">
+                    <div class="status-badge" :class="browser.status">
+                      <span class="status-dot"></span>
+                      {{ getStatusText(browser.status) }}
+                    </div>
+                  </td>
+                  <td class="browser-port">
+                    <span class="port-text">{{ browser.port || '-' }}</span>
+                  </td>
+                  <td class="browser-created">
+                    <span class="time-text">{{ formatTime(browser.createdAt) }}</span>
+                  </td>
+                  <td class="browser-activity">
+                    <span class="time-text">{{ formatTime(browser.lastActivity) }}</span>
+                  </td>
+                  <td class="browser-actions">
+                    <div class="action-buttons">
+                      <button
+                              v-if="browser.status !== 'running'"
+                              @click="startBrowser(browser.user_id)"
+                              class="btn btn-small btn-success"
+                              :disabled="isOperating"
+                              title="启动浏览器">
+                        ▶️
+                      </button>
+                      <button
+                              v-if="browser.status === 'running'"
+                              @click="stopBrowser(browser.user_id)"
+                              class="btn btn-small btn-warning"
+                              :disabled="isOperating"
+                              title="停止浏览器">
+                        ⏸️
+                      </button>
+                      <button
+                              @click="deleteBrowser(browser.user_id)"
+                              class="btn btn-small btn-danger"
+                              :disabled="isOperating"
+                              title="删除浏览器">
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- 浏览器配置 -->
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">浏览器配置</h2>
-        </div>
-        <div class="card-body">
-          <form @submit.prevent="saveBrowserConfig" class="config-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">默认用户代理</label>
-                <input 
-                  v-model="config.userAgent" 
-                  type="text" 
-                  class="form-input"
-                  placeholder="留空使用默认用户代理"
-                >
-              </div>
-              <div class="form-group">
-                <label class="form-label">窗口大小</label>
-                <div class="size-inputs">
-                  <input 
-                    v-model.number="config.windowWidth" 
-                    type="number" 
-                    class="form-input"
-                    placeholder="宽度"
-                    min="800"
-                  >
-                  <span>×</span>
-                  <input 
-                    v-model.number="config.windowHeight" 
-                    type="number" 
-                    class="form-input"
-                    placeholder="高度"
-                    min="600"
-                  >
-                </div>
-              </div>
-            </div>
-            
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-checkbox">
-                  <input v-model="config.headless" type="checkbox">
-                  <span>无头模式</span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label class="form-checkbox">
-                  <input v-model="config.disableImages" type="checkbox">
-                  <span>禁用图片加载</span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label class="form-checkbox">
-                  <input v-model="config.disableJavaScript" type="checkbox">
-                  <span>禁用JavaScript</span>
-                </label>
-              </div>
-            </div>
-            
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary" :disabled="isSaving">
-                <span v-if="isSaving" class="loading"></span>
-                保存配置
-              </button>
-              <button type="button" @click="resetConfig" class="btn btn-secondary">
-                重置
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>
@@ -198,37 +117,38 @@ export default {
   setup() {
     const isLoading = ref(false);
     const isOperating = ref(false);
-    const isSaving = ref(false);
     const browsers = ref([]);
-    
-    // 浏览器配置
-    const config = reactive({
-      userAgent: '',
-      windowWidth: 1920,
-      windowHeight: 1080,
-      headless: false,
-      disableImages: false,
-      disableJavaScript: false
-    });
-    
+    const isSaving = ref(false);
+
     // 计算属性
     const activeBrowsers = computed(() => {
       return browsers.value.filter(b => b.status === 'running').length;
     });
-    
+
     // 获取浏览器列表
     const getBrowsers = async () => {
       try {
         if (window.httpAPI) {
-          const data = await window.httpAPI.get('/api/browser/list');
-          browsers.value = data.browsers || [];
+          const data = await window.httpAPI.get('/api/active_instances');
+          // 将active_instances转换为browsers格式
+          if (data.active_instances && Array.isArray(data.active_instances)) {
+            browsers.value = data.active_instances.map((userId, index) => ({
+              user_id: userId,
+              status: 'running',
+              port: 9222 + index, // 模拟端口信息
+              createdAt: new Date(Date.now() - Math.random() * 86400000).toISOString(), // 模拟创建时间
+              lastActivity: new Date().toISOString() // 当前时间作为最后活动时间
+            }));
+          } else {
+            browsers.value = [];
+          }
         }
       } catch (error) {
         console.error('获取浏览器列表失败:', error);
         browsers.value = [];
       }
     };
-    
+
     // 刷新浏览器列表
     const refreshBrowsers = async () => {
       isLoading.value = true;
@@ -238,14 +158,18 @@ export default {
         isLoading.value = false;
       }
     };
-    
-    // 创建浏览器
+
+    // 创建浏览器 - 使用现有的start接口
     const createBrowser = async () => {
       try {
         isOperating.value = true;
         if (window.httpAPI) {
-          await window.httpAPI.post('/api/browser/create', config);
-          await getBrowsers();
+          // 使用测试用户ID启动接口
+          const userId = prompt('请输入用户ID', 'test001');
+          if (userId) {
+            await window.httpAPI.post(`/api/start/${userId}`);
+            await getBrowsers();
+          }
         }
       } catch (error) {
         console.error('创建浏览器失败:', error);
@@ -253,13 +177,13 @@ export default {
         isOperating.value = false;
       }
     };
-    
-    // 启动浏览器
+
+    // 启动浏览器 - 使用现有的start接口
     const startBrowser = async (browserId) => {
       try {
         isOperating.value = true;
         if (window.httpAPI) {
-          await window.httpAPI.post(`/api/browser/${browserId}/start`);
+          await window.httpAPI.post(`/api/start/${browserId}`);
           await getBrowsers();
         }
       } catch (error) {
@@ -268,13 +192,15 @@ export default {
         isOperating.value = false;
       }
     };
-    
-    // 停止浏览器
+
+    // 停止浏览器 - 目前只支持停止所有浏览器
     const stopBrowser = async (browserId) => {
+      if (!confirm('当前只支持停止所有浏览器，确定要继续吗？')) return;
+      
       try {
         isOperating.value = true;
         if (window.httpAPI) {
-          await window.httpAPI.post(`/api/browser/${browserId}/stop`);
+          await window.httpAPI.post('/api/stop');
           await getBrowsers();
         }
       } catch (error) {
@@ -283,15 +209,15 @@ export default {
         isOperating.value = false;
       }
     };
-    
-    // 删除浏览器
+
+    // 删除浏览器 - 目前只支持停止所有浏览器
     const deleteBrowser = async (browserId) => {
-      if (!confirm('确定要删除这个浏览器实例吗？')) return;
-      
+      if (!confirm('当前只支持停止所有浏览器，确定要继续吗？')) return;
+
       try {
         isOperating.value = true;
         if (window.httpAPI) {
-          await window.httpAPI.delete(`/api/browser/${browserId}`);
+          await window.httpAPI.post('/api/stop');
           await getBrowsers();
         }
       } catch (error) {
@@ -300,34 +226,9 @@ export default {
         isOperating.value = false;
       }
     };
-    
-    // 保存配置
-    const saveBrowserConfig = async () => {
-      try {
-        isSaving.value = true;
-        if (window.httpAPI) {
-          await window.httpAPI.post('/api/browser/config', config);
-          console.log('配置保存成功');
-        }
-      } catch (error) {
-        console.error('保存配置失败:', error);
-      } finally {
-        isSaving.value = false;
-      }
-    };
-    
-    // 重置配置
-    const resetConfig = () => {
-      Object.assign(config, {
-        userAgent: '',
-        windowWidth: 1920,
-        windowHeight: 1080,
-        headless: false,
-        disableImages: false,
-        disableJavaScript: false
-      });
-    };
-    
+
+
+
     // 工具函数
     const getStatusText = (status) => {
       const statusMap = {
@@ -339,32 +240,29 @@ export default {
       };
       return statusMap[status] || status;
     };
-    
+
     const formatTime = (timestamp) => {
       if (!timestamp) return '-';
       const date = new Date(timestamp);
       return date.toLocaleString('zh-CN');
     };
-    
+
     // 生命周期
     onMounted(() => {
       refreshBrowsers();
     });
-    
+
     return {
       isLoading,
       isOperating,
-      isSaving,
       browsers,
-      config,
       activeBrowsers,
+      isSaving,
       refreshBrowsers,
       createBrowser,
       startBrowser,
       stopBrowser,
       deleteBrowser,
-      saveBrowserConfig,
-      resetConfig,
       getStatusText,
       formatTime
     };
@@ -386,12 +284,7 @@ export default {
   margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
+
 
 .page-actions {
   display: flex;
@@ -446,151 +339,196 @@ export default {
   color: #666;
 }
 
-.browser-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
+/* 表格容器 */
+.browser-table-container {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
-.browser-card {
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 20px;
+/* 表格样式 */
+.browser-table {
+  width: 100%;
+  border-collapse: collapse;
   background: white;
-  transition: all 0.3s ease;
 }
 
-.browser-card.active {
-  border-color: #4caf50;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
-}
-
-.browser-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-.browser-name {
-  font-size: 18px;
+.browser-table th {
+  background: #f5f5f5;
+  padding: 12px 16px;
+  text-align: left;
   font-weight: 600;
   color: #333;
-  margin: 0 0 8px 0;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 14px;
 }
 
-.browser-status {
+.browser-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.browser-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.browser-table tbody tr.active-row {
+  background: #f0f8f0;
+}
+
+.browser-table tbody tr.active-row:hover {
+  background: #e8f5e8;
+}
+
+/* 用户ID列 */
+.browser-id .id-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
 }
 
-.browser-status.running {
+.browser-id .id-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* 状态列 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.status-badge.running {
   background: #e8f5e8;
   color: #2e7d32;
 }
 
-.browser-status.stopped {
+.status-badge.stopped {
   background: #ffebee;
   color: #c62828;
 }
 
-.browser-status.starting,
-.browser-status.stopping {
+.status-badge.starting,
+.status-badge.stopping {
   background: #fff3e0;
   color: #ef6c00;
 }
 
+.status-badge.error {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+/* 操作按钮组 */
 .browser-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
-.browser-details {
-  margin-bottom: 16px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  font-size: 14px;
-}
-
-.detail-label {
-  color: #666;
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 60px;
 }
 
-.detail-value {
-  color: #333;
-  font-family: monospace;
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.browser-tabs h4 {
-  font-size: 14px;
-  color: #333;
-  margin: 0 0 8px 0;
+.action-btn:active {
+  transform: translateY(0);
 }
 
-.tab-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.action-btn.start {
+  background: #4caf50;
+  color: white;
 }
 
-.tab-item {
-  padding: 4px 8px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  font-size: 12px;
+.action-btn.start:hover {
+  background: #45a049;
+}
+
+.action-btn.stop {
+  background: #ff9800;
+  color: white;
+}
+
+.action-btn.stop:hover {
+  background: #f57c00;
+}
+
+.action-btn.delete {
+  background: #f44336;
+  color: white;
+}
+
+.action-btn.delete:hover {
+  background: #d32f2f;
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* 端口信息 */
+.port-info {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
   color: #666;
+  background: #f8f8f8;
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
-.tab-title {
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tab-more {
-  padding: 4px 8px;
-  background: #e0e0e0;
-  border-radius: 4px;
+/* 时间信息 */
+.time-info {
   font-size: 12px;
-  color: #666;
-  text-align: center;
+  color: #888;
 }
 
-.config-form {
-  max-width: 600px;
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .browser-table-container {
+    font-size: 12px;
+  }
+  
+  .browser-table th,
+  .browser-table td {
+    padding: 8px 12px;
+  }
+  
+  .action-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+    min-width: 50px;
+  }
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 20px;
-}
 
-.size-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.size-inputs input {
-  flex: 1;
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
 </style>

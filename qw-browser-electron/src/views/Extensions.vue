@@ -1,7 +1,6 @@
 <template>
   <div class="extensions">
     <div class="page-header">
-      <h1 class="page-title">扩展管理</h1>
       <div class="page-actions">
         <button @click="installExtension" class="btn btn-primary">
           <span>📦</span>
@@ -27,7 +26,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon enabled">✅</div>
@@ -37,7 +36,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon disabled">⏸️</div>
@@ -47,7 +46,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon updates">🔄</div>
@@ -85,20 +84,18 @@
             <p>点击上方按钮安装第一个扩展</p>
           </div>
           <div v-else class="extensions-grid">
-            <div 
-              v-for="extension in filteredExtensions" 
-              :key="extension.id"
-              class="extension-card"
-              :class="{ disabled: !extension.enabled }"
-            >
+            <div
+                 v-for="extension in filteredExtensions"
+                 :key="extension.id"
+                 class="extension-card"
+                 :class="{ disabled: !extension.enabled }">
               <div class="extension-header">
                 <div class="extension-icon">
-                  <img 
-                    v-if="extension.icon" 
-                    :src="extension.icon" 
-                    :alt="extension.name"
-                    @error="handleIconError"
-                  >
+                  <img
+                       v-if="extension.icon"
+                       :src="extension.icon"
+                       :alt="extension.name"
+                       @error="handleIconError">
                   <span v-else class="default-icon">🧩</span>
                 </div>
                 <div class="extension-info">
@@ -106,22 +103,21 @@
                   <p class="extension-version">v{{ extension.version }}</p>
                 </div>
                 <div class="extension-status">
-                  <div 
-                    class="status-indicator" 
-                    :class="extension.enabled ? 'enabled' : 'disabled'"
-                    :title="extension.enabled ? '已启用' : '已禁用'"
-                  ></div>
+                  <div
+                       class="status-indicator"
+                       :class="extension.enabled ? 'enabled' : 'disabled'"
+                       :title="extension.enabled ? '已启用' : '已禁用'"></div>
                 </div>
               </div>
-              
+
               <div class="extension-body">
                 <p class="extension-description">{{ extension.description }}</p>
-                
+
                 <div class="extension-meta">
                   <span class="extension-category">{{ getCategoryText(extension.category) }}</span>
                   <span class="extension-author">作者: {{ extension.author }}</span>
                 </div>
-                
+
                 <div v-if="extension.permissions && extension.permissions.length" class="extension-permissions">
                   <h4>权限要求:</h4>
                   <ul>
@@ -131,48 +127,43 @@
                   </ul>
                 </div>
               </div>
-              
+
               <div class="extension-footer">
                 <div class="extension-actions">
-                  <button 
-                    v-if="!extension.enabled"
-                    @click="enableExtension(extension.id)"
-                    class="btn btn-small btn-success"
-                    :disabled="isOperating"
-                  >
+                  <button
+                          v-if="!extension.enabled"
+                          @click="enableExtension(extension.id)"
+                          class="btn btn-small btn-success"
+                          :disabled="isOperating">
                     启用
                   </button>
-                  <button 
-                    v-if="extension.enabled"
-                    @click="disableExtension(extension.id)"
-                    class="btn btn-small btn-warning"
-                    :disabled="isOperating"
-                  >
+                  <button
+                          v-if="extension.enabled"
+                          @click="disableExtension(extension.id)"
+                          class="btn btn-small btn-warning"
+                          :disabled="isOperating">
                     禁用
                   </button>
-                  <button 
-                    @click="configureExtension(extension)"
-                    class="btn btn-small btn-secondary"
-                  >
+                  <button
+                          @click="configureExtension(extension)"
+                          class="btn btn-small btn-secondary">
                     配置
                   </button>
-                  <button 
-                    v-if="extension.hasUpdate"
-                    @click="updateExtension(extension.id)"
-                    class="btn btn-small btn-info"
-                    :disabled="isOperating"
-                  >
+                  <button
+                          v-if="extension.hasUpdate"
+                          @click="updateExtension(extension.id)"
+                          class="btn btn-small btn-info"
+                          :disabled="isOperating">
                     更新
                   </button>
-                  <button 
-                    @click="uninstallExtension(extension.id)"
-                    class="btn btn-small btn-danger"
-                    :disabled="isOperating || extension.enabled"
-                  >
+                  <button
+                          @click="uninstallExtension(extension.id)"
+                          class="btn btn-small btn-danger"
+                          :disabled="isOperating || extension.enabled">
                     卸载
                   </button>
                 </div>
-                
+
                 <div class="extension-stats">
                   <span class="install-date">安装于: {{ formatDate(extension.installDate) }}</span>
                 </div>
@@ -192,64 +183,59 @@
         </div>
         <div class="modal-body">
           <div class="install-tabs">
-            <button 
-              v-for="tab in installTabs" 
-              :key="tab.key"
-              @click="activeInstallTab = tab.key"
-              class="tab-button"
-              :class="{ active: activeInstallTab === tab.key }"
-            >
+            <button
+                    v-for="tab in installTabs"
+                    :key="tab.key"
+                    @click="activeInstallTab = tab.key"
+                    class="tab-button"
+                    :class="{ active: activeInstallTab === tab.key }">
               {{ tab.label }}
             </button>
           </div>
-          
+
           <!-- 从文件安装 -->
           <div v-if="activeInstallTab === 'file'" class="install-content">
             <div class="form-group">
               <label class="form-label">选择扩展文件</label>
-              <input 
-                type="file" 
-                @change="handleFileSelect"
-                accept=".zip,.crx,.xpi"
-                class="form-input"
-              >
+              <input
+                     type="file"
+                     @change="handleFileSelect"
+                     accept=".zip,.crx,.xpi"
+                     class="form-input">
               <small class="form-help">支持 .zip, .crx, .xpi 格式的扩展文件</small>
             </div>
           </div>
-          
+
           <!-- 从URL安装 -->
           <div v-if="activeInstallTab === 'url'" class="install-content">
             <div class="form-group">
               <label class="form-label">扩展URL</label>
-              <input 
-                v-model="installForm.url" 
-                type="url" 
-                class="form-input"
-                placeholder="https://example.com/extension.zip"
-              >
+              <input
+                     v-model="installForm.url"
+                     type="url"
+                     class="form-input"
+                     placeholder="https://example.com/extension.zip">
             </div>
           </div>
-          
+
           <!-- 从商店安装 -->
           <div v-if="activeInstallTab === 'store'" class="install-content">
             <div class="form-group">
               <label class="form-label">搜索扩展</label>
-              <input 
-                v-model="storeSearchQuery" 
-                type="text" 
-                class="form-input"
-                placeholder="输入扩展名称或关键词"
-                @input="searchStoreExtensions"
-              >
+              <input
+                     v-model="storeSearchQuery"
+                     type="text"
+                     class="form-input"
+                     placeholder="输入扩展名称或关键词"
+                     @input="searchStoreExtensions">
             </div>
-            
+
             <div v-if="storeExtensions.length" class="store-extensions">
-              <div 
-                v-for="ext in storeExtensions" 
-                :key="ext.id"
-                class="store-extension-item"
-                @click="selectStoreExtension(ext)"
-              >
+              <div
+                   v-for="ext in storeExtensions"
+                   :key="ext.id"
+                   class="store-extension-item"
+                   @click="selectStoreExtension(ext)">
                 <div class="store-ext-icon">
                   <img v-if="ext.icon" :src="ext.icon" :alt="ext.name">
                   <span v-else>🧩</span>
@@ -268,13 +254,12 @@
               </div>
             </div>
           </div>
-          
+
           <div class="modal-actions">
-            <button 
-              @click="performInstall" 
-              class="btn btn-primary"
-              :disabled="isInstalling || !canInstall"
-            >
+            <button
+                    @click="performInstall"
+                    class="btn btn-primary"
+                    :disabled="isInstalling || !canInstall">
               <span v-if="isInstalling" class="loading"></span>
               安装扩展
             </button>
@@ -301,25 +286,24 @@
                 <span>随浏览器自动启动</span>
               </label>
             </div>
-            
+
             <div class="form-group">
               <label class="form-checkbox">
                 <input v-model="extensionConfig.allowInIncognito" type="checkbox">
                 <span>允许在隐身模式下运行</span>
               </label>
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">扩展设置</label>
-              <textarea 
-                v-model="extensionConfig.customSettings" 
-                class="form-textarea"
-                placeholder="JSON格式的自定义设置"
-                rows="6"
-              ></textarea>
+              <textarea
+                        v-model="extensionConfig.customSettings"
+                        class="form-textarea"
+                        placeholder="JSON格式的自定义设置"
+                        rows="6"></textarea>
             </div>
           </div>
-          
+
           <div class="modal-actions">
             <button @click="saveExtensionConfig" class="btn btn-primary" :disabled="isSaving">
               <span v-if="isSaving" class="loading"></span>
@@ -354,43 +338,43 @@ export default {
     const activeInstallTab = ref('file');
     const storeSearchQuery = ref('');
     const storeExtensions = ref([]);
-    
+
     // 安装表单
     const installForm = reactive({
       file: null,
       url: ''
     });
-    
+
     // 扩展配置
     const extensionConfig = reactive({
       autoStart: false,
       allowInIncognito: false,
       customSettings: '{}'
     });
-    
+
     // 安装选项卡
     const installTabs = [
       { key: 'file', label: '从文件安装' },
       { key: 'url', label: '从URL安装' },
       { key: 'store', label: '从商店安装' }
     ];
-    
+
     // 计算属性
     const enabledExtensions = computed(() => {
       return extensions.value.filter(ext => ext.enabled).length;
     });
-    
+
     const disabledExtensions = computed(() => {
       return extensions.value.filter(ext => !ext.enabled).length;
     });
-    
+
     const updatableExtensions = computed(() => {
       return extensions.value.filter(ext => ext.hasUpdate).length;
     });
-    
+
     const filteredExtensions = computed(() => {
       let filtered = extensions.value;
-      
+
       if (statusFilter.value) {
         filtered = filtered.filter(ext => {
           if (statusFilter.value === 'enabled') return ext.enabled;
@@ -398,20 +382,20 @@ export default {
           return true;
         });
       }
-      
+
       if (categoryFilter.value) {
         filtered = filtered.filter(ext => ext.category === categoryFilter.value);
       }
-      
+
       return filtered;
     });
-    
+
     const canInstall = computed(() => {
       if (activeInstallTab.value === 'file') return installForm.file;
       if (activeInstallTab.value === 'url') return installForm.url;
       return false;
     });
-    
+
     // 获取扩展列表
     const getExtensions = async () => {
       try {
@@ -424,7 +408,7 @@ export default {
         extensions.value = [];
       }
     };
-    
+
     // 刷新扩展
     const refreshExtensions = async () => {
       isLoading.value = true;
@@ -434,7 +418,7 @@ export default {
         isLoading.value = false;
       }
     };
-    
+
     // 启用扩展
     const enableExtension = async (extensionId) => {
       try {
@@ -449,7 +433,7 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 禁用扩展
     const disableExtension = async (extensionId) => {
       try {
@@ -464,7 +448,7 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 更新扩展
     const updateExtension = async (extensionId) => {
       try {
@@ -479,11 +463,11 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 卸载扩展
     const uninstallExtension = async (extensionId) => {
       if (!confirm('确定要卸载这个扩展吗？')) return;
-      
+
       try {
         isOperating.value = true;
         if (window.httpAPI) {
@@ -496,12 +480,12 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 安装扩展
     const installExtension = () => {
       showInstallModal.value = true;
     };
-    
+
     // 执行安装
     const performInstall = async () => {
       try {
@@ -517,7 +501,7 @@ export default {
               url: installForm.url
             });
           }
-          
+
           if (result) {
             await getExtensions();
             closeInstallModal();
@@ -529,7 +513,7 @@ export default {
         isInstalling.value = false;
       }
     };
-    
+
     // 配置扩展
     const configureExtension = (extension) => {
       configuringExtension.value = extension;
@@ -541,7 +525,7 @@ export default {
       });
       showConfigModal.value = true;
     };
-    
+
     // 保存扩展配置
     const saveExtensionConfig = async () => {
       try {
@@ -552,12 +536,12 @@ export default {
             allowInIncognito: extensionConfig.allowInIncognito,
             customSettings: JSON.parse(extensionConfig.customSettings || '{}')
           };
-          
+
           await window.httpAPI.put(
             `/api/extensions/${configuringExtension.value.id}/config`,
             config
           );
-          
+
           await getExtensions();
           closeConfigModal();
         }
@@ -567,14 +551,14 @@ export default {
         isSaving.value = false;
       }
     };
-    
+
     // 搜索商店扩展
     const searchStoreExtensions = async () => {
       if (!storeSearchQuery.value.trim()) {
         storeExtensions.value = [];
         return;
       }
-      
+
       try {
         if (window.httpAPI) {
           const data = await window.httpAPI.get('/api/extensions/store/search', {
@@ -587,7 +571,7 @@ export default {
         storeExtensions.value = [];
       }
     };
-    
+
     // 选择商店扩展
     const selectStoreExtension = async (extension) => {
       try {
@@ -605,19 +589,19 @@ export default {
         isInstalling.value = false;
       }
     };
-    
+
     // 处理文件选择
     const handleFileSelect = (event) => {
       const file = event.target.files[0];
       installForm.file = file;
     };
-    
+
     // 处理图标错误
     const handleIconError = (event) => {
       event.target.style.display = 'none';
       event.target.nextElementSibling.style.display = 'block';
     };
-    
+
     // 关闭模态框
     const closeInstallModal = () => {
       showInstallModal.value = false;
@@ -626,12 +610,12 @@ export default {
       storeSearchQuery.value = '';
       storeExtensions.value = [];
     };
-    
+
     const closeConfigModal = () => {
       showConfigModal.value = false;
       configuringExtension.value = null;
     };
-    
+
     // 工具函数
     const getCategoryText = (category) => {
       const categoryMap = {
@@ -642,7 +626,7 @@ export default {
       };
       return categoryMap[category] || category;
     };
-    
+
     const getPermissionText = (permission) => {
       const permissionMap = {
         'tabs': '访问标签页',
@@ -655,18 +639,18 @@ export default {
       };
       return permissionMap[permission] || permission;
     };
-    
+
     const formatDate = (timestamp) => {
       if (!timestamp) return '-';
       const date = new Date(timestamp);
       return date.toLocaleDateString('zh-CN');
     };
-    
+
     // 生命周期
     onMounted(() => {
       refreshExtensions();
     });
-    
+
     return {
       isLoading,
       isOperating,
@@ -726,12 +710,6 @@ export default {
   margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
 
 .page-actions {
   display: flex;

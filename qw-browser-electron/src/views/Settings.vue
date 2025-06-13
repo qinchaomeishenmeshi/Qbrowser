@@ -1,7 +1,6 @@
 <template>
   <div class="settings">
     <div class="page-header">
-      <h1 class="page-title">系统设置</h1>
       <div class="page-actions">
         <button @click="saveAllSettings" class="btn btn-primary" :disabled="isSaving">
           <span v-if="isSaving" class="loading"></span>
@@ -18,13 +17,12 @@
     <div class="settings-content">
       <div class="settings-sidebar">
         <nav class="settings-nav">
-          <button 
-            v-for="section in settingSections" 
-            :key="section.key"
-            @click="activeSection = section.key"
-            class="nav-item"
-            :class="{ active: activeSection === section.key }"
-          >
+          <button
+                  v-for="section in settingSections"
+                  :key="section.key"
+                  @click="activeSection = section.key"
+                  class="nav-item"
+                  :class="{ active: activeSection === section.key }">
             <span class="nav-icon">{{ section.icon }}</span>
             <span class="nav-label">{{ section.label }}</span>
           </button>
@@ -35,7 +33,7 @@
         <!-- 通用设置 -->
         <div v-if="activeSection === 'general'" class="setting-section">
           <h2 class="section-title">通用设置</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">应用配置</h3>
@@ -49,7 +47,7 @@
                   <option value="ja-JP">日本語</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">主题模式</label>
                 <select v-model="settings.general.theme" class="form-select">
@@ -58,21 +56,21 @@
                   <option value="auto">跟随系统</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.general.autoStart" type="checkbox">
                   <span>开机自动启动</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.general.minimizeToTray" type="checkbox">
                   <span>最小化到系统托盘</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.general.closeToTray" type="checkbox">
@@ -81,7 +79,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">更新设置</h3>
@@ -93,7 +91,7 @@
                   <span>自动检查更新</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">更新频率</label>
                 <select v-model="settings.general.updateFrequency" class="form-select">
@@ -109,7 +107,7 @@
         <!-- 浏览器设置 -->
         <div v-if="activeSection === 'browser'" class="setting-section">
           <h2 class="section-title">浏览器设置</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">默认配置</h3>
@@ -124,40 +122,38 @@
                   <option value="safari">Safari</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">默认窗口大小</label>
                 <div class="form-row">
-                  <input 
-                    v-model.number="settings.browser.defaultWidth" 
-                    type="number" 
-                    class="form-input"
-                    placeholder="宽度"
-                  >
+                  <input
+                         v-model.number="settings.browser.defaultWidth"
+                         type="number"
+                         class="form-input"
+                         placeholder="宽度">
                   <span class="form-separator">×</span>
-                  <input 
-                    v-model.number="settings.browser.defaultHeight" 
-                    type="number" 
-                    class="form-input"
-                    placeholder="高度"
-                  >
+                  <input
+                         v-model.number="settings.browser.defaultHeight"
+                         type="number"
+                         class="form-input"
+                         placeholder="高度">
                 </div>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.browser.headless" type="checkbox">
                   <span>默认无头模式</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.browser.disableImages" type="checkbox">
                   <span>禁用图片加载</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.browser.disableJavaScript" type="checkbox">
@@ -166,7 +162,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">代理设置</h3>
@@ -178,7 +174,7 @@
                   <span>启用代理</span>
                 </label>
               </div>
-              
+
               <div v-if="settings.browser.useProxy" class="proxy-config">
                 <div class="form-group">
                   <label class="form-label">代理类型</label>
@@ -188,46 +184,42 @@
                     <option value="socks5">SOCKS5</option>
                   </select>
                 </div>
-                
+
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">代理地址</label>
-                    <input 
-                      v-model="settings.browser.proxyHost" 
-                      type="text" 
-                      class="form-input"
-                      placeholder="127.0.0.1"
-                    >
+                    <input
+                           v-model="settings.browser.proxyHost"
+                           type="text"
+                           class="form-input"
+                           placeholder="127.0.0.1">
                   </div>
-                  
+
                   <div class="form-group">
                     <label class="form-label">端口</label>
-                    <input 
-                      v-model.number="settings.browser.proxyPort" 
-                      type="number" 
-                      class="form-input"
-                      placeholder="8080"
-                    >
+                    <input
+                           v-model.number="settings.browser.proxyPort"
+                           type="number"
+                           class="form-input"
+                           placeholder="8080">
                   </div>
                 </div>
-                
+
                 <div class="form-row">
                   <div class="form-group">
                     <label class="form-label">用户名（可选）</label>
-                    <input 
-                      v-model="settings.browser.proxyUsername" 
-                      type="text" 
-                      class="form-input"
-                    >
+                    <input
+                           v-model="settings.browser.proxyUsername"
+                           type="text"
+                           class="form-input">
                   </div>
-                  
+
                   <div class="form-group">
                     <label class="form-label">密码（可选）</label>
-                    <input 
-                      v-model="settings.browser.proxyPassword" 
-                      type="password" 
-                      class="form-input"
-                    >
+                    <input
+                           v-model="settings.browser.proxyPassword"
+                           type="password"
+                           class="form-input">
                   </div>
                 </div>
               </div>
@@ -238,7 +230,7 @@
         <!-- 性能设置 -->
         <div v-if="activeSection === 'performance'" class="setting-section">
           <h2 class="section-title">性能设置</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">资源限制</h3>
@@ -246,42 +238,39 @@
             <div class="card-body">
               <div class="form-group">
                 <label class="form-label">最大并发浏览器数量</label>
-                <input 
-                  v-model.number="settings.performance.maxBrowsers" 
-                  type="number" 
-                  class="form-input"
-                  min="1"
-                  max="20"
-                >
+                <input
+                       v-model.number="settings.performance.maxBrowsers"
+                       type="number"
+                       class="form-input"
+                       min="1"
+                       max="20">
                 <small class="form-help">同时运行的浏览器实例数量上限</small>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">内存使用限制 (MB)</label>
-                <input 
-                  v-model.number="settings.performance.memoryLimit" 
-                  type="number" 
-                  class="form-input"
-                  min="512"
-                  step="256"
-                >
+                <input
+                       v-model.number="settings.performance.memoryLimit"
+                       type="number"
+                       class="form-input"
+                       min="512"
+                       step="256">
                 <small class="form-help">单个浏览器实例的内存使用上限</small>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">CPU使用限制 (%)</label>
-                <input 
-                  v-model.number="settings.performance.cpuLimit" 
-                  type="number" 
-                  class="form-input"
-                  min="10"
-                  max="100"
-                >
+                <input
+                       v-model.number="settings.performance.cpuLimit"
+                       type="number"
+                       class="form-input"
+                       min="10"
+                       max="100">
                 <small class="form-help">应用程序的CPU使用率上限</small>
               </div>
             </div>
           </div>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">缓存设置</h3>
@@ -293,18 +282,17 @@
                   <span>启用缓存</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">缓存大小限制 (MB)</label>
-                <input 
-                  v-model.number="settings.performance.cacheSize" 
-                  type="number" 
-                  class="form-input"
-                  min="100"
-                  step="100"
-                >
+                <input
+                       v-model.number="settings.performance.cacheSize"
+                       type="number"
+                       class="form-input"
+                       min="100"
+                       step="100">
               </div>
-              
+
               <div class="form-group">
                 <button @click="clearCache" class="btn btn-warning">
                   <span>🗑️</span>
@@ -318,7 +306,7 @@
         <!-- 安全设置 -->
         <div v-if="activeSection === 'security'" class="setting-section">
           <h2 class="section-title">安全设置</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">访问控制</h3>
@@ -330,49 +318,46 @@
                   <span>启用身份验证</span>
                 </label>
               </div>
-              
+
               <div v-if="settings.security.requireAuth" class="auth-config">
                 <div class="form-group">
                   <label class="form-label">用户名</label>
-                  <input 
-                    v-model="settings.security.username" 
-                    type="text" 
-                    class="form-input"
-                    required
-                  >
+                  <input
+                         v-model="settings.security.username"
+                         type="text"
+                         class="form-input"
+                         required>
                 </div>
-                
+
                 <div class="form-group">
                   <label class="form-label">密码</label>
-                  <input 
-                    v-model="settings.security.password" 
-                    type="password" 
-                    class="form-input"
-                    required
-                  >
+                  <input
+                         v-model="settings.security.password"
+                         type="password"
+                         class="form-input"
+                         required>
                 </div>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.security.enableHttps" type="checkbox">
                   <span>强制HTTPS</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">允许的IP地址</label>
-                <textarea 
-                  v-model="settings.security.allowedIPs" 
-                  class="form-textarea"
-                  placeholder="127.0.0.1\n192.168.1.0/24"
-                  rows="4"
-                ></textarea>
+                <textarea
+                          v-model="settings.security.allowedIPs"
+                          class="form-textarea"
+                          placeholder="127.0.0.1\n192.168.1.0/24"
+                          rows="4"></textarea>
                 <small class="form-help">每行一个IP地址或CIDR网段，留空表示允许所有</small>
               </div>
             </div>
           </div>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">数据保护</h3>
@@ -384,23 +369,22 @@
                   <span>加密存储数据</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.security.autoBackup" type="checkbox">
                   <span>自动备份数据</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">备份保留天数</label>
-                <input 
-                  v-model.number="settings.security.backupRetentionDays" 
-                  type="number" 
-                  class="form-input"
-                  min="1"
-                  max="365"
-                >
+                <input
+                       v-model.number="settings.security.backupRetentionDays"
+                       type="number"
+                       class="form-input"
+                       min="1"
+                       max="365">
               </div>
             </div>
           </div>
@@ -409,7 +393,7 @@
         <!-- 日志设置 -->
         <div v-if="activeSection === 'logging'" class="setting-section">
           <h2 class="section-title">日志设置</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">日志配置</h3>
@@ -424,36 +408,34 @@
                   <option value="error">错误 (ERROR)</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-checkbox">
                   <input v-model="settings.logging.enableFileLog" type="checkbox">
                   <span>保存到文件</span>
                 </label>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">日志文件大小限制 (MB)</label>
-                <input 
-                  v-model.number="settings.logging.maxFileSize" 
-                  type="number" 
-                  class="form-input"
-                  min="1"
-                  max="1000"
-                >
+                <input
+                       v-model.number="settings.logging.maxFileSize"
+                       type="number"
+                       class="form-input"
+                       min="1"
+                       max="1000">
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">日志文件保留数量</label>
-                <input 
-                  v-model.number="settings.logging.maxFiles" 
-                  type="number" 
-                  class="form-input"
-                  min="1"
-                  max="100"
-                >
+                <input
+                       v-model.number="settings.logging.maxFiles"
+                       type="number"
+                       class="form-input"
+                       min="1"
+                       max="100">
               </div>
-              
+
               <div class="form-group">
                 <button @click="clearLogs" class="btn btn-warning">
                   <span>🗑️</span>
@@ -471,7 +453,7 @@
         <!-- 关于 -->
         <div v-if="activeSection === 'about'" class="setting-section">
           <h2 class="section-title">关于</h2>
-          
+
           <div class="card">
             <div class="card-header">
               <h3 class="card-title">应用信息</h3>
@@ -482,46 +464,46 @@
                   <span class="logo-icon">🌐</span>
                   <h3>QW Browser</h3>
                 </div>
-                
+
                 <div class="app-details">
                   <div class="detail-item">
                     <span class="detail-label">版本:</span>
                     <span class="detail-value">{{ appInfo.version }}</span>
                   </div>
-                  
+
                   <div class="detail-item">
                     <span class="detail-label">构建时间:</span>
                     <span class="detail-value">{{ appInfo.buildDate }}</span>
                   </div>
-                  
+
                   <div class="detail-item">
                     <span class="detail-label">Electron版本:</span>
                     <span class="detail-value">{{ appInfo.electronVersion }}</span>
                   </div>
-                  
+
                   <div class="detail-item">
                     <span class="detail-label">Node.js版本:</span>
                     <span class="detail-value">{{ appInfo.nodeVersion }}</span>
                   </div>
-                  
+
                   <div class="detail-item">
                     <span class="detail-label">Chrome版本:</span>
                     <span class="detail-value">{{ appInfo.chromeVersion }}</span>
                   </div>
                 </div>
-                
+
                 <div class="app-actions">
                   <button @click="checkUpdates" class="btn btn-primary" :disabled="isCheckingUpdates">
                     <span v-if="isCheckingUpdates" class="loading"></span>
                     <span v-else>🔄</span>
                     检查更新
                   </button>
-                  
+
                   <button @click="openLicense" class="btn btn-secondary">
                     <span>📄</span>
                     许可证
                   </button>
-                  
+
                   <button @click="openHomepage" class="btn btn-secondary">
                     <span>🌐</span>
                     官网
@@ -545,7 +527,7 @@ export default {
     const isSaving = ref(false);
     const isCheckingUpdates = ref(false);
     const activeSection = ref('general');
-    
+
     // 设置分类
     const settingSections = [
       { key: 'general', label: '通用', icon: '⚙️' },
@@ -555,7 +537,7 @@ export default {
       { key: 'logging', label: '日志', icon: '📝' },
       { key: 'about', label: '关于', icon: 'ℹ️' }
     ];
-    
+
     // 设置数据
     const settings = reactive({
       general: {
@@ -605,7 +587,7 @@ export default {
         maxFiles: 5
       }
     });
-    
+
     // 应用信息
     const appInfo = reactive({
       version: '1.0.0',
@@ -614,7 +596,7 @@ export default {
       nodeVersion: '18.20.0',
       chromeVersion: '120.0.0'
     });
-    
+
     // 加载设置
     const loadSettings = async () => {
       try {
@@ -626,7 +608,7 @@ export default {
         console.error('加载设置失败:', error);
       }
     };
-    
+
     // 保存所有设置
     const saveAllSettings = async () => {
       try {
@@ -648,11 +630,11 @@ export default {
         isSaving.value = false;
       }
     };
-    
+
     // 重置设置
     const resetSettings = async () => {
       if (!confirm('确定要重置所有设置到默认值吗？')) return;
-      
+
       try {
         if (window.httpAPI) {
           await window.httpAPI.post('/api/settings/reset');
@@ -662,11 +644,11 @@ export default {
         console.error('重置设置失败:', error);
       }
     };
-    
+
     // 清理缓存
     const clearCache = async () => {
       if (!confirm('确定要清理所有缓存吗？')) return;
-      
+
       try {
         if (window.httpAPI) {
           await window.httpAPI.post('/api/cache/clear');
@@ -678,11 +660,11 @@ export default {
         console.error('清理缓存失败:', error);
       }
     };
-    
+
     // 清理日志
     const clearLogs = async () => {
       if (!confirm('确定要清理所有日志吗？')) return;
-      
+
       try {
         if (window.httpAPI) {
           await window.httpAPI.post('/api/logs/clear');
@@ -694,7 +676,7 @@ export default {
         console.error('清理日志失败:', error);
       }
     };
-    
+
     // 导出日志
     const exportLogs = async () => {
       try {
@@ -706,13 +688,13 @@ export default {
               { name: 'ZIP文件', extensions: ['zip'] }
             ]
           });
-          
+
           if (!result.canceled && result.filePath) {
             if (window.httpAPI) {
               await window.httpAPI.post('/api/logs/export', {
                 filePath: result.filePath
               });
-              
+
               if (window.electronAPI?.showNotification) {
                 window.electronAPI.showNotification('导出成功', `日志已导出到 ${result.filePath}`);
               }
@@ -723,7 +705,7 @@ export default {
         console.error('导出日志失败:', error);
       }
     };
-    
+
     // 检查更新
     const checkUpdates = async () => {
       try {
@@ -746,21 +728,21 @@ export default {
         isCheckingUpdates.value = false;
       }
     };
-    
+
     // 打开许可证
     const openLicense = () => {
       if (window.electronAPI?.openExternal) {
         window.electronAPI.openExternal('https://github.com/your-repo/LICENSE');
       }
     };
-    
+
     // 打开官网
     const openHomepage = () => {
       if (window.electronAPI?.openExternal) {
         window.electronAPI.openExternal('https://your-website.com');
       }
     };
-    
+
     // 获取应用信息
     const getAppInfo = async () => {
       try {
@@ -772,13 +754,13 @@ export default {
         console.error('获取应用信息失败:', error);
       }
     };
-    
+
     // 生命周期
     onMounted(() => {
       loadSettings();
       getAppInfo();
     });
-    
+
     return {
       isSaving,
       isCheckingUpdates,
@@ -813,12 +795,7 @@ export default {
   margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
+
 
 .page-actions {
   display: flex;

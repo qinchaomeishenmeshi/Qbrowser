@@ -1,5 +1,5 @@
 <template>
-  <div id="main-app" :class="{ 'dark-theme': isDarkTheme }">
+  <div id="main-app" :class="{ 'dark-theme': isDarkTheme }" class="app-container">
     <!-- 侧边栏 -->
     <aside class="sidebar" :class="{ collapsed: !sidebarExpanded }">
       <div class="sidebar-header">
@@ -17,7 +17,7 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav">
+      <nav class="sidebar-nav nav-menu">
         <router-link to="/" class="nav-item" exact-active-class="active">
           <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 1l7 6v8H1V7l7-6zm0 1.5L2.5 7.5V14h3V9h5v5h3V7.5L8 2.5z" />
@@ -94,78 +94,31 @@
       </div>
     </main>
 
-    <!-- 通知面板 -->
-    <div v-if="showNotificationPanel" class="notification-panel" @click.self="hideNotifications">
-      <div class="notification-content">
-        <div class="notification-header">
-          <h3>通知</h3>
-          <button @click="hideNotifications" class="close-button">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path
-                    d="M4.646 4.646a.5.5 0 01.708 0L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 010-.708z" />
-            </svg>
-          </button>
-        </div>
 
-        <div class="notification-list">
-          <div v-if="notifications.length === 0" class="no-notifications">
-            暂无通知
-          </div>
-
-          <div
-               v-for="notification in notifications"
-               :key="notification.id"
-               class="notification-item"
-               :class="{ unread: !notification.read }"
-               @click="markAsRead(notification.id)">
-            <div class="notification-icon" :class="notification.type">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path v-if="notification.type === 'success'"
-                      d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z" />
-                <path v-else-if="notification.type === 'error'"
-                      d="M4.646 4.646a.5.5 0 01.708 0L8 7.293l2.646-2.647a.5.5 0 01.708.708L8.707 8l2.647 2.646a.5.5 0 01-.708.708L8 8.707l-2.646 2.647a.5.5 0 01-.708-.708L7.293 8 4.646 5.354a.5.5 0 010-.708z" />
-                <path v-else-if="notification.type === 'warning'"
-                      d="M8.982 1.566a1.13 1.13 0 00-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 01-1.1 0L7.1 5.995A.905.905 0 018 5zm.002 6a1 1 0 100 2 1 1 0 000-2z" />
-                <path v-else d="M8 1a7 7 0 100 14A7 7 0 008 1zM7 4a1 1 0 112 0v3a1 1 0 11-2 0V4zm1.5 6.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-              </svg>
-            </div>
-
-            <div class="notification-body">
-              <div class="notification-title">{{ notification.title }}</div>
-              <div class="notification-message">{{ notification.message }}</div>
-              <div class="notification-time">{{ formatTime(notification.timestamp) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="notification-actions">
-          <button @click="markAllAsRead" class="btn btn-secondary">全部标记为已读</button>
-          <button @click="clearAllNotifications" class="btn btn-danger">清空通知</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
-import { useAppStore } from './store/modules/app'
 import { mapState, mapActions } from 'pinia'
+import { useAppStore } from './store/modules/app.js'
 
 export default {
   name: 'App',
   data() {
     return {
-      sidebarExpanded: true,
-      notifications: [],
       statusCheckInterval: null
     }
   },
 
   computed: {
     ...mapState(useAppStore, [
-      'backendStatus',
-      'notifications as storeNotifications'
+      'backendStatus'
     ]),
+
+    sidebarExpanded() {
+      const appStore = useAppStore()
+      return !appStore.ui?.sidebarCollapsed
+    },
 
     isDarkTheme() {
       const appStore = useAppStore()
@@ -194,10 +147,7 @@ export default {
       'checkBackendStatus',
       'restartBackend',
       'setTheme',
-      'toggleSidebar',
-      'addNotification',
-      'markNotificationAsRead',
-      'clearNotifications'
+      'toggleSidebar'
     ]),
 
     toggleTheme() {
@@ -208,54 +158,7 @@ export default {
 
 
 
-    markAsRead(notificationId) {
-      const notification = this.notifications.find(n => n.id === notificationId)
-      if (notification) {
-        notification.read = true
-        this.markNotificationAsRead(notificationId)
-      }
-    },
 
-    markAllAsRead() {
-      this.notifications.forEach(n => {
-        n.read = true
-        this.markNotificationAsRead(n.id)
-      })
-    },
-
-    clearAllNotifications() {
-      this.notifications = []
-      this.clearNotifications()
-      this.hideNotifications()
-    },
-
-    formatTime(timestamp) {
-      const now = new Date()
-      const time = new Date(timestamp)
-      const diff = now - time
-
-      if (diff < 60000) { // 1分钟内
-        return '刚刚'
-      } else if (diff < 3600000) { // 1小时内
-        return `${Math.floor(diff / 60000)}分钟前`
-      } else if (diff < 86400000) { // 24小时内
-        return `${Math.floor(diff / 3600000)}小时前`
-      } else {
-        return time.toLocaleDateString()
-      }
-    },
-
-    addTestNotification() {
-      const types = ['success', 'error', 'warning', 'info']
-      const type = types[Math.floor(Math.random() * types.length)]
-
-      this.addNotification({
-        type,
-        title: '测试通知',
-        message: `这是一个${type}类型的测试通知`,
-        timestamp: Date.now()
-      })
-    }
   },
 
   async mounted() {
@@ -272,19 +175,8 @@ export default {
       window.electronAPI.onBackendStatusChange((event, status) => {
         this.backendStatus.isRunning = status.status === 'running'
         this.backendStatus.pid = status.pid
-
-        // 添加状态变化通知
-        this.addNotification({
-          type: status.status === 'running' ? 'success' : 'error',
-          title: '后端状态变化',
-          message: status.status === 'running' ? '后端服务已启动' : '后端服务已停止',
-          timestamp: Date.now()
-        })
       })
     }
-
-    // 初始化通知数据
-    this.notifications = this.storeNotifications || []
   },
 
   beforeUnmount() {
@@ -293,18 +185,46 @@ export default {
     }
   },
 
-  watch: {
-    storeNotifications: {
-      handler(newNotifications) {
-        this.notifications = newNotifications || []
-      },
-      deep: true
-    }
-  }
+
 }
 </script>
 
 <style scoped>
+/* CSS 变量定义 - 移到最前面确保优先加载 */
+:root {
+  --primary-color: #667eea;
+  --primary-bg: rgba(102, 126, 234, 0.1);
+  --bg-color: #ffffff;
+  --content-bg: #f8fafc;
+  --sidebar-bg: #ffffff;
+  --header-bg: #ffffff;
+  --panel-bg: #ffffff;
+  --text-color: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --hover-bg: #f3f4f6;
+}
+
+.dark-theme {
+  --primary-color: #667eea;
+  --primary-bg: rgba(102, 126, 234, 0.2);
+  --bg-color: #111827;
+  --content-bg: #1f2937;
+  --sidebar-bg: #1f2937;
+  --header-bg: #1f2937;
+  --panel-bg: #1f2937;
+  --text-color: #f9fafb;
+  --text-secondary: #9ca3af;
+  --border-color: #374151;
+  --hover-bg: #374151;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
 /* 侧边栏样式 */
 .sidebar {
   width: 250px;
@@ -330,6 +250,36 @@ export default {
 .sidebar.collapsed .sidebar-header {
   padding: 20px 10px;
   justify-content: center;
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.sidebar-toggle:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
+}
+
+.logo-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .logo-text {
+  opacity: 0;
+  width: 0;
 }
 
 .logo {
@@ -393,10 +343,12 @@ export default {
   color: var(--primary-color);
 }
 
-.nav-item.active {
-  background: var(--primary-bg);
-  color: var(--primary-color);
-  border-right: 3px solid var(--primary-color);
+.sidebar-nav .nav-item.active,
+.sidebar-nav .nav-item.router-link-active,
+.sidebar-nav .nav-item.router-link-exact-active {
+  background: var(--primary-bg, rgba(102, 126, 234, 0.1)) !important;
+  color: var(--primary-color, #667eea) !important;
+  border-right: 3px solid var(--primary-color, #667eea) !important;
 }
 
 .nav-icon {
@@ -417,6 +369,21 @@ export default {
 }
 
 .sidebar.collapsed .nav-text {
+  opacity: 0;
+  width: 0;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.sidebar.collapsed .sidebar-footer {
+  padding: 16px 10px;
+}
+
+.sidebar.collapsed .status-text {
   opacity: 0;
   width: 0;
 }
@@ -471,6 +438,24 @@ export default {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button:hover {
+  background: var(--hover-bg);
+  color: var(--text-color);
 }
 
 .status-indicator {
@@ -534,10 +519,11 @@ export default {
 }
 
 /* 内容区域 */
-.content {
+.content-area {
   flex: 1;
   overflow: auto;
   background: var(--content-bg);
+  padding: 20px;
 }
 
 /* 通知面板样式 */
@@ -598,8 +584,8 @@ export default {
 }
 
 .notification-item.unread {
-  background: var(--primary-bg);
-  border-left: 3px solid var(--primary-color);
+  background: var(--primary-bg, rgba(102, 126, 234, 0.1));
+  border-left: 3px solid var(--primary-color, #667eea);
 }
 
 .notification-content {
@@ -630,32 +616,7 @@ export default {
   color: var(--text-secondary);
 }
 
-/* CSS 变量定义 */
-:root {
-  --primary-color: #667eea;
-  --primary-bg: rgba(102, 126, 234, 0.1);
-  --bg-color: #ffffff;
-  --content-bg: #f8fafc;
-  --sidebar-bg: #ffffff;
-  --header-bg: #ffffff;
-  --panel-bg: #ffffff;
-  --text-color: #1f2937;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
-  --hover-bg: #f3f4f6;
-}
-
-.dark-theme {
-  --bg-color: #111827;
-  --content-bg: #1f2937;
-  --sidebar-bg: #1f2937;
-  --header-bg: #1f2937;
-  --panel-bg: #1f2937;
-  --text-color: #f9fafb;
-  --text-secondary: #9ca3af;
-  --border-color: #374151;
-  --hover-bg: #374151;
-}
+/* 重复的 CSS 变量定义已移到文件开头 */
 
 /* 响应式设计 */
 @media (max-width: 768px) {

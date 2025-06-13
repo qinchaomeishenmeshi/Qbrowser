@@ -1,7 +1,6 @@
 <template>
   <div class="scheduler">
     <div class="page-header">
-      <h1 class="page-title">定时任务</h1>
       <div class="page-actions">
         <button @click="createTask" class="btn btn-primary">
           <span>➕</span>
@@ -27,7 +26,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon running">▶️</div>
@@ -37,7 +36,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon scheduled">⏰</div>
@@ -47,7 +46,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="card stat-card">
           <div class="card-body">
             <div class="stat-icon failed">❌</div>
@@ -120,33 +119,29 @@
                   </td>
                   <td>
                     <div class="task-actions">
-                      <button 
-                        v-if="task.status === 'stopped'"
-                        @click="startTask(task.id)"
-                        class="btn btn-small btn-success"
-                        :disabled="isOperating"
-                      >
+                      <button
+                              v-if="task.status === 'stopped'"
+                              @click="startTask(task.id)"
+                              class="btn btn-small btn-success"
+                              :disabled="isOperating">
                         ▶️
                       </button>
-                      <button 
-                        v-if="task.status === 'running' || task.status === 'scheduled'"
-                        @click="stopTask(task.id)"
-                        class="btn btn-small btn-warning"
-                        :disabled="isOperating"
-                      >
+                      <button
+                              v-if="task.status === 'running' || task.status === 'scheduled'"
+                              @click="stopTask(task.id)"
+                              class="btn btn-small btn-warning"
+                              :disabled="isOperating">
                         ⏸️
                       </button>
-                      <button 
-                        @click="editTask(task)"
-                        class="btn btn-small btn-secondary"
-                      >
+                      <button
+                              @click="editTask(task)"
+                              class="btn btn-small btn-secondary">
                         ✏️
                       </button>
-                      <button 
-                        @click="deleteTask(task.id)"
-                        class="btn btn-small btn-danger"
-                        :disabled="isOperating || task.status === 'running'"
-                      >
+                      <button
+                              @click="deleteTask(task.id)"
+                              class="btn btn-small btn-danger"
+                              :disabled="isOperating || task.status === 'running'">
                         🗑️
                       </button>
                     </div>
@@ -170,24 +165,22 @@
           <form @submit.prevent="saveTask">
             <div class="form-group">
               <label class="form-label">任务名称</label>
-              <input 
-                v-model="taskForm.name" 
-                type="text" 
-                class="form-input"
-                required
-                placeholder="输入任务名称"
-              >
+              <input
+                     v-model="taskForm.name"
+                     type="text"
+                     class="form-input"
+                     required
+                     placeholder="输入任务名称">
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">任务描述</label>
-              <textarea 
-                v-model="taskForm.description" 
-                class="form-textarea"
-                placeholder="输入任务描述（可选）"
-              ></textarea>
+              <textarea
+                        v-model="taskForm.description"
+                        class="form-textarea"
+                        placeholder="输入任务描述（可选）"></textarea>
             </div>
-            
+
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">任务类型</label>
@@ -199,38 +192,36 @@
                   <option value="system_maintenance">系统维护</option>
                 </select>
               </div>
-              
+
               <div class="form-group">
                 <label class="form-label">调度规则 (Cron)</label>
-                <input 
-                  v-model="taskForm.cronExpression" 
-                  type="text" 
-                  class="form-input"
-                  required
-                  placeholder="0 */5 * * * *"
-                >
+                <input
+                       v-model="taskForm.cronExpression"
+                       type="text"
+                       class="form-input"
+                       required
+                       placeholder="0 */5 * * * *">
                 <small class="form-help">例: 0 */5 * * * * (每5分钟执行一次)</small>
               </div>
             </div>
-            
+
             <div class="form-group">
               <label class="form-label">执行脚本/命令</label>
-              <textarea 
-                v-model="taskForm.script" 
-                class="form-textarea"
-                required
-                placeholder="输入要执行的脚本或命令"
-                rows="4"
-              ></textarea>
+              <textarea
+                        v-model="taskForm.script"
+                        class="form-textarea"
+                        required
+                        placeholder="输入要执行的脚本或命令"
+                        rows="4"></textarea>
             </div>
-            
+
             <div class="form-group">
               <label class="form-checkbox">
                 <input v-model="taskForm.enabled" type="checkbox">
                 <span>启用任务</span>
               </label>
             </div>
-            
+
             <div class="form-actions">
               <button type="submit" class="btn btn-primary" :disabled="isSaving">
                 <span v-if="isSaving" class="loading"></span>
@@ -260,7 +251,7 @@ export default {
     const statusFilter = ref('');
     const showTaskModal = ref(false);
     const editingTask = ref(null);
-    
+
     // 任务表单
     const taskForm = reactive({
       name: '',
@@ -270,25 +261,25 @@ export default {
       script: '',
       enabled: true
     });
-    
+
     // 计算属性
     const runningTasks = computed(() => {
       return tasks.value.filter(t => t.status === 'running').length;
     });
-    
+
     const scheduledTasks = computed(() => {
       return tasks.value.filter(t => t.status === 'scheduled').length;
     });
-    
+
     const failedTasks = computed(() => {
       return tasks.value.filter(t => t.status === 'failed').length;
     });
-    
+
     const filteredTasks = computed(() => {
       if (!statusFilter.value) return tasks.value;
       return tasks.value.filter(t => t.status === statusFilter.value);
     });
-    
+
     // 获取任务列表
     const getTasks = async () => {
       try {
@@ -301,7 +292,7 @@ export default {
         tasks.value = [];
       }
     };
-    
+
     // 刷新任务
     const refreshTasks = async () => {
       isLoading.value = true;
@@ -311,14 +302,14 @@ export default {
         isLoading.value = false;
       }
     };
-    
+
     // 创建任务
     const createTask = () => {
       editingTask.value = null;
       resetTaskForm();
       showTaskModal.value = true;
     };
-    
+
     // 编辑任务
     const editTask = (task) => {
       editingTask.value = task;
@@ -332,7 +323,7 @@ export default {
       });
       showTaskModal.value = true;
     };
-    
+
     // 保存任务
     const saveTask = async () => {
       try {
@@ -352,7 +343,7 @@ export default {
         isSaving.value = false;
       }
     };
-    
+
     // 启动任务
     const startTask = async (taskId) => {
       try {
@@ -367,7 +358,7 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 停止任务
     const stopTask = async (taskId) => {
       try {
@@ -382,11 +373,11 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 删除任务
     const deleteTask = async (taskId) => {
       if (!confirm('确定要删除这个任务吗？')) return;
-      
+
       try {
         isOperating.value = true;
         if (window.httpAPI) {
@@ -399,14 +390,14 @@ export default {
         isOperating.value = false;
       }
     };
-    
+
     // 关闭模态框
     const closeTaskModal = () => {
       showTaskModal.value = false;
       editingTask.value = null;
       resetTaskForm();
     };
-    
+
     // 重置表单
     const resetTaskForm = () => {
       Object.assign(taskForm, {
@@ -418,7 +409,7 @@ export default {
         enabled: true
       });
     };
-    
+
     // 工具函数
     const getTaskTypeText = (type) => {
       const typeMap = {
@@ -429,7 +420,7 @@ export default {
       };
       return typeMap[type] || type;
     };
-    
+
     const getStatusText = (status) => {
       const statusMap = {
         'running': '运行中',
@@ -440,18 +431,18 @@ export default {
       };
       return statusMap[status] || status;
     };
-    
+
     const formatTime = (timestamp) => {
       if (!timestamp) return '-';
       const date = new Date(timestamp);
       return date.toLocaleString('zh-CN');
     };
-    
+
     // 生命周期
     onMounted(() => {
       refreshTasks();
     });
-    
+
     return {
       isLoading,
       isOperating,
@@ -495,12 +486,7 @@ export default {
   margin-bottom: 24px;
 }
 
-.page-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #333;
-  margin: 0;
-}
+
 
 .page-actions {
   display: flex;
