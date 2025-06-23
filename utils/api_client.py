@@ -228,7 +228,7 @@ class InternalApiClient:
         :param data: 直播大屏数据
         :return: 同步结果
         """
-        endpoint = "/aiplay/admin/eos_live/save"
+        endpoint = "/aiplay/admin/livebroadcastreviewdetail/synmessage"
         return await self.post(endpoint, data)
 
 

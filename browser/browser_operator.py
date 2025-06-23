@@ -91,7 +91,7 @@ class BrowserOperator:
                     return tab
         except Exception as e:
             print(f"查找现有tabs时出错: {e}")
-        
+
         # 没找到匹配的tab，创建新的
         print("创建新tab")
         return browser.new_tab()
@@ -122,6 +122,11 @@ class BrowserOperator:
         results = {"cookies": {}, "headers": {}, "api_results": {}}
 
         try:
+            # 如果url中没有login，则继续
+            tabs = browser.get_tabs()
+            for tab in tabs:
+                if "eos.douyin.com/livesite/login" not in tab.url:
+                    continue
 
             tab = self.get_or_create_tab(browser, url)
             # 确保页面加载完成
