@@ -12,7 +12,7 @@ class InternalApiClient:
     """
 
     def __init__(
-        self, base_url: str = "http://113.57.110.35:20379/dev-api", timeout: int = 60
+        self, base_url: str = "http://113.57.110.35:13276/dev-api", timeout: int = 60
     ):
         """
         初始化API客户端
