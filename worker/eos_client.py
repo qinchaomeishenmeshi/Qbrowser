@@ -560,13 +560,19 @@ async def get_key_index_data_for_live_rooms(response_json_data):
                         print("other_data:", other_data)
                         print("conversion_funnel_data:", conversion_funnel_data)
                         print("live_portrait_data:", live_portrait_data)
+                        conversion_funnel_data_jsonstr = json.dumps(
+                            conversion_funnel_data, ensure_ascii=False
+                        )
+                        live_portrait_data_jsonstr = json.dumps(
+                            live_portrait_data, ensure_ascii=False
+                        )
                         # 调用保存方法
                         save_success = await save_key_index_data_fn(
                             room_id,
                             key_index_data,
                             other_data,
-                            conversion_funnel_data,
-                            live_portrait_data,
+                            conversion_funnel_data_jsonstr,
+                            live_portrait_data_jsonstr,
                         )
                         if save_success:
                             logger.info(f"直播间 {room_id} 大屏key_index数据保存成功")

@@ -30,7 +30,7 @@
 			"hour": "10,14",
 			"day": "*",
 			"month": "*",
-			"day_of_week": "?"
+			"day_of_week": "*"
 		},
 		"target_function": "get_live_room_list_main",
 		"function_params": {},
@@ -50,7 +50,7 @@
 			"hour": "9,14",
 			"day": "*",
 			"month": "*",
-			"day_of_week": "?"
+			"day_of_week": "*"
 		},
 		"target_function": "get_replay_punish_list_main",
 		"function_params": {},
