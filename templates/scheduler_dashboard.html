@@ -463,7 +463,7 @@
 <body>
     <!-- Toast 容器 -->
     <div class="toast-container" id="toast-container"></div>
-    
+
     <div class="container">
         <div class="header">
             <h1>🕐 定时任务管理面板</h1>
@@ -645,7 +645,7 @@
             const container = document.getElementById('toast-container');
             const toastClass = type === 'success' ? 'toast-success' : 'toast-error';
             const toastId = 'toast-' + Date.now();
-            
+
             // 创建 toast 元素
             const toast = document.createElement('div');
             toast.className = `toast ${toastClass}`;
@@ -654,28 +654,28 @@
                 <div class="toast-content">${message}</div>
                 <button class="toast-close" onclick="closeToast('${toastId}')">&times;</button>
             `;
-            
+
             // 添加到容器
             container.appendChild(toast);
-            
+
             // 触发显示动画
             setTimeout(() => {
                 toast.classList.add('show');
             }, 10);
-            
+
             // 自动隐藏
             setTimeout(() => {
                 hideToast(toastId);
             }, 5000);
         }
-        
+
         // 隐藏 Toast
         function hideToast(toastId) {
             const toast = document.getElementById(toastId);
             if (toast) {
                 toast.classList.remove('show');
                 toast.classList.add('hide');
-                
+
                 // 动画结束后移除元素
                 setTimeout(() => {
                     if (toast.parentNode) {
@@ -684,7 +684,7 @@
                 }, 300);
             }
         }
-        
+
         // 关闭 Toast
         function closeToast(toastId) {
             hideToast(toastId);
@@ -956,7 +956,7 @@
             try {
                 console.log('autoFillDeviceList');
 
-                const response = await fetch('/active_instances');
+                const response = await fetch('/api/active_instances');
                 console.log('response', response);
 
                 const data = await response.json();
