@@ -83,6 +83,13 @@ class EosClient:
         self.live_key_index_url = (
             "https://eos.douyin.com/life/api/live_screen/v4/key_index"
         )
+        self.conversion_funnel_url = (
+            "https://eos.douyin.com/life/api/live_screen/v4/conversion_funnel"
+        )
+        # https://eos.douyin.com/life/api/live_screen/v4/portrait
+        self.live_portrait_url = (
+            "https://eos.douyin.com/life/api/live_screen/v4/portrait"
+        )
 
     @staticmethod
     async def _get_cookies_for_user(user_id: str, site_key="eos") -> Dict[str, str]:
@@ -327,6 +334,99 @@ class EosClient:
             logger.error(f"获取直播间大屏详细数据失败: {e}")
             return {"code": -1, "msg": f"获取直播间大屏详细数据失败: {str(e)}"}
 
+    async def get_conversion_funnel(self, user_id: str, room_id: str):
+        """
+        获取直播间大屏的详细数据-转化分析漏斗
+        """
+        try:
+            cookies = await self._get_cookies_for_user(user_id)
+            headers = await self._get_headers_for_user(user_id)
+
+            # 设置特定的headers，参考live.py
+            headers.update(
+                {
+                    "content-type": "application/json",
+                    "origin": "https://eos.douyin.com",
+                    "referer": f"https://eos.douyin.com/dp/liveScreen?room_id={room_id}&enter_from=eos_live_history_page",
+                }
+            )
+
+            # 构造请求数据，参考live.py
+            json_data = {
+                "channel": "全部",
+                "room_id": room_id,
+            }
+
+            logger.info(f"发送请求：{self.conversion_funnel_url} room_id={room_id}")
+            logger.info(f"请求数据: {json_data}")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.conversion_funnel_url,
+                    json=json_data,
+                    cookies=cookies,
+                    headers=headers,
+                ) as resp:
+                    logger.info(f"响应状态码: {resp.status}")
+                    if resp.status != 200:
+                        response_text = await resp.text()
+                        logger.error(f"请求失败，响应内容: {response_text}")
+                    resp.raise_for_status()
+                    result = await resp.json()
+                    logger.info(
+                        f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
+                    )
+                    return result
+
+        except Exception as e:
+            logger.error(f"获取直播间大屏详细数据失败: {e}")
+            return {"code": -1, "msg": f"获取直播间大屏详细数据失败: {str(e)}"}
+
+    async def get_live_portrait(self, user_id: str, room_id: str):
+        """
+        获取直播间大屏的详细数据-用户画像
+        """
+        try:
+            cookies = await self._get_cookies_for_user(user_id)
+            headers = await self._get_headers_for_user(user_id)
+
+            # 设置特定的headers，参考live.py
+            headers.update(
+                {
+                    "content-type": "application/json",
+                    "origin": "https://eos.douyin.com",
+                    "referer": f"https://eos.douyin.com/dp/liveScreen?room_id={room_id}&enter_from=eos_live_history_page",
+                }
+            )
+
+            # 构造请求数据，参考live.py
+            json_data = {"calculate": "all", "room_id": room_id, "type": "order"}
+
+            logger.info(f"发送请求：{self.live_portrait_url} room_id={room_id}")
+            logger.info(f"请求数据: {json_data}")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    self.live_portrait_url,
+                    json=json_data,
+                    cookies=cookies,
+                    headers=headers,
+                ) as resp:
+                    logger.info(f"响应状态码: {resp.status}")
+                    if resp.status != 200:
+                        response_text = await resp.text()
+                        logger.error(f"请求失败，响应内容: {response_text}")
+                    resp.raise_for_status()
+                    result = await resp.json()
+                    logger.info(
+                        f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
+                    )
+                    return result
+
+        except Exception as e:
+            logger.error(f"获取直播间大屏详细数据失败: {e}")
+            return {"code": -1, "msg": f"获取直播间大屏详细数据失败: {str(e)}"}
+
 
 async def save_live_room_list_fn(data):
     """
@@ -361,7 +461,11 @@ async def save_live_room_list_fn(data):
 
 
 async def save_key_index_data_fn(
-    live_id: str, key_index_data: dict, other_data: str
+    live_id: str,
+    key_index_data: dict,
+    other_data: str,
+    conversion_funnel_data: str,
+    live_portrait_data: str,
 ) -> bool:
     """
     保存直播间大屏key_index数据到后端系统
@@ -378,10 +482,12 @@ async def save_key_index_data_fn(
             "live_id": live_id,
             "key_index_data": key_index_data,
             "other_data": other_data,
+            "conversion_funnel_data": conversion_funnel_data,
+            "live_portrait_data": live_portrait_data,
         }
 
         logger.info(f"保存直播间大屏key_index数据: live_id={live_id}")
-        logger.debug(f"保存的数据内容: {post_data}")
+        logger.debug(f"save_key_index_data_fn保存的数据内容: {post_data}")
 
         # 调用后端接口同步直播间大屏key_index数据
         result = await default_api_client.sync_live_key_index_data(post_data)
@@ -430,9 +536,9 @@ async def get_key_index_data_for_live_rooms(response_json_data):
                 )
 
                 # 调用 get_live_key_index_main 获取大屏明细
-                key_index_request = {"userId": user_id, "roomId": room_id}
+                request_data = {"userId": user_id, "roomId": room_id}
 
-                key_index_response = await get_live_key_index_main(key_index_request)
+                key_index_response = await get_live_key_index_main(request_data)
                 logger.info(f"get_live_key_index_main 响应数据: {key_index_response}")
                 if key_index_response.get("status") == "success":
                     logger.info(
@@ -444,11 +550,23 @@ async def get_key_index_data_for_live_rooms(response_json_data):
                     if response_data and isinstance(response_data, dict):
                         key_index_data = response_data.get("data", {})
                         other_data = json.dumps(response_data, ensure_ascii=False)
+                        conversion_funnel_data = await get_conversion_funnel_data_main(
+                            request_data
+                        )
+                        live_portrait_data = await get_live_portrait_data_main(
+                            request_data
+                        )
                         print("key_index_data:", key_index_data)
                         print("other_data:", other_data)
+                        print("conversion_funnel_data:", conversion_funnel_data)
+                        print("live_portrait_data:", live_portrait_data)
                         # 调用保存方法
                         save_success = await save_key_index_data_fn(
-                            room_id, key_index_data, other_data
+                            room_id,
+                            key_index_data,
+                            other_data,
+                            conversion_funnel_data,
+                            live_portrait_data,
                         )
                         if save_success:
                             logger.info(f"直播间 {room_id} 大屏key_index数据保存成功")
@@ -605,6 +723,54 @@ async def get_live_key_index_main(data) -> PublicResponse:
 
     client = EosClient()
     response_json_data = await client.get_live_key_index(user_id, room_id)
+
+    logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
+    return PublicResponse.success(data=response_json_data, message="操作成功")
+
+
+async def get_conversion_funnel_data_main(data) -> PublicResponse:
+    """EOS直播间大屏明细-转化分析入口"""
+    logger.info(f"EOS直播间大屏明细入口: {data}")
+
+    user_id = data.get("userId")
+    room_id = data.get("roomId")
+
+    if not user_id or not room_id:
+        return PublicResponse.error(message="缺少必要参数 userId 或 roomId")
+
+    logger.info("准备抓取cookies")
+    await BrowserOperator().attach_get_cookies(user_ids=[user_id], site_key="eos")
+    logger.info("抓取cookies完成")
+
+    # 每个直播间处理完成后等待一段时间，降低API调用频率
+    await asyncio.sleep(2)  # 设置2秒的间隔
+
+    client = EosClient()
+    response_json_data = await client.get_conversion_funnel(user_id, room_id)
+
+    logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
+    return PublicResponse.success(data=response_json_data, message="操作成功")
+
+
+async def get_live_portrait_data_main(data) -> PublicResponse:
+    """EOS直播间大屏明细-用户画像入口"""
+    logger.info(f"EOS直播间大屏明细入口: {data}")
+
+    user_id = data.get("userId")
+    room_id = data.get("roomId")
+
+    if not user_id or not room_id:
+        return PublicResponse.error(message="缺少必要参数 userId 或 roomId")
+
+    logger.info("准备抓取cookies")
+    await BrowserOperator().attach_get_cookies(user_ids=[user_id], site_key="eos")
+    logger.info("抓取cookies完成")
+
+    # 每个直播间处理完成后等待一段时间，降低API调用频率
+    await asyncio.sleep(2)  # 设置2秒的间隔
+
+    client = EosClient()
+    response_json_data = await client.get_live_portrait(user_id, room_id)
 
     logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
     return PublicResponse.success(data=response_json_data, message="操作成功")
