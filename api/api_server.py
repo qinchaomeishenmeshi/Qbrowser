@@ -65,7 +65,7 @@ async def get_browser_status():
         "status": "running",
         "total_instances": count,
         "active_instances": active_count,
-        "message": "Browser service is running"
+        "message": "Browser service is running",
     }
 
 
@@ -75,38 +75,28 @@ async def get_extensions_status():
     return {
         "status": "running",
         "loaded_extensions": [],
-        "message": "Extensions service is running"
+        "message": "Extensions service is running",
     }
 
 
 @api_router.get("/scheduler/recent")
 async def get_recent_tasks():
     """获取最近的任务"""
-    return {
-        "tasks": [],
-        "message": "No recent tasks"
-    }
+    return {"tasks": [], "message": "No recent tasks"}
 
 
 @api_router.get("/system/logs")
 async def get_system_logs(limit: int = 10):
     """获取系统日志"""
-    return {
-        "logs": [],
-        "message": "No logs available"
-    }
+    return {"logs": [], "message": "No logs available"}
 
 
 @api_router.get("/settings/ui")
 async def get_ui_settings():
     """获取UI设置"""
     return {
-        "settings": {
-            "theme": "light",
-            "language": "zh-CN",
-            "sidebarCollapsed": False
-        },
-        "message": "UI settings loaded successfully"
+        "settings": {"theme": "light", "language": "zh-CN", "sidebarCollapsed": False},
+        "message": "UI settings loaded successfully",
     }
 
 
@@ -115,10 +105,7 @@ async def save_ui_settings(settings: dict):
     """保存UI设置"""
     # 这里可以将设置保存到数据库或文件
     # 目前只是简单返回成功消息
-    return {
-        "success": True,
-        "message": "UI settings saved successfully"
-    }
+    return {"success": True, "message": "UI settings saved successfully"}
 
 
 @api_router.get("/active_instances")
@@ -126,15 +113,15 @@ async def get_active_instances():
     """获取所有激活的浏览器实例"""
     # 从 browser_store 获取所有浏览器管理器实例
     managers = await browser_store.get_all()
-    
+
     # 筛选出正在运行的浏览器实例的 user_id
     active_devices = [manager.user_id for manager in managers if manager.is_running]
-    
+
     logger.info(f"获取到 {len(active_devices)} 个活跃浏览器实例: {active_devices}")
     return {
         "status": "success",
         "active_count": len(active_devices),
-        "active_instances": active_devices
+        "active_instances": active_devices,
     }
 
 
@@ -192,7 +179,7 @@ async def launch_browser(user_id: str, url: str = "") -> dict:
 
 @api_router.post("/start/{user_id}")
 async def start_browser(
-        user_id: str, url: str = Query(default="", description="要打开的页面url，可选")
+    user_id: str, url: str = Query(default="", description="要打开的页面url，可选")
 ):
     result = await launch_browser(user_id, url)
     if result["status"] in ("fail", "error"):
@@ -208,16 +195,16 @@ async def stop_all():
 
 @api_router.post("/start_all")
 async def start_all_browsers(
-        user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
-        url: str = Query(default="", description="要打开的页面url，可选"),
+    user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
+    url: str = Query(default="", description="要打开的页面url，可选"),
 ):
     results = [await launch_browser(user_id, url) for user_id in user_ids]
     return {"results": results}
 
 
 app.include_router(api_router, prefix="/api")  # 浏览器管理接口
-app.include_router(business_router, prefix="/api")  # 业务接口
-app.include_router(scheduler_router, prefix="/api")  # 定时任务管理接口
+app.include_router(business_router)  # 业务接口
+app.include_router(scheduler_router)  # 定时任务管理接口
 
 
 # 定时任务管理界面路由
