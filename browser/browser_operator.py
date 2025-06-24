@@ -125,8 +125,8 @@ class BrowserOperator:
             # 如果url中没有login，则继续
             tabs = browser.get_tabs()
             for tab in tabs:
-                if "eos.douyin.com/livesite/login" not in tab.url:
-                    continue
+                if "eos.douyin.com/livesite/login" in tab.url:
+                    raise Exception("EOS未登录，操作失败")
 
             tab = self.get_or_create_tab(browser, url)
             # 确保页面加载完成
