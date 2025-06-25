@@ -1,0 +1,25 @@
+{
+  "keywords": [
+    "绿茶",
+    "红茶",
+    "白茶",
+    "黑茶",
+    "乌龙茶",
+    "泡茶",
+    "采茶",
+    "茶园",
+    "女生街拍",
+    "春天",
+    "夏天",
+    "冬天",
+    "秋天"
+  ],
+  "effect_type": 5,
+  "count": 50,
+  "save_full_result": true,
+  "save_video_urls": true,
+  "download_videos": true,
+  "max_workers": 5,
+  "save_dir": "data/results/jianying",
+  "video_dir": "data/video"
+}
