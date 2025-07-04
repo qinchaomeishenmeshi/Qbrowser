@@ -26,42 +26,41 @@ DEFAULT_CONFIG = {
     "max_workers": 5,                   # 最大并发下载数
     "save_dir": "data/results/jianying", # 结果保存目录
     "video_dir": "data/video",          # 视频保存目录
-    "min_resolution": "1080p",          # 最低视频分辨率要求
     "cookies": {                        # 默认cookies配置
-            "store-region": "cn-hb",
-            "store-region-src": "uid",
-            "n_mh": "8KAIYd9nMFxwSVPpy4XEJKhGL0nyfw_35Nxkilxelck",
-            "passport_csrf_token": "311c279e13e613ecc67ce486d0ba89fc",
-            "passport_csrf_token_default": "311c279e13e613ecc67ce486d0ba89fc",
-            "sid_guard": "fd9ebaee83632608f1ea217f78e4e558%7C1747967643%7C5184000%7CTue%2C+22-Jul-2025+02%3A34%3A03+GMT",
-            "uid_tt": "10740e0db45c09735197a4ace7e23f20",
-            "uid_tt_ss": "10740e0db45c09735197a4ace7e23f20",
-            "sid_tt": "fd9ebaee83632608f1ea217f78e4e558",
-            "sessionid": "fd9ebaee83632608f1ea217f78e4e558",
-            "sessionid_ss": "fd9ebaee83632608f1ea217f78e4e558",
-            "is_staff_user": "false",
-            "sid_ucp_v1": "1.0.0-KDMxMTBlNmMzOTA5NjZlNDkzNzNjN2JjNmRiMTM2MmEyM2ZmMTgxZmYKHwiD99C91czNBBCbvb_BBhifrR8gDDCQ-NWyBjgIQCYaAmxmIiBmZDllYmFlZTgzNjMyNjA4ZjFlYTIxN2Y3OGU0ZTU1OA",
-            "ssid_ucp_v1": "1.0.0-KDMxMTBlNmMzOTA5NjZlNDkzNzNjN2JjNmRiMTM2MmEyM2ZmMTgxZmYKHwiD99C91czNBBCbvb_BBhifrR8gDDCQ-NWyBjgIQCYaAmxmIiBmZDllYmFlZTgzNjMyNjA4ZjFlYTIxN2Y3OGU0ZTU1OA",
-            "_uetvid": "27f18f50f8ac11efafd0f56303409b7b",
-            "odin_tt": "fbfde72c09ee8e595b07dcb2ee27f68f31e09d7d61b840ff3a7bb4dd065e3689e9537ceca06b0ec148b103f9f9c5e454d1ae7de4f9b7c2aef70b43499d3a54bc",
-            "_tea_web_id": "7397668772687349298",
-            "s_v_web_id": "verify_mcburg40_nEP4SLZm_jTgg_4ePs_AD3M_38lbBBofbVEm",
-            "COOKIE_CONSENT_PROMPT_CONFIG": "{%22status%22:1%2C%22settings%22:{%22firstPartyAnalytics%22:true%2C%22GoogleAnalytics%22:true}%2C%22updatedTime%22:1750849795438}",
+        "store-region": "cn-hb",
+        "store-region-src": "uid",
+        "n_mh": "8KAIYd9nMFxwSVPpy4XEJKhGL0nyfw_35Nxkilxelck",
+        "passport_csrf_token": "311c279e13e613ecc67ce486d0ba89fc",
+        "passport_csrf_token_default": "311c279e13e613ecc67ce486d0ba89fc",
+        "sid_guard": "fd9ebaee83632608f1ea217f78e4e558%7C1747967643%7C5184000%7CTue%2C+22-Jul-2025+02%3A34%3A03+GMT",
+        "uid_tt": "10740e0db45c09735197a4ace7e23f20",
+        "uid_tt_ss": "10740e0db45c09735197a4ace7e23f20",
+        "sid_tt": "fd9ebaee83632608f1ea217f78e4e558",
+        "sessionid": "fd9ebaee83632608f1ea217f78e4e558",
+        "sessionid_ss": "fd9ebaee83632608f1ea217f78e4e558",
+        "is_staff_user": "false",
+        "sid_ucp_v1": "1.0.0-KDMxMTBlNmMzOTA5NjZlNDkzNzNjN2JjNmRiMTM2MmEyM2ZmMTgxZmYKHwiD99C91czNBBCbvb_BBhifrR8gDDCQ-NWyBjgIQCYaAmxmIiBmZDllYmFlZTgzNjMyNjA4ZjFlYTIxN2Y3OGU0ZTU1OA",
+        "ssid_ucp_v1": "1.0.0-KDMxMTBlNmMzOTA5NjZlNDkzNzNjN2JjNmRiMTM2MmEyM2ZmMTgxZmYKHwiD99C91czNBBCbvb_BBhifrR8gDDCQ-NWyBjgIQCYaAmxmIiBmZDllYmFlZTgzNjMyNjA4ZjFlYTIxN2Y3OGU0ZTU1OA",
+        "_uetvid": "27f18f50f8ac11efafd0f56303409b7b",
+        "odin_tt": "fbfde72c09ee8e595b07dcb2ee27f68f31e09d7d61b840ff3a7bb4dd065e3689e9537ceca06b0ec148b103f9f9c5e454d1ae7de4f9b7c2aef70b43499d3a54bc",
+        "_tea_web_id": "7397668772687349298",
+        "s_v_web_id": "verify_mcburg40_nEP4SLZm_jTgg_4ePs_AD3M_38lbBBofbVEm",
+        "COOKIE_CONSENT_PROMPT_CONFIG": "{%22status%22:1%2C%22settings%22:{%22firstPartyAnalytics%22:true%2C%22GoogleAnalytics%22:true}%2C%22updatedTime%22:1750849795438}",
         "ttwid": "1|hMs1clJXG22twhi8wRvpoUzyeaPmKoVyCJxSeR6RhvM|1750849800|7057d47a4f646231d5082ba5d30f95e04f0c2d70bcb96a5ee3f4383fdcd00dab"
     },
     "headers": {                        # 默认headers配置
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "zh-CN,zh;q=0.9",
-            "content-type": "application/json",
-            "origin": "https://www.jianying.com",
-            "priority": "u=1, i",
-            "referer": "https://www.jianying.com/ai-creator/storyboard/23608377858?workspaceId=7397267851037687849&spaceId=7373936382663721254&draftId=881FB5BA-F5DF-4C00-B28C-52E87BAFA205",
-            "sec-ch-ua": '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": '"macOS"',
-            "sec-fetch-dest": "empty",
-            "sec-fetch-mode": "cors",
-            "sec-fetch-site": "same-origin",
+        "accept": "application/json, text/plain, */*",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "content-type": "application/json",
+        "origin": "https://www.jianying.com",
+        "priority": "u=1, i",
+        "referer": "https://www.jianying.com/ai-creator/storyboard/23608377858?workspaceId=7397267851037687849&spaceId=7373936382663721254&draftId=881FB5BA-F5DF-4C00-B28C-52E87BAFA205",
+        "sec-ch-ua": '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
     }
 }
@@ -95,17 +94,17 @@ class JianyingEffectSearcher:
         
         # 基本请求参数
         self.params = {
-    "aid": "3704",
-    "version_name": "18.1.0",
-    "version_code": "11.0.0",
-    "sdk_version": "18.1.0",
-    "effect_sdk_version": "18.1.0",
-    "device_platform": "web",
-    "language": "zh-Hans",
-    "device_type": "web",
-    "channel": "online",
-}
-
+            "aid": "3704",
+            "version_name": "18.1.0",
+            "version_code": "11.0.0",
+            "sdk_version": "18.1.0",
+            "effect_sdk_version": "18.1.0",
+            "device_platform": "web",
+            "language": "zh-Hans",
+            "device_type": "web",
+            "channel": "online",
+        }
+        
     def update_cookies(self, new_cookies: Dict[str, str]) -> None:
         """
         更新cookies配置
@@ -452,37 +451,6 @@ class JianyingEffectSearcher:
             return "unnamed_video"
         return sanitized.strip()
 
-    def is_hd_video(self, video_info: Dict[str, Any]) -> bool:
-        """
-        判断视频是否为高清（1080p及以上）
-        
-        Args:
-            video_info: 视频信息
-            
-        Returns:
-            是否为高清视频
-        """
-        # 从配置中获取最低分辨率要求
-        min_resolution = self.config.get("min_resolution", "1080p")
-        
-        # 获取视频分辨率信息
-        definition = video_info.get('definition', '')
-        height = video_info.get('height', 0)
-        width = video_info.get('width', 0)
-        
-        # 根据definition字段判断
-        if definition:
-            if min_resolution == "1080p":
-                return "1080" in definition or "2K" in definition or "4K" in definition or "HD" in definition.upper()
-            elif min_resolution == "720p":
-                return "720" in definition or "1080" in definition or "2K" in definition or "4K" in definition or "HD" in definition.upper()
-        
-        # 根据高度判断
-        if height >= 1080:
-            return True
-        
-        return False
-        
     def download_video(self, video_info: Dict[str, Any], keyword: str, index: int) -> str:
         """
         下载单个视频
@@ -501,11 +469,6 @@ class JianyingEffectSearcher:
             Exception: 其他异常
         """
         try:
-            # 检查分辨率
-            if not self.is_hd_video(video_info):
-                print(f"视频 {index} 分辨率低于要求(1080p)，跳过下载")
-                return ""
-                
             # 获取视频URL
             video_url = video_info.get('video_url')
             if not video_url:
@@ -591,11 +554,6 @@ class JianyingEffectSearcher:
             match = re.search(r'jianying_video_urls_(.+?)_\d+', filename)
             keyword = match.group(1) if match else "unknown"
             
-            # 过滤符合分辨率要求的视频
-            min_resolution = self.config.get("min_resolution", "1080p")
-            hd_video_count = sum(1 for video in video_urls if self.is_hd_video(video))
-            print(f"找到 {hd_video_count}/{len(video_urls)} 个符合分辨率要求({min_resolution}+)的视频")
-            
             downloaded_files = []
             
             # 使用线程池并发下载
@@ -616,7 +574,7 @@ class JianyingEffectSearcher:
                     except Exception as e:
                         print(f"下载视频 {index} 失败: {e}")
             
-            print(f"共下载 {len(downloaded_files)}/{hd_video_count} 个符合条件的视频")
+            print(f"共下载 {len(downloaded_files)}/{len(video_urls)} 个视频")
             return downloaded_files
         
         except IOError as e:
@@ -826,8 +784,6 @@ def main():
         parser.add_argument('--update-cookies', action='store_true', help='更新cookies并保存到配置文件')
         parser.add_argument('--cookies-file', help='从JSON文件加载cookies')
         parser.add_argument('--save-config', action='store_true', help='保存当前配置到文件')
-        parser.add_argument('--min-resolution', choices=['720p', '1080p', '2K', '4K'], default='1080p', 
-                          help='最低视频分辨率要求 (默认: 1080p)')
         
         # 添加一个专门的参数来显示配置示例
         parser.add_argument('--show-config-example', action='store_true', help='显示配置文件格式示例')
@@ -842,11 +798,6 @@ def main():
 
         # 加载配置
         config = load_config(args.config)
-        
-        # 更新配置中的分辨率设置
-        if args.min_resolution:
-            config["min_resolution"] = args.min_resolution
-            
         searcher = JianyingEffectSearcher(config)
         
         # 更新cookies
