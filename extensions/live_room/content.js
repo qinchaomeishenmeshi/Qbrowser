@@ -335,7 +335,7 @@ async function sendProductsListToBackground() {
         ...product,
         product_info: product.product_info?.product_id
           ? product.product_info
-          : {},
+          : undefined,
         fromType: "5",
         sort: index + 1,
       };
