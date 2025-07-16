@@ -281,6 +281,12 @@ async function getCommodityDetail(productId) {
     .then((response) => response.json())
     .then((data) => {
       console.log("获取commodityDetail信息成功:", data);
+      if (!data?.product_info?.product_id) {
+        console.error(
+          "获取commodityDetail信息失败+++++++++" + JSON.stringify(data)
+        );
+        return;
+      }
       // 找到对应的商品 ，然后更新productsList的数据
       const product = productsList.find(
         (product) => product.product_base_info.product_id === productId
@@ -307,6 +313,12 @@ async function getProductDetail(productId) {
     .then((response) => response.json())
     .then((data) => {
       console.log("获取商品详情成功:", data);
+      if (!data?.product_info?.product_id) {
+        console.error(
+          "获取商品详情信息失败+++++++++" + JSON.stringify(data)
+        );
+        return;
+      }
       if (!data.product_info?.product_id) {
         console.error("获取商品详情失败+++++++++" + JSON.stringify(data));
         return;
