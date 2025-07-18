@@ -42,6 +42,8 @@ const API = {
     createPlan: '/aiplay/admin/LivePlan/createPlan',
     // 直播计划同步回混剪系统
     saveProductListApi: '/aiplay/ai/interaction/saveProductList',
+    // 百应直播计划同步回混剪系统
+    saveEcProductListApi: '/aiplay/ai/interaction/saveEcProductList',
     // 定时获取主动评论的数据
     pullAdminComment: '/vediows/admin/livestreamingcomments/pullAdminComment',
     // 保存违规信息

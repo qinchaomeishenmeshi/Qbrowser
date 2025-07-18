@@ -95,3 +95,43 @@ function parseJSON(jsonString = '', defaultValue = null) {
         return defaultValue
     }
 }
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 获取commodityDetail信息
+async function getCommodityDetail(productId, productsList) {
+  // 添加随机延时（0-2秒）
+  await delay(Math.random() * 2000);
+  const baseUrl = `https://eos.douyin.com/life/alliance/v2/goods/product/commodity/detail/get?from_type=5&product_id=${productId}`;
+  return fetch(baseUrl)
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("获取commodityDetail信息成功:", data);
+
+      return data;
+    })
+    .catch((error) => {
+      console.error("获取commodityDetail信息失败:", error);
+      window.alert("获取commodityDetail信息失败" + JSON.stringify(error));
+    });
+}
+
+// 获取商品详情数据
+async function getProductDetail(productId, productsList) {
+  window.scrollBy({
+    top: Math.random() * 100,
+    behavior: "smooth",
+  });
+  const baseUrl = `https://eos.douyin.com/life/alliance/v2/goods/product/detail/get?from_type=5&image_size=%7B%22width%22:750%7D&product_id=${productId}`;
+  return fetch(baseUrl)
+    .then((response) => response.json())
+    .then((data) => {
+      console.log("获取商品详情成功:", data);
+
+      return data;
+    })
+    .catch((error) => {
+      console.error("获取商品详情失败:", error);
+      window.alert("获取商品详情失败" + JSON.stringify(error));
+    });
+}

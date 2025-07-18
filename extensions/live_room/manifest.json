@@ -8,8 +8,19 @@
     "tabs",
     "scripting",
     "alarms",
-    "activeTab"
+    "activeTab",
+    "cookies",
+    "declarativeNetRequest"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
   "host_permissions": [
     "https://*.douyin.com/*",
     "https://hj.qwang.com.cn/*",
@@ -26,10 +37,11 @@
         "https://*.jinritemai.com/*"
       ],
       "js": [
-        "content.js",
-        "utils/dom.js",
         "utils/request.js",
-        "utils/setting.js"
+        "utils/setting.js",
+        "utils/dom.js",
+        "utils/dataProcessor.js",
+        "content.js"
       ],
       "run_at": "document_start",
       "word": "MAIN"

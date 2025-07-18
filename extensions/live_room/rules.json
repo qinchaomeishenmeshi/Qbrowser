@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://haohuo.jinritemai.com"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "https://haohuo.jinritemai.com/aweme/v2/shop/promotion/pack/detail/",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  }
+]
