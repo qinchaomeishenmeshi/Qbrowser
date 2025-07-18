@@ -86,6 +86,7 @@ function formatProductDetails(detailData) {
   );
 
   return {
+    detail: detailData.detail_info,
     config: formatDetailConfig,
     info: formatDetailInfo,
   };

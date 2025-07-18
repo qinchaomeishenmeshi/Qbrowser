@@ -199,89 +199,89 @@ function setupMixedCutSyncButton() {
             type: "info",
           });
 
-          // const productPromises = productList.map(async (product) => {
-          //   const promotionId = product.product_id;
-          //   if (!promotionId) return;
+          const productPromises = productList.map(async (product) => {
+            const promotionId = product.product_id;
+            if (!promotionId) return;
 
-          //   console.log(`正在处理商品 ID: ${promotionId}`);
+            console.log(`正在处理商品 ID: ${promotionId}`);
 
-          //   const url = `https://haohuo.jinritemai.com/aweme/v2/shop/promotion/pack/detail/?is_h5=1&origin_type=pc_buyin_selection_decision`;
-          //   const UserAgent =
-          //     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-          //   const headers = {
-          //     Accept: "application/json, text/plain, */*",
-          //     "Content-Type": "application/x-www-form-urlencoded",
-          //     Referer: `https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=${promotionId}&origin_type=pc_buyin_selection_decision`,
-          //     "User-Agent": UserAgent,
-          //   };
-          //   const body = `promotion_id=${promotionId}&enter_from=&meta_param=&is_h5=1`;
+            const url = `https://haohuo.jinritemai.com/aweme/v2/shop/promotion/pack/detail/?is_h5=1&origin_type=pc_buyin_selection_decision`;
+            const UserAgent =
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+            const headers = {
+              Accept: "application/json, text/plain, */*",
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: `https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=${promotionId}&origin_type=pc_buyin_selection_decision`,
+              "User-Agent": UserAgent,
+            };
+            const body = `promotion_id=${promotionId}&enter_from=&meta_param=&is_h5=1`;
 
-          //   try {
-          //     const responseData = await new Promise((resolve, reject) => {
-          //       chrome.runtime.sendMessage(
-          //         {
-          //           action: "FETCH_PRODUCT_DETAIL",
-          //           data: {
-          //             url,
-          //             options: {
-          //               method: "POST",
-          //               headers,
-          //               body,
-          //               credentials: "include",
-          //             },
-          //           },
-          //         },
-          //         (response) => {
-          //           if (chrome.runtime.lastError) {
-          //             return reject(chrome.runtime.lastError);
-          //           }
-          //           if (response && response.success) {
-          //             resolve(response.data);
-          //           } else {
-          //             reject(
-          //               new Error(
-          //                 response?.error ||
-          //                   "Background script returned an error."
-          //               )
-          //             );
-          //           }
-          //         }
-          //       );
-          //     });
-          //     console.log(
-          //       "Product detail fetched via background:",
-          //       responseData
-          //     );
+            try {
+              const responseData = await new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage(
+                  {
+                    action: "FETCH_PRODUCT_DETAIL",
+                    data: {
+                      url,
+                      options: {
+                        method: "POST",
+                        headers,
+                        body,
+                        credentials: "include",
+                      },
+                    },
+                  },
+                  (response) => {
+                    if (chrome.runtime.lastError) {
+                      return reject(chrome.runtime.lastError);
+                    }
+                    if (response && response.success) {
+                      resolve(response.data);
+                    } else {
+                      reject(
+                        new Error(
+                          response?.error ||
+                            "Background script returned an error."
+                        )
+                      );
+                    }
+                  }
+                );
+              });
+              console.log(
+                "Product detail fetched via background:",
+                responseData
+              );
 
-          //     if (responseData.status_code === 0) {
-          //       console.log(
-          //         `商品 ${promotionId} 同步成功:`,
-          //         responseData.detail_info
-          //       );
-          //       const formattedData = formatProductDetails(responseData);
-          //       if (formattedData) {
-          //         console.log("formattedData:", formattedData);
+              if (responseData.status_code === 0) {
+                console.log(
+                  `商品 ${promotionId} 同步成功:`,
+                  responseData.detail_info
+                );
+                const formattedData = formatProductDetails(responseData);
+                if (formattedData) {
+                  console.log("formattedData:", formattedData);
+                  product.detailInfo = JSON.stringify(formattedData.detail);
+                  product.configStr = formattedData.config.join(",");
+                  product.infoStr = formattedData.info.join(",");
+                  product.fromType = "7";
+                } else {
+                  console.warn(
+                    `商品 ${promotionId} 的详情数据格式不正确，无法格式化。`
+                  );
+                }
+              } else {
+                throw new Error(
+                  responseData.error || `获取商品 ${promotionId} 详情失败`
+                );
+              }
+            } catch (error) {
+              console.error(`商品 ${promotionId} 同步失败:`, error);
+              createTopTips(`商品 ${promotionId} 同步失败`, { type: "error" });
+            }
+          });
 
-          //         product.configStr = formattedData.config.join(",");
-          //         product.infoStr = formattedData.info.join(",");
-          //         product.fromType = "7";
-          //       } else {
-          //         console.warn(
-          //           `商品 ${promotionId} 的详情数据格式不正确，无法格式化。`
-          //         );
-          //       }
-          //     } else {
-          //       throw new Error(
-          //         responseData.error || `获取商品 ${promotionId} 详情失败`
-          //       );
-          //     }
-          //   } catch (error) {
-          //     console.error(`商品 ${promotionId} 同步失败:`, error);
-          //     createTopTips(`商品 ${promotionId} 同步失败`, { type: "error" });
-          //   }
-          // });
-
-          // await Promise.allSettled(productPromises);
+          await Promise.allSettled(productPromises);
 
           // 等所有商品处理结束后 获取最终productList
           console.log("所有商品处理完成，最终的 productList:", productList);
