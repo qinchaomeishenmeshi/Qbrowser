@@ -1,0 +1,79 @@
+{
+  "manifest_version": 3,
+  "name": "直播中控 v2.0",
+  "description": "直播常用词管理 - 配置外置优化版本",
+  "version": "2.0.0",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "alarms",
+    "activeTab",
+    "cookies",
+    "declarativeNetRequest"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "host_permissions": [
+    "https://*.douyin.com/*",
+    "https://hj.qwang.com.cn/*",
+    "https://*.jinritemai.com/*"
+  ],
+  "background": {
+    "service_worker": "background-refactored.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.douyin.com/*",
+        "https://hj.qwang.com.cn/*",
+        "https://*.jinritemai.com/*"
+      ],
+      "js": [
+        "utils/config-manager.js",
+        "utils/request-refactored.js",
+        "utils/setting-refactored.js",
+        "utils/dom.js",
+        "utils/dataProcessor.js",
+        "content-refactored.js"
+      ],
+      "run_at": "document_start",
+      "word": "MAIN"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "*.js",
+        "*.html",
+        "*.json",
+        "config/*.json"
+      ],
+      "matches": [
+        "https://*.douyin.com/*",
+        "https://hj.qwang.com.cn/*",
+        "https://*.jinritemai.com/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup-v2.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
