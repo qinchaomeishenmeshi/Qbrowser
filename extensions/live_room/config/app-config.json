@@ -1,0 +1,151 @@
+{
+  "domains": {
+    "douyin": [
+      "https://haohuo.jinritemai.com/*",
+      "https://www.douyin.com/*",
+      "https://eos.douyin.com/*",
+      "https://buyin.jinritemai.com/*"
+    ],
+    "target_hostnames": {
+      "eos": "eos.douyin.com",
+      "buyin": "buyin.jinritemai.com",
+      "haohuo": "haohuo.jinritemai.com"
+    }
+  },
+  "urls": {
+    "buyin_live_control_create": "https://buyin.jinritemai.com/dashboard/buyin_live_control/prepare/create",
+    "product_detail_api": "https://haohuo.jinritemai.com/aweme/v2/shop/promotion/pack/detail/?is_h5=1&origin_type=pc_buyin_selection_decision",
+    "punish_list_api": "https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list",
+    "live_plans_api": "/api/anchor/livepc/get_live_plans",
+    "plan_detail_api": "/data/life/live/plan/detail/",
+    "agreement_api": "/data/life/live/case/agreement/get"
+  },
+  "timeouts": {
+    "account_observer": 10000,
+    "save_plan_button_observer": 30000,
+    "sync_container_delay": 3000,
+    "success_message_duration": 3000,
+    "periodic_punish_sync": 3600000,
+    "modal_check_interval": 3000,
+    "product_detail_delay_max": 2000
+  },
+  "delays": {
+    "dom_delay": 500,
+    "page_delay": 3000,
+    "random_request_max": 2000
+  },
+  "selectors": {
+    "account_panel": "div[class*='dropdown-panel-']",
+    "account_no": "div[class*='panel-profile-account-']",
+    "account_name": "div[class*='panel-profile-name-']",
+    "save_plan_button_text": "保存计划",
+    "sync_container_parent": "div.okee-app-live-loading.okee-app-live-loading-block>div>div:nth-last-child(1) button:nth-child(1)",
+    "modal_wrapper": ".okee-main-modal-wrapper .okee-main-modal-body .okee-main-content-container .okee-main-content-header.okee-main-modal-content-header",
+    "violation_reason_span": "span",
+    "dy_account_name": ".btn-item-role-exchange-name__title",
+    "pagination": ".douyin-creator-pc-page-item.douyin-creator-pc-page-item-small"
+  },
+  "ui": {
+    "sync_button": {
+      "text": {
+        "default": "同步混剪系统",
+        "loading": "同步中...",
+        "success": "同步成功",
+        "error": "同步失败",
+        "reload": "重新同步"
+      },
+      "styles": {
+        "background": "linear-gradient(to right bottom, #7db1ff, #004EFE) border-box border-box",
+        "border": "1px solid transparent",
+        "borderRadius": "6px",
+        "color": "#fff",
+        "fontSize": "14px",
+        "height": "36px",
+        "lineHeight": "22px",
+        "minWidth": "80px",
+        "padding": "6px 16px",
+        "textAlign": "center",
+        "marginLeft": "10px",
+        "cursor": "pointer",
+        "transition": "opacity 0.3s"
+      },
+      "buyin_styles": {
+        "marginRight": "12px",
+        "border": "none",
+        "backgroundImage": "linear-gradient(270deg, #ff3b37, #be1142 80%)",
+        "color": "#fff"
+      }
+    },
+    "top_tips": {
+      "position": "fixed",
+      "top": "20px",
+      "left": "50%",
+      "transform": "translateX(-50%)",
+      "color": "#fff",
+      "padding": "12px 20px",
+      "borderRadius": "8px",
+      "fontSize": "16px",
+      "zIndex": "9999",
+      "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.15)",
+      "transition": "top 0.3s ease-in-out, opacity 0.3s ease-in-out",
+      "opacity": "0",
+      "cursor": "pointer",
+      "colors": {
+        "info": "#1677ff",
+        "success": "#52c41a",
+        "error": "#f5222d"
+      }
+    }
+  },
+  "http": {
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "headers": {
+      "accept": "application/json, text/plain, */*",
+      "content_type": "application/x-www-form-urlencoded",
+      "content_type_json": "application/json"
+    },
+    "credentials": "include"
+  },
+  "business": {
+    "daily_task_time": {
+      "hour": 9,
+      "minute": 30
+    },
+    "punish_sync_period_days": 30,
+    "default_user_id": "1258293549605997",
+    "violation_pattern": "/处罚原因：(.+?)\\s*违规时间：([\\d-]+\\s[\\d:]+)\\s*处罚方式：(.+?)(?:\\s|$)/s",
+    "default_account_name": "chrome-plugins",
+    "product_from_types": {
+      "live_room": "5",
+      "buyin": "7"
+    },
+    "attr_default": "1"
+  },
+  "messages": {
+    "tips": {
+      "account_loading_timeout": "账号信息加载超时，请手动刷新页面",
+      "no_live_plan_data": "请先刷新页面以获取直播计划数据",
+      "live_plan_format_error": "直播计划数据格式不正确",
+      "no_plan_or_products": "未找到当前计划或商品列表为空",
+      "sync_start": "开始同步 {count} 个商品...",
+      "sync_complete": "所有商品已处理完毕",
+      "sync_error": "处理数据时出错，请检查控制台日志",
+      "no_target_container": "未找到目标容器，无法创建同步按钮",
+      "sync_punish_start": "同步违规记录——开始",
+      "sync_punish_complete": "同步违规记录——完成",
+      "sync_punish_no_records": "同步完成：无新的违规记录",
+      "sync_punish_failed": "同步失败：{error}",
+      "modal_content_failed": "弹窗内容获取失败",
+      "violation_record_saved": "账号：{account}, 违规记录保存成功",
+      "no_douyin_account": "未找到抖音账号信息",
+      "live_plan_data_success": "直播计划数据已获取成功",
+      "all_products_complete": "所有商品处理完成，请在混剪系统中查看"
+    }
+  },
+  "storage_keys": {
+    "dy_account_no": "dyAccountNo",
+    "dy_room_name": "dyRoomName",
+    "agreement_user_id": "agreement_user_id",
+    "script_injected_flag": "__scriptInjected"
+  }
+}
