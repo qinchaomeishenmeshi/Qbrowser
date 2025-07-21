@@ -4,7 +4,6 @@ const DOUYIN_DOMAINS = [
   "https://www.douyin.com/*",
   "https://eos.douyin.com/*",
   "https://buyin.jinritemai.com/*",
-  "https://haohuo.jinritemai.com/*",
 ];
 
 // 新增数据处理函数
@@ -182,12 +181,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ success: false, error: error.message });
       });
     return true; // Indicates that the response is sent asynchronously
-  }
-
-  if (request.action === "SHELVES_ANCHOR_DATA") {
-    console.log("接收货架主播数据:", request.data);
-    // 统一数据处理逻辑
-    handleShelvesData(request.data);
   }
 
   if (request.action === "CLOSE_TAB_BY_URL") {
