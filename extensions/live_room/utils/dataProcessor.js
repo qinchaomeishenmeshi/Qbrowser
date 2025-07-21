@@ -7,7 +7,7 @@ async function processProducts(data, sendProductsListToBackground) {
       const getRandomDelay = () => Math.floor(Math.random() * 2000) + 3000;
 
       let productsList = data.info || [];
-      console.log("待处理商品数量:", internalProductsList.length);
+      console.log("待处理商品数量:", productsList.length);
 
       // 创建带延时的请求任务链
       const processProduct = async (productId) => {
