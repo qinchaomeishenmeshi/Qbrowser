@@ -191,7 +191,61 @@ class SchedulerClient:
     async def disable_task(self, task_id: str) -> bool:
         """禁用任务"""
         return await self._toggle_task(task_id, False)
-    
+
+    async def update_all_task_configs(self):
+        """自动获取最新的所有设备并更新所有任务配置"""
+        try:
+            # 1. 从 browser_store 获取所有设备ID
+            all_managers = await browser_store.get_all()
+            device_ids = [manager.user_id for manager in all_managers]
+            device_ids_str = ",".join(device_ids)
+
+            if not device_ids:
+                logger.warning("未找到任何活动的浏览器实例，无法更新任务配置")
+                return
+
+            logger.info(f"获取到 {len(device_ids)} 个设备，将用于更新任务配置: {device_ids_str}")
+
+            # 2. 遍历并更新所有任务配置
+            updated_tasks = []
+            for task_id, task_config in self.task_configs.items():
+                # 检查 function_params 是否包含 deviceNoList
+                if "deviceNoList" in task_config.function_params:
+                    # 更新 deviceNoList
+                    task_config.function_params["deviceNoList"] = device_ids_str
+                    task_config.updated_at = datetime.now().isoformat()
+                    updated_tasks.append(task_id)
+
+                    # 如果任务正在运行，需要重新加载
+                    if self.scheduler.running and task_config.enabled:
+                        await self._update_job(task_config)
+
+            if updated_tasks:
+                self._save_configs()
+                logger.info(f"已成功更新以下任务的设备列表: {updated_tasks}")
+            else:
+                logger.info("没有需要更新设备列表的任务配置")
+
+        except Exception as e:
+            logger.error(f"更新所有任务配置失败: {e}")
+
+    async def _update_job(self, task_config: TaskConfig):
+        """更新调度器中的任务"""
+        try:
+            # 移除旧任务
+            try:
+                self.scheduler.remove_job(task_config.task_id)
+            except Exception:
+                pass  # 任务可能不存在
+
+            # 如果任务启用，则重新添加
+            if task_config.enabled:
+                await self._add_job(task_config)
+                logger.info(f"任务 {task_config.task_id} 已在调度器中更新")
+
+        except Exception as e:
+            logger.error(f"更新调度器任务 {task_config.task_id} 失败: {e}")
+
     async def _toggle_task(self, task_id: str, enabled: bool) -> bool:
         """切换任务启用状态"""
         try:

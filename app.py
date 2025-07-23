@@ -130,6 +130,11 @@ class App(QMainWindow):
 
             logger.info("应用初始化完成")
             self.log_signal.log_updated.emit("应用初始化完成")
+
+            # 更新所有任务的设备列表
+    
+
+            self.log_signal.log_updated.emit("定时任务配置已更新")
         except Exception as e:
             logger.error(f"初始化失败: {e}")
             self.log_signal.log_updated.emit(f"初始化失败: {e}")
@@ -373,6 +378,7 @@ class App(QMainWindow):
             self.start_btn.setEnabled(True)
             self.stop_btn.setEnabled(True)
             self.log_signal.log_updated.emit("启动浏览器操作已完成")
+            await self.scheduler_client.update_all_task_configs()
 
     @asyncSlot()
     async def stop_browsers(self):
