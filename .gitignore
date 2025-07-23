@@ -59,6 +59,6 @@ htmlcov/
 .DS_Store
 Thumbs.db
 /.cursorrules
-data/cookies/
 static/
 qw-browser-electron/node_modules/
+data/
