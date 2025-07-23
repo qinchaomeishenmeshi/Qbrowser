@@ -3,7 +3,8 @@ import os
 import sys
 
 # PyQt导入
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
@@ -203,6 +204,11 @@ class ModernApp(QMainWindow):
         self.nav_button_group.addButton(self.instances_btn)
         sidebar_layout.addWidget(self.instances_btn)
 
+        self.scheduler_btn = self.create_nav_button("定时任务", "schedule")
+        self.scheduler_btn.clicked.connect(self.show_scheduler)
+        self.nav_button_group.addButton(self.scheduler_btn)
+        sidebar_layout.addWidget(self.scheduler_btn)
+
         # 添加伸缩项，使按钮靠上对齐
         sidebar_layout.addStretch()
 
@@ -299,6 +305,7 @@ class ModernApp(QMainWindow):
         # 添加各页面到栈
         self.init_dashboard_page()
         self.init_instance_page()
+        self.init_scheduler_page()
         self.init_data_page()
         self.init_settings_page()
 
@@ -365,8 +372,36 @@ class ModernApp(QMainWindow):
 
     def init_dashboard_page(self):
         """初始化仪表盘页面"""
-        self.dashboard_page = DashboardPage(self)  # 传入self作为父窗口
+        # 确保DashboardPage已正确导入
+        from ui.pages.dashboard import DashboardPage
+        self.dashboard_page = DashboardPage(self)
         self.content_stack.addWidget(self.dashboard_page)
+
+    def show_instances(self):
+        """显示实例管理页面"""
+        self.content_stack.setCurrentIndex(1)
+        self.update_page_title("浏览器实例管理")
+
+    def show_scheduler(self):
+        """显示定时任务页面"""
+        if hasattr(self, 'scheduler_page'):
+            index = self.content_stack.indexOf(self.scheduler_page)
+            if index != -1:
+                self.content_stack.setCurrentIndex(index)
+                self.update_page_title("定时任务管理")
+
+    def init_scheduler_page(self):
+        """初始化定时任务管理页面"""
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        web_view = QWebEngineView()
+        web_view.setUrl(QUrl("http://127.0.0.1:6001/"))
+        layout.addWidget(web_view)
+        
+        self.scheduler_page = page
+        self.content_stack.addWidget(self.scheduler_page)
 
     def init_instance_page(self):
         """初始化实例管理页面 - Chrome风格"""
@@ -554,70 +589,90 @@ class ModernApp(QMainWindow):
         self.content_stack.addWidget(page)
 
     def init_data_page(self):
-        """初始化数据管理页面"""
-        theme = THEMES[CURRENT_THEME]
-
+        """初始化数据分析页面"""
         page = QWidget()
         layout = QVBoxLayout(page)
-
-        # 创建一个漂亮的"即将推出"提示卡片
-        coming_soon = QWidget()
-        coming_soon.setStyleSheet(f"""
-            background-color: {theme['card']};
-            border-radius: {LAYOUT["border_radius"]}px;
-            padding: 30px;
-        """)
-
-        coming_layout = QVBoxLayout(coming_soon)
-
-        title = QLabel("数据管理功能开发中")
-        title.setFont(QFont(FONTS["title"][0], 20, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(f"color: {theme['text']};")
-
-        description = QLabel("此功能将在未来版本中推出，敬请期待！")
-        description.setFont(QFont(FONTS["regular"][0], 14))
-        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        description.setStyleSheet(f"color: {theme['text_secondary']};")
-
-        coming_layout.addWidget(title)
-        coming_layout.addWidget(description)
-
-        layout.addWidget(coming_soon)
-        self.content_stack.addWidget(page)
+        label = QLabel("数据分析页面 - 待开发")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.data_page = page
+        self.content_stack.addWidget(self.data_page)
 
     def init_settings_page(self):
-        """初始化系统设置页面"""
-        theme = THEMES[CURRENT_THEME]
-
+        """初始化设置页面"""
         page = QWidget()
         layout = QVBoxLayout(page)
+        label = QLabel("设置页面 - 待开发")
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(label)
+        self.settings_page = page
+        self.content_stack.addWidget(self.settings_page)
 
-        # 创建一个漂亮的"即将推出"提示卡片
-        coming_soon = QWidget()
-        coming_soon.setStyleSheet(f"""
-            background-color: {theme['card']};
-            border-radius: {LAYOUT["border_radius"]}px;
-            padding: 30px;
-        """)
+    def update_log(self, msg: str):
+        # 确保 self.log_area 存在
+        if self.log_area:
+            self.log_area.append(msg)
+            self.log_area.verticalScrollBar().setValue(
+                self.log_area.verticalScrollBar().maximum()
+            )
 
-        coming_layout = QVBoxLayout(coming_soon)
+    def load_cache(self):
+        try:
+            ids = self.browser_service.load_cache()
+            if self.text_edit:
+                self.text_edit.setText("\n".join(ids))
+            logger.info(f"加载用户缓存成功: {ids}")
+        except Exception as e:
+            logger.error(f"加载用户缓存失败: {e}")
 
-        title = QLabel("系统设置功能开发中")
-        title.setFont(QFont(FONTS["title"][0], 20, QFont.Weight.Bold))
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet(f"color: {theme['text']};")
+    async def async_init(self):
+        """异步初始化，加载端口和启动服务"""
+        try:
+            # 加载端口配置
+            await self.browser_service.load_ports()
 
-        description = QLabel("此功能将在未来版本中推出，敬请期待！")
-        description.setFont(QFont(FONTS["regular"][0], 14))
-        description.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        description.setStyleSheet(f"color: {theme['text_secondary']};")
+            # 启动API服务
+            try:
+                run_server(host="127.0.0.1", port=6001)
+                logger.info("FastAPI服务已启动")
+                self.log_signal.log_updated.emit("FastAPI服务已启动")
+            except Exception as e:
+                logger.error(f"FastAPI服务启动失败: {e}")
+                self.log_signal.log_updated.emit(f"FastAPI服务启动失败: {e}")
 
-        coming_layout.addWidget(title)
-        coming_layout.addWidget(description)
+            # 启动定时任务服务
+            try:
+                await self.scheduler_client.start()
+                task_count = len(self.scheduler_client.task_configs)
+                enabled_count = sum(1 for config in self.scheduler_client.task_configs.values() if config.enabled)
+                logger.info(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+                self.log_signal.log_updated.emit(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+            except Exception as e:
+                logger.error(f"定时任务调度器启动失败: {e}")
+                self.log_signal.log_updated.emit(f"定时任务调度器启动失败: {e}")
 
-        layout.addWidget(coming_soon)
-        self.content_stack.addWidget(page)
+            # 仅在Windows系统上尝试启动frpc服务
+            if sys.platform == "win32":
+                try:
+                    self.frpc_process = self._start_frpc()
+                    if self.frpc_process:
+                        self.log_signal.log_updated.emit("frpc服务已启动")
+                    else:
+                        self.log_signal.log_updated.emit(
+                            "frpc服务启动失败，请确保以管理员权限运行程序"
+                        )
+                except Exception as e:
+                    logger.error(f"frpc服务启动错误: {e}")
+                    self.log_signal.log_updated.emit(f"frpc服务启动错误: {e}")
+
+            logger.info("应用初始化完成")
+            self.log_signal.log_updated.emit("应用初始化完成")
+
+            # 更新所有任务的设备列表
+            self.log_signal.log_updated.emit("定时任务配置已更新")
+        except Exception as e:
+            logger.error(f"初始化失败: {e}")
+            self.log_signal.log_updated.emit(f"初始化失败: {e}")
 
     def _create_text_edit(self):
         """创建文本编辑区 - Chrome风格"""

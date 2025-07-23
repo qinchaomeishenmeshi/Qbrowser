@@ -9,7 +9,7 @@ def resource_path(relative_path):
     if getattr(sys, "frozen", False):
         base_path = sys._MEIPASS  # 打包后的临时解压目录
     else:
-        base_path = os.path.dirname(os.path.abspath(__file__))
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
 
 

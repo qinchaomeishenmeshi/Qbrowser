@@ -37,6 +37,8 @@ dependencies = [
     "pyqt6==6.9.0",
     "pyqt6-qt6==6.9.1",
     "pyqt6-sip==13.10.2",
+    "pyqt6-webengine",
+
     "qasync==0.27.1",
     "requests~=2.32.3",
     "requests-file==2.1.0",
@@ -89,16 +91,11 @@ full = [
 ]
 
 [tool.uv.sources]
-"tsinghua" = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+tsinghua = { url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" }
 
-[tool.uv.scripts]
-start-app = "python main.py"
-start-scheduler = "python start_scheduler_server.py"
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
-[tool.uv.dev-dependencies]
-# 开发和测试工具
-pytest = ">=7.4.3"
-pytest-asyncio = ">=0.21.1"
-mypy = ">=1.7.1"
-black = ">=23.11.0"
-pyinstaller = ">=6.0.0"
+[tool.setuptools]
+packages = ["api", "browser", "models", "service", "ui", "utils", "worker", "frp_client", "instance", "conf"]
