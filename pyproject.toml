@@ -97,5 +97,5 @@ tsinghua = { url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple" }
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["api", "browser", "models", "service", "ui", "utils", "worker", "frp_client", "instance", "conf"]
+[tool.setuptools.packages.find]
+exclude = ["instance", "instance.*", "tests", "tests.*", "docs", "docs.*", "backups", "backups.*"]
