@@ -12,7 +12,7 @@ datas = [
     ('extensions/block_videos', 'extensions/block_videos'),
     ('frp_client/frpc.exe', 'frp_client'),
     ('frp_client/frpc.toml', 'frp_client'),
-    ('conf.py', '.'),
+    ('conf', 'conf'),
     ('user_ids_cache.json', '.'),
     ('user_ports_cache.json', '.'),
     ('static', 'static'),
