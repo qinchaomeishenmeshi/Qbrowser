@@ -4,11 +4,16 @@ import sys
 
 # PyQt导入
 from PyQt6.QtCore import Qt, QTimer, QUrl
-# QtWebEngineWidgets已在app.py中导入，避免重复导入
+# 安全导入 QtWebEngineWidgets
+# 检查是否为轻量版模式
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
-except ImportError:
+    LITE_MODE = False
+except ImportError as e:
+    print(f"⚠️ QtWebEngineWidgets 导入失败: {e}")
+    print("🔧 轻量版模式 - 将使用外部浏览器")
     QWebEngineView = None
+    LITE_MODE = True
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
@@ -388,6 +393,19 @@ class ModernApp(QMainWindow):
 
     def show_scheduler(self):
         """显示定时任务页面"""
+        if LITE_MODE or QWebEngineView is None:
+            # 轻量版模式：使用外部浏览器打开
+            import webbrowser
+            try:
+                webbrowser.open("http://127.0.0.1:6001/")
+                QMessageBox.information(self, "定时任务管理", 
+                    "已在外部浏览器中打开定时任务页面\n\n" +
+                    "URL: http://127.0.0.1:6001/\n\n" +
+                    "注意：请确保后台服务正在运行")
+            except Exception as e:
+                QMessageBox.warning(self, "打开失败", f"无法打开外部浏览器：{e}")
+            return
+            
         if hasattr(self, 'scheduler_page'):
             index = self.content_stack.indexOf(self.scheduler_page)
             if index != -1:

@@ -45,30 +45,36 @@ QtWebEngineWidgets must be imported or Qt.AA_ShareOpenGLContexts must be set bef
 - 构建时包含了开发依赖 (~15-25MB)
 - 未优化的PyInstaller配置 (~10-15MB)
 
-**优化方案：**
-1. **使用优化构建配置：**
-   ```bash
-   # 使用优化的spec文件
-   pyinstaller app-optimized.spec --clean --noconfirm
-   
-   # 或使用优化的GitHub Actions
-   # 参考: build-exe-optimized.yml
-   ```
+**双版本构建方案：**
 
-2. **移除开发依赖：**
-   ```bash
-   # 生产构建时只安装必要依赖
-   uv sync --extra scheduler  # 不包含 --extra dev
-   ```
+#### 🚀 完整版 (Full Version)
+- **文件名**: `全网直播浏览器-完整版.zip`
+- **大小**: ~150-170MB
+- **特性**: 
+  - 包含所有功能
+  - 内置WebEngine支持
+  - 定时任务页面内嵌显示
+  - 最佳用户体验
 
-3. **条件化WebEngine：**
-   - 轻量版本: 不包含WebEngine (~60MB)
-   - 完整版本: 包含WebEngine (~150-170MB)
+#### ⚡ 轻量版 (Lite Version)
+- **文件名**: `全网直播浏览器-轻量版.zip`
+- **大小**: ~60-80MB
+- **特性**:
+  - 核心功能完整
+  - 移除WebEngine依赖
+  - 定时任务页面使用外部浏览器打开
+  - 启动速度更快，占用内存更少
 
-**预期优化效果：**
-- 当前版本: 195MB
-- 优化后: 150-170MB (减少25-45MB)
-- 轻量版本: 55-65MB
+#### 🔧 构建配置
+- **完整版配置**: `app.spec` + `build-exe.yml`
+- **轻量版配置**: `app-lite.spec` + `build-exe.yml`
+- **自动构建**: GitHub Actions同时构建两个版本
+- **智能检测**: 应用自动检测WebEngine可用性
+
+**使用建议：**
+- **推荐完整版**: 需要最佳体验和完整功能
+- **推荐轻量版**: 对文件大小敏感或系统资源有限
+- **功能对比**: 轻量版仅在定时任务管理上使用外部浏览器，其他功能完全一致
 
 详细分析请参考: `PACKAGING_SIZE_ANALYSIS.md`
 

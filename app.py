@@ -5,12 +5,17 @@ import subprocess
 import sys
 import threading
 
-# 必须在QApplication创建之前导入QtWebEngineWidgets
+# 预先导入 QtWebEngineWidgets 以避免导入顺序问题
+# 支持轻量版构建（不包含WebEngine）
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
-except ImportError:
-    # 如果导入失败，设置标志位
+    print("✅ QtWebEngineWidgets 导入成功 - 完整版模式")
+    LITE_MODE = False
+except ImportError as e:
+    print(f"⚠️ QtWebEngineWidgets 导入失败: {e}")
+    print("🔧 启用轻量版模式 - 将使用外部浏览器")
     QWebEngineView = None
+    LITE_MODE = True
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt
 from PyQt6.QtGui import QFont

@@ -1,4 +1,4 @@
-# 打包文件大小增加分析报告
+image.png# 打包文件大小增加分析报告
 
 ## 问题概述
 - **之前打包大小**: 约59MB
@@ -119,9 +119,59 @@ pytest-asyncio>=0.21.1
 pyinstaller>=6.0.0
 ```
 
-## 优化建议
+## 双版本构建方案
 
-### 1. 立即优化 (可减少20-30MB)
+### 🚀 完整版 (Full Version)
+**目标文件大小**: 150-170MB
+
+**包含组件**:
+- 完整的PyQt6 WebEngine支持
+- 所有生产依赖
+- 内置定时任务管理界面
+- 完整的用户体验
+
+**优化措施**:
+- 移除开发依赖 (-15MB)
+- 优化PyInstaller配置 (-10MB)
+- UPX压缩关键组件 (-10MB)
+
+### ⚡ 轻量版 (Lite Version)
+**目标文件大小**: 60-80MB
+
+**排除组件**:
+- PyQt6 WebEngine (-100MB)
+- WebEngine相关Qt组件 (-20MB)
+- 开发工具依赖 (-15MB)
+
+**功能调整**:
+- 定时任务管理使用外部浏览器
+- 自动检测WebEngine可用性
+- 优雅降级处理
+
+### 🔧 技术实现
+
+#### 1. 条件化WebEngine加载
+```python
+# 支持轻量版构建
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+    LITE_MODE = False
+except ImportError:
+    QWebEngineView = None
+    LITE_MODE = True
+```
+
+#### 2. 智能UI适配
+- 完整版：内嵌WebEngine视图
+- 轻量版：外部浏览器打开
+- 用户体验保持一致
+
+#### 3. 构建配置分离
+- `app.spec`: 完整版配置
+- `app-lite.spec`: 轻量版配置
+- GitHub Actions并行构建
+
+### 4. 立即优化措施
 
 **修改构建命令**:
 ```bash
@@ -131,11 +181,6 @@ uv sync --extra scheduler --extra dev
 # 优化后
 uv sync --extra scheduler
 ```
-
-**排除开发依赖**:
-- mypy, black, pytest 等开发工具不应包含在生产构建中
-
-### 2. WebEngine优化 (可减少10-20MB)
 
 **更新 app.spec**:
 ```python
@@ -153,23 +198,6 @@ upx_exclude=[
 ],
 ```
 
-### 3. 条件化WebEngine (可减少100MB+)
-
-**实现动态加载**:
-```python
-# 仅在需要时加载WebEngine
-if USE_WEBENGINE:
-    from PyQt6.QtWebEngineWidgets import QWebEngineView
-else:
-    QWebEngineView = None
-```
-
-**创建轻量版本**:
-- 提供不包含WebEngine的轻量版本 (约60MB)
-- 提供完整功能版本 (约195MB)
-
-### 4. 依赖精简 (可减少5-10MB)
-
 **移除非必要依赖**:
 ```toml
 # 可选移除的依赖
@@ -177,6 +205,20 @@ else:
 "lxml==5.4.0",          # XML处理，DrissionPage已包含
 "psutil~=7.0.0",        # 系统信息，如不需要可移除
 ```
+
+## 预期优化效果
+
+| 版本 | 文件大小 | 减少幅度 | 适用场景 |
+|------|----------|----------|----------|
+| 当前版本 | 195MB | - | 基准版本 |
+| 完整版 | 150-170MB | 25-45MB | 最佳体验 |
+| 轻量版 | 60-80MB | 115-135MB | 资源敏感 |
+
+## 使用建议
+
+- **完整版**: 推荐给需要最佳用户体验的用户
+- **轻量版**: 推荐给对文件大小敏感或系统资源有限的用户
+- **功能差异**: 仅定时任务管理界面的显示方式不同
 
 ## 总结
 
@@ -190,8 +232,8 @@ else:
 2. **中期**: 优化WebEngine打包配置 (-10-20MB)
 3. **长期**: 实现条件化WebEngine加载，提供多版本选择
 
-**预期优化效果**:
-- 当前: 195MB
-- 短期优化后: 165-175MB
-- 完全优化后: 140-160MB
-- 轻量版本: 55-65MB
+**双版本构建优势**:
+- 满足不同用户需求
+- 保持功能完整性
+- 显著减少文件大小（轻量版）
+- 提供最佳用户体验（完整版）

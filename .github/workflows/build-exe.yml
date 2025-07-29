@@ -16,7 +16,8 @@ on:
   workflow_dispatch:  # 手动触发
 
 jobs:
-  build-windows:
+  build-windows-full:
+    name: "构建完整版 (包含WebEngine)"
     runs-on: windows-latest
     
     steps:
@@ -178,22 +179,236 @@ jobs:
           exit 1
         }
         
-    - name: Upload artifact
+    - name: Upload Full Version Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: qw-browser-windows-exe
+        name: qw-browser-windows-exe-full
         path: dist/全网直播浏览器/
         retention-days: 30
         
-    - name: Create Release (on tag)
-      if: startsWith(github.ref, 'refs/tags/v')
+  build-windows-lite:
+    name: "构建轻量版 (不含WebEngine)"
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        
+    - name: Cache uv
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/bin/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+          
+    - name: Install uv
+      run: |
+        if (-not (Test-Path "$env:USERPROFILE\.cargo\bin\uv.exe")) {
+          Write-Host "📦 Installing uv..."
+          irm https://astral.sh/uv/install.ps1 | iex
+        } else {
+          Write-Host "✅ uv already installed"
+        }
+        
+    - name: Verify uv installation
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        uv --version
+        
+    - name: Cache PyInstaller build
+      uses: actions/cache@v3
+      with:
+        path: |
+          build/
+          dist/
+        key: ${{ runner.os }}-pyinstaller-lite-${{ hashFiles('**/pyproject.toml', '**/app-lite.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-pyinstaller-lite-
+          
+    - name: Install dependencies (Lite Version)
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        # 创建轻量版依赖配置
+        Write-Host "📦 Creating lite version dependencies..."
+        
+        # 临时修改pyproject.toml，移除webengine依赖
+        $content = Get-Content "pyproject.toml" -Raw
+        $content = $content -replace '"pyqt6-webengine",', '# "pyqt6-webengine",  # 轻量版移除'
+        $content | Out-File "pyproject-lite.toml" -Encoding UTF8
+        
+        # 使用轻量版配置安装依赖
+        Copy-Item "pyproject-lite.toml" "pyproject.toml"
+        uv sync --extra scheduler
+        
+        # 单独安装PyInstaller
+        uv add pyinstaller>=6.0.0
+        
+    - name: Create necessary directories
+      run: |
+        New-Item -ItemType Directory -Force -Path "data\cookies"
+        New-Item -ItemType Directory -Force -Path "data\user_static"
+        New-Item -ItemType Directory -Force -Path "data\scheduler"
+        New-Item -ItemType Directory -Force -Path "data\results"
+        New-Item -ItemType Directory -Force -Path "data\tasks"
+        New-Item -ItemType Directory -Force -Path "static"
+        New-Item -ItemType Directory -Force -Path "logs"
+        New-Item -ItemType Directory -Force -Path "templates"
+        
+        # 创建缓存文件
+        if (-not (Test-Path "user_ids_cache.json")) {
+          '{}' | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
+        }
+        if (-not (Test-Path "user_ports_cache.json")) {
+          '{}' | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
+        }
+        
+    - name: Run dependency tests (Lite)
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        Write-Host "🧪 Testing lite version dependencies..."
+        uv run python -c "import PyQt6; print('✅ PyQt6 imported successfully')"
+        uv run python -c "import fastapi; print('✅ FastAPI imported successfully')"
+        uv run python -c "import uvicorn; print('✅ Uvicorn imported successfully')"
+        uv run python -c "import DrissionPage; print('✅ DrissionPage imported successfully')"
+        uv run python -c "import apscheduler; print('✅ APScheduler imported successfully')"
+        
+        Write-Host "🧪 Verifying WebEngine is excluded..."
+        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('❌ WebEngine found - should be excluded'); exit(1); except ImportError: print('✅ WebEngine correctly excluded')"
+        
+    - name: Build Windows EXE (Lite Version)
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        Write-Host "🔨 Building Windows EXE (Lite Version)..."
+        uv run pyinstaller app-lite.spec --clean --noconfirm --log-level INFO
+        
+    - name: Verify lite build and check size
+      run: |
+        Write-Host "🔍 Checking lite build results..."
+        
+        # 检查dist目录
+        if (Test-Path "dist") {
+          Write-Host "✅ dist目录存在"
+          Get-ChildItem "dist" -Recurse | Select-Object Name, FullName, Length | Format-Table -AutoSize
+        } else {
+          Write-Host "❌ dist目录不存在"
+        }
+        
+        # 检查具体的EXE文件
+        if (Test-Path "dist\全网直播浏览器-轻量版\全网直播浏览器.exe") {
+          Write-Host "✅ 轻量版EXE文件构建成功"
+          $exeInfo = Get-Item "dist\全网直播浏览器-轻量版\全网直播浏览器.exe"
+          $sizeMB = [math]::Round($exeInfo.Length / 1MB, 2)
+          Write-Host "📊 轻量版EXE文件大小: $($exeInfo.Length) 字节 ($sizeMB MB)"
+          Write-Host "📁 轻量版EXE文件路径: $($exeInfo.FullName)"
+          
+          # 检查整个目录大小
+          $dirSize = (Get-ChildItem "dist\全网直播浏览器-轻量版" -Recurse | Measure-Object -Property Length -Sum).Sum
+          $dirSizeMB = [math]::Round($dirSize / 1MB, 2)
+          Write-Host "📊 轻量版整个应用目录大小: $dirSize 字节 ($dirSizeMB MB)"
+          
+          # 大小验证
+          if ($sizeMB -lt 80) {
+            Write-Host "🎉 轻量版构建成功！文件大小符合预期"
+          } else {
+            Write-Host "⚠️ 轻量版文件大小超出预期，可能需要进一步优化"
+          }
+        } else {
+          Write-Host "❌ 轻量版EXE文件构建失败"
+          exit 1
+        }
+        
+    - name: Upload Lite Version Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: qw-browser-windows-exe-lite
+        path: dist/全网直播浏览器-轻量版/
+        retention-days: 30
+        
+  create-release:
+    name: "创建发布版本"
+    needs: [build-windows-full, build-windows-lite]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download Full Version
+      uses: actions/download-artifact@v4
+      with:
+        name: qw-browser-windows-exe-full
+        path: ./full-version/
+        
+    - name: Download Lite Version
+      uses: actions/download-artifact@v4
+      with:
+        name: qw-browser-windows-exe-lite
+        path: ./lite-version/
+        
+    - name: Create ZIP packages
+      run: |
+        # 创建完整版ZIP
+        cd full-version
+        zip -r ../qw-browser-full-${{ github.ref_name }}.zip .
+        cd ..
+        
+        # 创建轻量版ZIP
+        cd lite-version
+        zip -r ../qw-browser-lite-${{ github.ref_name }}.zip .
+        cd ..
+        
+        # 显示文件信息
+        ls -lh *.zip
+        
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          dist/全网直播浏览器/全网直播浏览器.exe
+          qw-browser-full-${{ github.ref_name }}.zip
+          qw-browser-lite-${{ github.ref_name }}.zip
         draft: false
         prerelease: false
         generate_release_notes: true
+        name: "全网直播浏览器 ${{ github.ref_name }}"
+        body: |
+          ## 🚀 全网直播浏览器发布
+          
+          ### 📦 版本说明
+          
+          **完整版** (`qw-browser-full-${{ github.ref_name }}.zip`)
+          - ✅ 包含所有功能
+          - ✅ 支持WebEngine内嵌浏览器
+          - ✅ 定时任务管理界面
+          - 📊 文件大小: ~150-170MB
+          
+          **轻量版** (`qw-browser-lite-${{ github.ref_name }}.zip`)
+          - ✅ 核心浏览器功能
+          - ✅ 定时任务调度器
+          - ❌ 不包含WebEngine (使用外部浏览器)
+          - 📊 文件大小: ~55-65MB
+          
+          ### 🔧 使用建议
+          - **推荐完整版**: 如果需要完整的用户体验和内嵌浏览器功能
+          - **推荐轻量版**: 如果对文件大小敏感或只需要核心功能
+          
+          ### 📋 系统要求
+          - Windows 10/11 (64位)
+          - 无需安装Python环境
+          - 建议内存: 4GB+
+          
+          ### 🆕 更新内容
+          - 修复了QtWebEngine导入错误问题
+          - 优化了打包配置，减少文件大小
+          - 提供轻量版和完整版选择
+          - 增强了错误处理和用户体验
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
