@@ -189,6 +189,12 @@ A: cookies保存在 `data/cookies/` 目录下，以 `{user_id}_{site_key}_cookie
 Q: 为什么要统一使用CookiesManager？
 A: 统一使用CookiesManager可以避免直接操作文件，提高安全性和可靠性，同时简化了跨模块共享数据的复杂度。
 
+Q: 遇到 "qt.qpa.screen: Unable to open monitor interface" 错误怎么办？
+A: 这是Windows系统上的Qt显示器接口问题，已在代码中添加修复方案。如果仍有问题，请参考 `QT_DISPLAY_ERROR_FIX.md` 文件中的详细解决方案，包括更新显卡驱动、调整显示设置、使用兼容性模式等。
+
+Q: GitHub Actions构建时遇到Unicode编码错误怎么办？
+A: 这是Windows构建环境中的字符编码问题，已在构建工作流中添加UTF-8编码设置和Unicode字符替换。详细的修复方案请参考 `UNICODE_ENCODING_FIX.md` 文件，包括环境变量设置、字符替换规则和语法错误修复等。
+
 ## 许可证
 MIT License
 

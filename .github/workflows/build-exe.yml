@@ -51,23 +51,24 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-uv-installation-
         
-    - name: Install uv
+    - name: Install uv (Lite)
       run: |
+        $env:PYTHONIOENCODING = "utf-8"
         # 检查缓存中是否已有 uv
         $uvPath = "$env:USERPROFILE\.local\bin"
         if (Test-Path "$uvPath\uv.exe") {
-          Write-Host "✅ uv found in cache"
+          Write-Host "[OK] uv found in cache"
         } else {
-          Write-Host "📥 Installing uv..."
+          Write-Host "Installing uv..."
           Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
         }
         # 刷新环境变量
         $env:PATH = "$uvPath;$env:PATH"
         # 验证安装
         if (Test-Path "$uvPath\uv.exe") {
-          Write-Host "✅ uv available at $uvPath\uv.exe"
+          Write-Host "[OK] uv available at $uvPath\uv.exe"
         } else {
-          Write-Host "❌ uv installation failed"
+          Write-Host "[ERROR] uv installation failed"
           exit 1
         }
         # 添加到 PATH
@@ -91,13 +92,15 @@ jobs:
         
     - name: Install dependencies
       run: |
+        $env:PYTHONIOENCODING = "utf-8"
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
         # 使用 uv sync 安装依赖（包括 scheduler 和 dev 依赖）
-        Write-Host "📦 Installing dependencies with uv sync..."
+        Write-Host "Installing dependencies with uv sync..."
         uv sync --extra scheduler --extra dev
         
-    - name: Create missing directories and files
+    - name: Create necessary directories and files (Lite)
       run: |
+        $env:PYTHONIOENCODING = "utf-8"
         # 创建必要的目录
         New-Item -ItemType Directory -Force -Path "data"
         New-Item -ItemType Directory -Force -Path "data\cookies"
@@ -120,7 +123,8 @@ jobs:
     - name: Test dependencies
       run: |
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        Write-Host "测试基础依赖..."
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Testing basic dependencies..."
         uv run python test_dependencies.py
         
     - name: Test APScheduler
@@ -136,30 +140,32 @@ jobs:
     - name: Build EXE
       run: |
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        Write-Host "开始构建EXE文件..."
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Starting EXE build..."
         uv run pyinstaller app.spec --clean --noconfirm --log-level DEBUG
-        Write-Host "构建完成"
+        Write-Host "Build completed"
         
     - name: Verify build
       run: |
-        Write-Host "检查构建结果..."
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Checking build results..."
         
         # 检查dist目录
         if (Test-Path "dist") {
-          Write-Host "✅ dist目录存在"
+          Write-Host "[OK] dist directory exists"
           Get-ChildItem "dist" -Recurse | Select-Object Name, Length, FullName
         } else {
-          Write-Host "❌ dist目录不存在"
+          Write-Host "[ERROR] dist directory not found"
         }
         
         # 检查具体的EXE文件
         if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
-          Write-Host "✅ EXE文件构建成功"
+          Write-Host "[OK] EXE file built successfully"
           $exeInfo = Get-Item "dist\全网直播浏览器\全网直播浏览器.exe"
-          Write-Host "EXE文件大小: $($exeInfo.Length) 字节"
-          Write-Host "EXE文件路径: $($exeInfo.FullName)"
+          Write-Host "EXE file size: $($exeInfo.Length) bytes"
+          Write-Host "EXE file path: $($exeInfo.FullName)"
         } else {
-          Write-Host "❌ EXE文件构建失败"
+          Write-Host "[ERROR] EXE file build failed"
           
           # 检查可能的错误日志
           if (Test-Path "build") {
@@ -211,10 +217,10 @@ jobs:
     - name: Install uv
       run: |
         if (-not (Test-Path "$env:USERPROFILE\.cargo\bin\uv.exe")) {
-          Write-Host "📦 Installing uv..."
+          Write-Host "Installing uv..."
           irm https://astral.sh/uv/install.ps1 | iex
         } else {
-          Write-Host "✅ uv already installed"
+          Write-Host "[OK] uv already installed"
         }
         
     - name: Verify uv installation
@@ -237,7 +243,8 @@ jobs:
         $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
         
         # 创建轻量版依赖配置
-        Write-Host "📦 Creating lite version dependencies..."
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Creating lite version dependencies..."
         
         # 临时修改pyproject.toml，移除webengine依赖
         $content = Get-Content "pyproject.toml" -Raw
@@ -274,56 +281,59 @@ jobs:
       run: |
         $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
         
-        Write-Host "🧪 Testing lite version dependencies..."
-        uv run python -c "import PyQt6; print('✅ PyQt6 imported successfully')"
-        uv run python -c "import fastapi; print('✅ FastAPI imported successfully')"
-        uv run python -c "import uvicorn; print('✅ Uvicorn imported successfully')"
-        uv run python -c "import DrissionPage; print('✅ DrissionPage imported successfully')"
-        uv run python -c "import apscheduler; print('✅ APScheduler imported successfully')"
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Testing lite version dependencies..."
+        uv run python -c "import PyQt6; print('[OK] PyQt6 imported successfully')"
+        uv run python -c "import fastapi; print('[OK] FastAPI imported successfully')"
+        uv run python -c "import uvicorn; print('[OK] Uvicorn imported successfully')"
+        uv run python -c "import DrissionPage; print('[OK] DrissionPage imported successfully')"
+        uv run python -c "import apscheduler; print('[OK] APScheduler imported successfully')"
         
-        Write-Host "🧪 Verifying WebEngine is excluded..."
-        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('❌ WebEngine found - should be excluded'); exit(1); except ImportError: print('✅ WebEngine correctly excluded')"
+        Write-Host "Verifying WebEngine is excluded..."
+        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('[ERROR] WebEngine found - should be excluded'); exit(1)" || uv run python -c "print('[OK] WebEngine correctly excluded')"
         
     - name: Build Windows EXE (Lite Version)
       run: |
+        $env:PYTHONIOENCODING = "utf-8"
         $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
         
-        Write-Host "🔨 Building Windows EXE (Lite Version)..."
+        Write-Host "Building Windows EXE (Lite Version)..."
         uv run pyinstaller app-lite.spec --clean --noconfirm --log-level INFO
         
     - name: Verify lite build and check size
       run: |
-        Write-Host "🔍 Checking lite build results..."
+        $env:PYTHONIOENCODING = "utf-8"
+        Write-Host "Checking lite build results..."
         
         # 检查dist目录
         if (Test-Path "dist") {
-          Write-Host "✅ dist目录存在"
+          Write-Host "[OK] dist directory exists"
           Get-ChildItem "dist" -Recurse | Select-Object Name, FullName, Length | Format-Table -AutoSize
         } else {
-          Write-Host "❌ dist目录不存在"
+          Write-Host "[ERROR] dist directory not found"
         }
         
         # 检查具体的EXE文件
         if (Test-Path "dist\全网直播浏览器-轻量版\全网直播浏览器.exe") {
-          Write-Host "✅ 轻量版EXE文件构建成功"
+          Write-Host "[OK] Lite version EXE file built successfully"
           $exeInfo = Get-Item "dist\全网直播浏览器-轻量版\全网直播浏览器.exe"
           $sizeMB = [math]::Round($exeInfo.Length / 1MB, 2)
-          Write-Host "📊 轻量版EXE文件大小: $($exeInfo.Length) 字节 ($sizeMB MB)"
-          Write-Host "📁 轻量版EXE文件路径: $($exeInfo.FullName)"
+          Write-Host "[INFO] Lite version EXE file size: $($exeInfo.Length) bytes ($sizeMB MB)"
+          Write-Host "[INFO] Lite version EXE file path: $($exeInfo.FullName)"
           
           # 检查整个目录大小
           $dirSize = (Get-ChildItem "dist\全网直播浏览器-轻量版" -Recurse | Measure-Object -Property Length -Sum).Sum
           $dirSizeMB = [math]::Round($dirSize / 1MB, 2)
-          Write-Host "📊 轻量版整个应用目录大小: $dirSize 字节 ($dirSizeMB MB)"
+          Write-Host "[INFO] Lite version total app directory size: $dirSize bytes ($dirSizeMB MB)"
           
           # 大小验证
           if ($sizeMB -lt 80) {
-            Write-Host "🎉 轻量版构建成功！文件大小符合预期"
+            Write-Host "[SUCCESS] Lite version build successful! File size meets expectations"
           } else {
-            Write-Host "⚠️ 轻量版文件大小超出预期，可能需要进一步优化"
+            Write-Host "[WARNING] Lite version file size exceeds expectations, may need further optimization"
           }
         } else {
-          Write-Host "❌ 轻量版EXE文件构建失败"
+          Write-Host "[ERROR] Lite version EXE file build failed"
           exit 1
         }
         
@@ -381,25 +391,25 @@ jobs:
         body: |
           ## 🚀 全网直播浏览器发布
           
-          ### 📦 版本说明
+          ### Version Information
           
-          **完整版** (`qw-browser-full-${{ github.ref_name }}.zip`)
-          - ✅ 包含所有功能
-          - ✅ 支持WebEngine内嵌浏览器
-          - ✅ 定时任务管理界面
-          - 📊 文件大小: ~150-170MB
+          **Full Version** (`qw-browser-full-${{ github.ref_name }}.zip`)
+          - [✓] Complete functionality
+          - [✓] WebEngine embedded browser support
+          - [✓] Scheduler management interface
+          - [INFO] File size: ~150-170MB
           
-          **轻量版** (`qw-browser-lite-${{ github.ref_name }}.zip`)
-          - ✅ 核心浏览器功能
-          - ✅ 定时任务调度器
-          - ❌ 不包含WebEngine (使用外部浏览器)
-          - 📊 文件大小: ~55-65MB
+          **Lite Version** (`qw-browser-lite-${{ github.ref_name }}.zip`)
+          - [✓] Core browser functionality
+          - [✓] Task scheduler
+          - [X] No WebEngine (uses external browser)
+          - [INFO] File size: ~55-65MB
           
-          ### 🔧 使用建议
-          - **推荐完整版**: 如果需要完整的用户体验和内嵌浏览器功能
-          - **推荐轻量版**: 如果对文件大小敏感或只需要核心功能
+          ### Usage Recommendations
+          - **Recommended Full Version**: For complete user experience and embedded browser functionality
+          - **Recommended Lite Version**: For size-sensitive environments or core functionality only
           
-          ### 📋 系统要求
+          ### System Requirements
           - Windows 10/11 (64位)
           - 无需安装Python环境
           - 建议内存: 4GB+
@@ -434,7 +444,7 @@ jobs:
     - name: Install dependencies
       run: |
         # 使用 uv sync 安装依赖（包括 scheduler 和 dev 依赖）
-        echo "📦 Installing dependencies with uv sync..."
+        echo "Installing dependencies with uv sync..."
         uv sync --extra scheduler --extra dev
         
     - name: Create necessary directories

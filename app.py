@@ -545,8 +545,17 @@ def main():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")
         print("建议: 右键点击程序，选择'以管理员身份运行'")
 
-    # 在创建QApplication之前设置Qt属性，解决QtWebEngineWidgets导入问题
+    # 在创建QApplication之前设置Qt属性，解决QtWebEngineWidgets导入问题和显示器接口问题
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    
+    # 解决Windows显示器接口问题 (qt.qpa.screen错误)
+    if sys.platform == "win32":
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
+        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
+        # 设置环境变量解决显示器接口问题
+        os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', '')
+        os.environ.setdefault('QT_OPENGL', 'desktop')
+        os.environ.setdefault('QT_DEVICE_PIXEL_RATIO', 'auto')
     
     app = QApplication(sys.argv)
     loop = QEventLoop(app)

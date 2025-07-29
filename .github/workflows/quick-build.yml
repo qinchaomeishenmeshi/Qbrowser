@@ -45,10 +45,10 @@ jobs:
       run: |
         $uvPath = "$env:USERPROFILE\.local\bin"
         if (-not (Test-Path "$uvPath\uv.exe")) {
-          Write-Host "📥 Installing uv..."
+          Write-Host "Installing uv..."
           Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
         } else {
-          Write-Host "✅ uv found in cache"
+          Write-Host "[OK] uv found in cache"
         }
         $env:PATH = "$uvPath;$env:PATH"
         echo "$uvPath" >> $env:GITHUB_PATH
@@ -58,10 +58,10 @@ jobs:
         $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
         uv --version
         if (-not (Test-Path ".venv")) {
-          Write-Host "📦 Creating virtual environment..."
+          Write-Host "Creating virtual environment..."
           uv venv
         } else {
-          Write-Host "✅ Virtual environment found in cache"
+          Write-Host "[OK] Virtual environment found in cache"
         }
         .venv\Scripts\activate
         uv pip install pyinstaller PyQt6 qasync DrissionPage fastapi jinja2 uvicorn
@@ -87,11 +87,11 @@ jobs:
     - name: Check build result
       run: |
         if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
-          Write-Host "✅ 构建成功!"
+          Write-Host "[OK] Build successful!"
           $size = (Get-Item "dist\全网直播浏览器\全网直播浏览器.exe").Length / 1MB
-          Write-Host "📦 文件大小: $([math]::Round($size, 2)) MB"
+          Write-Host "[INFO] File size: $([math]::Round($size, 2)) MB"
         } else {
-          Write-Host "❌ 构建失败!"
+          Write-Host "[ERROR] Build failed!"
           Get-ChildItem "dist" -Recurse -ErrorAction SilentlyContinue
           exit 1
         }
