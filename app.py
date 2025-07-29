@@ -5,7 +5,14 @@ import subprocess
 import sys
 import threading
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+# 必须在QApplication创建之前导入QtWebEngineWidgets
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+except ImportError:
+    # 如果导入失败，设置标志位
+    QWebEngineView = None
+
+from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
@@ -533,6 +540,9 @@ def main():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")
         print("建议: 右键点击程序，选择'以管理员身份运行'")
 
+    # 在创建QApplication之前设置Qt属性，解决QtWebEngineWidgets导入问题
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)

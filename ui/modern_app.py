@@ -4,7 +4,11 @@ import sys
 
 # PyQt导入
 from PyQt6.QtCore import Qt, QTimer, QUrl
-from PyQt6.QtWebEngineWidgets import QWebEngineView
+# QtWebEngineWidgets已在app.py中导入，避免重复导入
+try:
+    from PyQt6.QtWebEngineWidgets import QWebEngineView
+except ImportError:
+    QWebEngineView = None
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
@@ -396,12 +400,41 @@ class ModernApp(QMainWindow):
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
         
-        web_view = QWebEngineView()
-        web_view.setUrl(QUrl("http://127.0.0.1:6001/"))
-        layout.addWidget(web_view)
+        if QWebEngineView is not None:
+            # 使用WebEngine视图
+            web_view = QWebEngineView()
+            web_view.setUrl(QUrl("http://127.0.0.1:6001/"))
+            layout.addWidget(web_view)
+        else:
+            # WebEngine不可用时的备用方案
+            fallback_label = QLabel("定时任务管理功能需要QtWebEngine支持")
+            fallback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            fallback_label.setStyleSheet("""
+                QLabel {
+                    font-size: 16px;
+                    color: #666;
+                    padding: 20px;
+                    background-color: #f5f5f5;
+                    border-radius: 8px;
+                }
+            """)
+            layout.addWidget(fallback_label)
+            
+            # 添加打开浏览器按钮
+            open_browser_btn = QPushButton("在浏览器中打开")
+            open_browser_btn.clicked.connect(lambda: self.open_scheduler_in_browser())
+            layout.addWidget(open_browser_btn)
         
         self.scheduler_page = page
         self.content_stack.addWidget(self.scheduler_page)
+    
+    def open_scheduler_in_browser(self):
+        """在外部浏览器中打开定时任务管理页面"""
+        import webbrowser
+        try:
+            webbrowser.open("http://127.0.0.1:6001/")
+        except Exception as e:
+            QMessageBox.warning(self, "错误", f"无法打开浏览器: {e}")
 
     def init_instance_page(self):
         """初始化实例管理页面 - Chrome风格"""

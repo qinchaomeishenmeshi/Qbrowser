@@ -16,6 +16,25 @@ QW-Browser 是一个强大的多浏览器实例管理工具，提供图形化界
 ## 系统要求
 - Python 3.8+
 - 操作系统：Windows/macOS/Linux
+- PyQt6 (包含QtWebEngineWidgets模块，用于现代UI)
+
+## 已知问题及解决方案
+
+### QtWebEngineWidgets导入错误
+**问题描述：** 在打包成exe后运行时出现错误：
+```
+QtWebEngineWidgets must be imported or Qt.AA_ShareOpenGLContexts must be set before a QCoreApplication instance is created
+```
+
+**解决方案：** 
+1. 在创建QApplication之前设置`Qt.AA_ShareOpenGLContexts`属性
+2. 在应用启动时预先导入QtWebEngineWidgets模块
+3. 添加了优雅的降级机制，当QtWebEngine不可用时自动切换到经典UI
+
+**修复内容：**
+- 修改了`app.py`中的导入顺序和QApplication创建逻辑
+- 在`modern_app.py`中添加了QtWebEngine不可用时的备用方案
+- 提供了在外部浏览器中打开定时任务管理页面的功能
 
 ## 快速开始
 
