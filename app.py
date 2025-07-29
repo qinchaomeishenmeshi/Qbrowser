@@ -546,16 +546,13 @@ def main():
         print("建议: 右键点击程序，选择'以管理员身份运行'")
 
     # 在创建QApplication之前设置Qt属性，解决QtWebEngineWidgets导入问题和显示器接口问题
-    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+    # 使用兼容性工具模块，避免不同Qt版本的AttributeError问题
+    from utils.qt_compatibility import initialize_qt_compatibility
     
-    # 解决Windows显示器接口问题 (qt.qpa.screen错误)
-    if sys.platform == "win32":
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        # 设置环境变量解决显示器接口问题
-        os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', '')
-        os.environ.setdefault('QT_OPENGL', 'desktop')
-        os.environ.setdefault('QT_DEVICE_PIXEL_RATIO', 'auto')
+    # 初始化Qt兼容性设置
+    qt_init_success = initialize_qt_compatibility()
+    if not qt_init_success:
+        print("[WARNING] Qt兼容性初始化部分失败，程序可能无法正常运行")
     
     app = QApplication(sys.argv)
     loop = QEventLoop(app)

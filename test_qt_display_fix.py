@@ -18,24 +18,21 @@ def test_qt_display_fix():
     print("=== Qt显示器错误修复测试 ===")
     print(f"操作系统: {sys.platform}")
     
-    # 应用与app.py相同的修复方案
-    if sys.platform == "win32":
-        print("检测到Windows系统，应用显示器修复方案...")
-        
-        # 设置Qt属性
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_DisableWindowContextHelpButton)
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseDesktopOpenGL)
-        
-        # 设置环境变量
-        os.environ.setdefault('QT_QPA_PLATFORM_PLUGIN_PATH', '')
-        os.environ.setdefault('QT_OPENGL', 'desktop')
-        os.environ.setdefault('QT_DEVICE_PIXEL_RATIO', 'auto')
-        
-        print("[OK] Windows显示器修复方案已应用")
+    # 应用与app.py相同的修复方案，使用Qt兼容性工具模块
+    from utils.qt_compatibility import initialize_qt_compatibility, get_qt_version_info
+    
+    # 显示Qt版本信息
+    version_info = get_qt_version_info()
+    print(f"Qt版本: {version_info['qt_version']}")
+    print(f"PyQt版本: {version_info['pyqt_version']}")
+    print(f"平台: {version_info['platform']}")
+    
+    # 初始化Qt兼容性设置
+    qt_init_success = initialize_qt_compatibility()
+    if qt_init_success:
+        print("[OK] Qt兼容性设置成功")
     else:
-        print("非Windows系统，跳过Windows特定修复")
-        QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+        print("[WARNING] Qt兼容性设置部分失败")
     
     # 创建应用程序
     try:

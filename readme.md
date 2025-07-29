@@ -36,6 +36,44 @@ QtWebEngineWidgets must be imported or Qt.AA_ShareOpenGLContexts must be set bef
 - 在`modern_app.py`中添加了QtWebEngine不可用时的备用方案
 - 提供了在外部浏览器中打开定时任务管理页面的功能
 
+### Qt兼容性问题（Windows打包exe）
+**问题描述：** 在Windows系统运行打包后的exe文件时出现错误：
+```
+AttributeError: type object 'ApplicationAttribute' has no attribute 'AA_DisableWindowContextHelpButton'
+```
+
+**问题原因：**
+- 不同Qt版本之间的API差异
+- 打包环境和运行环境的Qt版本不匹配
+- 某些Qt属性在特定版本中不存在
+
+**解决方案：**
+1. 创建了Qt兼容性工具模块 `utils/qt_compatibility.py`
+2. 使用 `hasattr()` 安全检查Qt属性是否存在
+3. 提供平台特定的Qt属性设置
+4. 自动配置Windows系统环境变量
+
+**修复内容：**
+- 新增 `utils/qt_compatibility.py` - Qt兼容性工具模块
+- 修改 `app.py` - 使用兼容性工具替代直接设置Qt属性
+- 更新 `test_qt_display_fix.py` - 使用新的兼容性模块
+- 添加 `QT_COMPATIBILITY_FIX.md` - 详细的修复文档
+
+**使用方法：**
+```python
+from utils.qt_compatibility import initialize_qt_compatibility
+
+# 在创建QApplication之前调用
+initialize_qt_compatibility()
+app = QApplication(sys.argv)
+```
+
+**测试验证：**
+```bash
+# 运行Qt兼容性测试
+python test_qt_display_fix.py
+```
+
 ### 打包文件大小优化
 
 **问题描述：** 添加WebEngine支持后，打包文件从59MB增加到195MB
