@@ -36,6 +36,42 @@ QtWebEngineWidgets must be imported or Qt.AA_ShareOpenGLContexts must be set bef
 - 在`modern_app.py`中添加了QtWebEngine不可用时的备用方案
 - 提供了在外部浏览器中打开定时任务管理页面的功能
 
+### 打包文件大小优化
+
+**问题描述：** 添加WebEngine支持后，打包文件从59MB增加到195MB
+
+**主要原因：**
+- PyQt6 WebEngine包含Chromium内核 (~100-120MB)
+- 构建时包含了开发依赖 (~15-25MB)
+- 未优化的PyInstaller配置 (~10-15MB)
+
+**优化方案：**
+1. **使用优化构建配置：**
+   ```bash
+   # 使用优化的spec文件
+   pyinstaller app-optimized.spec --clean --noconfirm
+   
+   # 或使用优化的GitHub Actions
+   # 参考: build-exe-optimized.yml
+   ```
+
+2. **移除开发依赖：**
+   ```bash
+   # 生产构建时只安装必要依赖
+   uv sync --extra scheduler  # 不包含 --extra dev
+   ```
+
+3. **条件化WebEngine：**
+   - 轻量版本: 不包含WebEngine (~60MB)
+   - 完整版本: 包含WebEngine (~150-170MB)
+
+**预期优化效果：**
+- 当前版本: 195MB
+- 优化后: 150-170MB (减少25-45MB)
+- 轻量版本: 55-65MB
+
+详细分析请参考: `PACKAGING_SIZE_ANALYSIS.md`
+
 ## 快速开始
 
 ### 1. 环境准备

@@ -1,0 +1,204 @@
+name: Build Windows EXE (Optimized)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        
+    - name: Cache uv
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/bin/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+          
+    - name: Install uv
+      run: |
+        if (-not (Test-Path "$env:USERPROFILE\.cargo\bin\uv.exe")) {
+          Write-Host "📦 Installing uv..."
+          irm https://astral.sh/uv/install.ps1 | iex
+        } else {
+          Write-Host "✅ uv already installed"
+        }
+        
+    - name: Verify uv installation
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        uv --version
+        
+    - name: Cache PyInstaller build
+      uses: actions/cache@v3
+      with:
+        path: |
+          build/
+          dist/
+        key: ${{ runner.os }}-pyinstaller-${{ hashFiles('**/pyproject.toml', '**/app-optimized.spec') }}
+        restore-keys: |
+          ${{ runner.os }}-pyinstaller-
+          
+    - name: Install dependencies (Production Only)
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        # 只安装生产依赖和调度器依赖，排除开发依赖
+        Write-Host "📦 Installing production dependencies with uv sync..."
+        uv sync --extra scheduler
+        
+        Write-Host "📦 Installing PyInstaller separately..."
+        uv add pyinstaller>=6.0.0
+        
+    - name: Create necessary directories
+      run: |
+        New-Item -ItemType Directory -Force -Path "data\cookies"
+        New-Item -ItemType Directory -Force -Path "data\user_static"
+        New-Item -ItemType Directory -Force -Path "data\scheduler"
+        New-Item -ItemType Directory -Force -Path "data\results"
+        New-Item -ItemType Directory -Force -Path "data\tasks"
+        New-Item -ItemType Directory -Force -Path "static"
+        New-Item -ItemType Directory -Force -Path "logs"
+        New-Item -ItemType Directory -Force -Path "templates"
+        
+        # 创建缓存文件
+        if (-not (Test-Path "user_ids_cache.json")) {
+          '{}' | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
+        }
+        if (-not (Test-Path "user_ports_cache.json")) {
+          '{}' | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
+        }
+        
+    - name: Run dependency tests
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        Write-Host "🧪 Testing core dependencies..."
+        uv run python -c "import PyQt6; print('✅ PyQt6 imported successfully')"
+        uv run python -c "import fastapi; print('✅ FastAPI imported successfully')"
+        uv run python -c "import uvicorn; print('✅ Uvicorn imported successfully')"
+        uv run python -c "import DrissionPage; print('✅ DrissionPage imported successfully')"
+        
+        Write-Host "🧪 Testing scheduler dependencies..."
+        uv run python -c "import apscheduler; print('✅ APScheduler imported successfully')"
+        
+        Write-Host "🧪 Testing WebEngine (optional)..."
+        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('✅ QtWebEngine available'); except: print('⚠️ QtWebEngine not available, will use fallback')"
+        
+    - name: Build Windows EXE (Optimized)
+      run: |
+        $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
+        
+        Write-Host "🔨 Building Windows EXE with optimized configuration..."
+        uv run pyinstaller app-optimized.spec --clean --noconfirm --log-level INFO
+        
+    - name: Verify build and check size
+      run: |
+        Write-Host "🔍 Checking build results..."
+        
+        # 检查dist目录
+        if (Test-Path "dist") {
+          Write-Host "✅ dist目录存在"
+          Get-ChildItem "dist" -Recurse | Select-Object Name, FullName, Length | Format-Table -AutoSize
+        } else {
+          Write-Host "❌ dist目录不存在"
+        }
+        
+        # 检查具体的EXE文件
+        if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
+          Write-Host "✅ EXE文件构建成功"
+          $exeInfo = Get-Item "dist\全网直播浏览器\全网直播浏览器.exe"
+          $sizeMB = [math]::Round($exeInfo.Length / 1MB, 2)
+          Write-Host "📊 EXE文件大小: $($exeInfo.Length) 字节 ($sizeMB MB)"
+          Write-Host "📁 EXE文件路径: $($exeInfo.FullName)"
+          
+          # 检查整个目录大小
+          $dirSize = (Get-ChildItem "dist\全网直播浏览器" -Recurse | Measure-Object -Property Length -Sum).Sum
+          $dirSizeMB = [math]::Round($dirSize / 1MB, 2)
+          Write-Host "📊 整个应用目录大小: $dirSize 字节 ($dirSizeMB MB)"
+          
+          # 与之前版本对比
+          if ($sizeMB -lt 100) {
+            Write-Host "🎉 优化成功！文件大小已显著减少"
+          } elseif ($sizeMB -lt 150) {
+            Write-Host "✅ 文件大小在可接受范围内"
+          } else {
+            Write-Host "⚠️ 文件大小仍然较大，可能需要进一步优化"
+          }
+        } else {
+          Write-Host "❌ EXE文件构建失败"
+          
+          # 检查可能的错误日志
+          if (Test-Path "build") {
+            Write-Host "build目录内容:"
+            Get-ChildItem "build" -Recurse | Select-Object Name, FullName
+          }
+          
+          # 检查PyInstaller日志
+          if (Test-Path "*.log") {
+            Write-Host "发现日志文件:"
+            Get-ChildItem "*.log" | ForEach-Object {
+              Write-Host "=== $($_.Name) ==="
+              Get-Content $_.FullName -Tail 50
+            }
+          }
+          
+          exit 1
+        }
+        
+    - name: Upload optimized artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: qw-browser-windows-exe-optimized
+        path: dist/全网直播浏览器/
+        retention-days: 30
+        
+    - name: Create Release (on tag)
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/全网直播浏览器/全网直播浏览器.exe
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: "优化版本 ${{ github.ref_name }}"
+        body: |
+          ## 🚀 优化版本发布
+          
+          ### 📊 文件大小优化
+          - 移除了开发依赖 (mypy, black, pytest等)
+          - 优化了PyInstaller配置
+          - 排除了不必要的模块
+          
+          ### ✨ 主要特性
+          - 全网直播浏览器核心功能
+          - 定时任务调度器
+          - 现代化UI界面
+          - WebEngine支持（可选）
+          
+          ### 📋 系统要求
+          - Windows 10/11 (64位)
+          - 无需安装Python环境
+          - 建议内存: 4GB+
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
