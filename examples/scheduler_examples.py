@@ -52,7 +52,7 @@ async def example_1_create_cron_tasks():
         },
         enabled=True
     )
-    print(f"✅ 30分钟核心数据任务创建: {'成功' if success else '失败'}")
+    print(f"[OK] 30分钟核心数据任务创建: {'成功' if success else '失败'}")
     
     # 每天8点获取历史直播列表
     success = await create_cron_task(
@@ -66,7 +66,7 @@ async def example_1_create_cron_tasks():
         },
         enabled=True
     )
-    print(f"✅ 每日8点历史列表任务创建: {'成功' if success else '失败'}")
+    print(f"[OK] 每日8点历史列表任务创建: {'成功' if success else '失败'}")
     
     # 工作日每2小时批量获取数据
     success = await create_cron_task(
@@ -93,7 +93,7 @@ async def example_1_create_cron_tasks():
         },
         enabled=True
     )
-    print(f"✅ 工作日批量数据任务创建: {'成功' if success else '失败'}")
+    print(f"[OK] 工作日批量数据任务创建: {'成功' if success else '失败'}")
 
 
 async def example_2_create_interval_tasks():
@@ -115,7 +115,7 @@ async def example_2_create_interval_tasks():
         },
         enabled=False  # 先创建但不启用，避免过于频繁
     )
-    print(f"✅ 15分钟高频监控任务创建: {'成功' if success else '失败'}")
+    print(f"[OK] 15分钟高频监控任务创建: {'成功' if success else '失败'}")
     
     # 每小时获取历史列表
     success = await create_interval_task(
@@ -129,7 +129,7 @@ async def example_2_create_interval_tasks():
         },
         enabled=True
     )
-    print(f"✅ 每小时历史列表任务创建: {'成功' if success else '失败'}")
+    print(f"[OK] 每小时历史列表任务创建: {'成功' if success else '失败'}")
 
 
 async def example_3_manage_tasks():
@@ -138,7 +138,7 @@ async def example_3_manage_tasks():
     
     # 获取所有任务配置
     tasks = scheduler_client.get_task_configs()
-    print(f"📋 当前共有 {len(tasks)} 个任务:")
+    print(f"[INFO] 当前共有 {len(tasks)} 个任务:")
     
     for task_id, config in tasks.items():
         status = "启用" if config.enabled else "禁用"
@@ -148,12 +148,12 @@ async def example_3_manage_tasks():
     # 禁用高频任务（演示）
     if "core_data_15min" in tasks:
         success = await scheduler_client.disable_task("core_data_15min")
-        print(f"🔴 禁用高频任务: {'成功' if success else '失败'}")
+        print(f"[INFO] 禁用高频任务: {'成功' if success else '失败'}")
     
     # 启用一个任务（演示）
     if "core_data_30min" in tasks:
         success = await scheduler_client.enable_task("core_data_30min")
-        print(f"🟢 启用30分钟任务: {'成功' if success else '失败'}")
+        print(f"[INFO] 启用30分钟任务: {'成功' if success else '失败'}")
 
 
 async def example_4_view_results():
@@ -162,14 +162,14 @@ async def example_4_view_results():
     
     # 获取最近的执行结果
     results = scheduler_client.get_task_results(limit=10)
-    print(f"📊 最近 {len(results)} 次执行结果:")
+    print(f"[INFO] 最近 {len(results)} 次执行结果:")
     
     if not results:
         print("  暂无执行结果")
         return
     
     for result in results:
-        status_icon = "✅" if result.get('status') == 'success' else "❌"
+        status_icon = "[OK]" if result.get('status') == 'success' else "[ERROR]"
         execution_time = result.get('execution_time', 'Unknown')
         task_id = result.get('task_id', 'Unknown')
         
@@ -188,12 +188,12 @@ async def example_5_scheduler_control():
     
     # 检查调度器状态
     is_running = scheduler_client.scheduler.running if scheduler_client.scheduler else False
-    print(f"📡 调度器状态: {'运行中' if is_running else '已停止'}")
+    print(f"[INFO] 调度器状态: {'运行中' if is_running else '已停止'}")
     
     if not is_running:
-        print("🚀 启动调度器...")
+        print("[INFO] 启动调度器...")
         await scheduler_client.start()
-        print("✅ 调度器已启动")
+        print("[OK] 调度器已启动")
     
     # 等待一段时间让任务执行
     print("⏳ 等待任务执行（10秒）...")
@@ -216,7 +216,7 @@ async def example_6_cleanup():
         "history_hourly"
     ]
     
-    print("🧹 清理演示任务...")
+    print("[INFO] 清理演示任务...")
     for task_id in demo_task_ids:
         if task_id in scheduler_client.task_configs:
             success = await scheduler_client.remove_task(task_id)
@@ -228,13 +228,13 @@ async def example_6_cleanup():
 async def main():
     """主函数"""
     print("\n" + "="*60)
-    print("🕐 定时任务功能使用示例")
+    print("[INFO] 定时任务功能使用示例")
     print("="*60)
     
     try:
         # 启动调度器
         await scheduler_client.start()
-        print("✅ 调度器已启动")
+        print("[OK] 调度器已启动")
         
         # 运行示例
         await example_1_create_cron_tasks()
@@ -249,20 +249,20 @@ async def main():
         if cleanup == 'y':
             await example_6_cleanup()
         
-        print("\n🎉 示例演示完成！")
-        print("\n💡 提示:")
+        print("\n[OK] 示例演示完成！")
+        print("\n[INFO] 提示:")
         print("  - 启动 Web 服务: python start_scheduler_server.py")
         print("  - 访问管理界面: http://localhost:8000/scheduler/dashboard")
         print("  - 查看 API 文档: http://localhost:8000/docs")
         
     except Exception as e:
         logger.error(f"示例运行失败: {e}")
-        print(f"❌ 示例运行失败: {e}")
+        print(f"[ERROR] 示例运行失败: {e}")
     
     finally:
         # 停止调度器
         await scheduler_client.stop()
-        print("🛑 调度器已停止")
+        print("[INFO] 调度器已停止")
 
 
 if __name__ == "__main__":

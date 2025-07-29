@@ -10,8 +10,8 @@ try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
     LITE_MODE = False
 except ImportError as e:
-    print(f"⚠️ QtWebEngineWidgets 导入失败: {e}")
-    print("🔧 轻量版模式 - 将使用外部浏览器")
+    print(f"[WARNING] QtWebEngineWidgets 导入失败: {e}")
+    print("[INFO] 轻量版模式 - 将使用外部浏览器")
     QWebEngineView = None
     LITE_MODE = True
 from PyQt6.QtGui import QFont, QColor

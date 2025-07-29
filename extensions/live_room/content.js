@@ -489,9 +489,9 @@ function handleAgreementResponse(url) {
     );
     if (userId) {
       localStorage.setItem("agreement_user_id", userId);
-      console.log("✅ 已保存 user_id 到 localStorage:", userId);
+      console.log("[OK] 已保存 user_id 到 localStorage:", userId);
     } else {
-      console.warn("⚠️ URL 中没有找到 user_id 参数");
+      console.warn("[WARNING] URL 中没有找到 user_id 参数");
     }
   } catch (e) {
     console.error("解析 user_id 或存储时出错:", e);
@@ -680,14 +680,14 @@ async function get_replay_punish_list() {
         console.log("保存参数：", params);
         await $Request(API.liveviolationrecordsdealSaveApi, { params });
       } catch (e) {
-        console.error("⚠️ 单条保存失败：", e, item);
+        console.error("[WARNING] 单条保存失败：", e, item);
       }
     }
 
     createTopTips("同步违规记录——完成", { type: "success" });
-    console.log("✅ 全部记录已处理完毕");
+    console.log("[OK] 全部记录已处理完毕");
   } catch (err) {
-    console.error("❌ 同步过程出错：", err);
+    console.error("[ERROR] 同步过程出错：", err);
     createTopTips(`同步失败：${err.message || "未知错误"}`, { type: "error" });
   }
 }

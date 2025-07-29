@@ -4,11 +4,11 @@
       <div class="page-actions">
         <button @click="saveAllSettings" class="btn btn-primary" :disabled="isSaving">
           <span v-if="isSaving" class="loading"></span>
-          <span v-else>💾</span>
+          <span v-else>[SAVE]</span>
           保存设置
         </button>
         <button @click="resetSettings" class="btn btn-secondary">
-          <span>🔄</span>
+          <span>[RESET]</span>
           重置默认
         </button>
       </div>
@@ -500,12 +500,12 @@
                   </button>
 
                   <button @click="openLicense" class="btn btn-secondary">
-                    <span>📄</span>
+                    <span>[DOC]</span>
                     许可证
                   </button>
 
                   <button @click="openHomepage" class="btn btn-secondary">
-                    <span>🌐</span>
+                    <span>[WEB]</span>
                     官网
                   </button>
                 </div>
@@ -530,12 +530,12 @@ export default {
 
     // 设置分类
     const settingSections = [
-      { key: 'general', label: '通用', icon: '⚙️' },
-      { key: 'browser', label: '浏览器', icon: '🌐' },
-      { key: 'performance', label: '性能', icon: '⚡' },
-      { key: 'security', label: '安全', icon: '🔒' },
-      { key: 'logging', label: '日志', icon: '📝' },
-      { key: 'about', label: '关于', icon: 'ℹ️' }
+      { key: 'general', label: '通用', icon: '[SETTINGS]' },
+      { key: 'browser', label: '浏览器', icon: '[BROWSER]' },
+      { key: 'performance', label: '性能', icon: '[PERF]' },
+      { key: 'security', label: '安全', icon: '[LOCK]' },
+      { key: 'logging', label: '日志', icon: '[LOG]' },
+      { key: 'about', label: '关于', icon: '[INFO]' }
     ];
 
     // 设置数据

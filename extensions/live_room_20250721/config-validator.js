@@ -330,14 +330,14 @@ class ConfigValidator {
    * @returns {Object} 验证结果
    */
   validateConfig(config) {
-    console.log('🔍 开始验证配置文件...');
+    console.log('[INFO] 开始验证配置文件...');
     
     const result = this.validator.validate(config, CONFIG_SCHEMA);
     
     if (result.valid) {
-      console.log('✅ 配置文件验证通过');
+      console.log('[OK] 配置文件验证通过');
     } else {
-      console.log('❌ 配置文件验证失败:');
+      console.log('[ERROR] 配置文件验证失败:');
       result.errors.forEach(error => {
         console.log(`  - ${error.path}: ${error.message}`);
       });
@@ -352,7 +352,7 @@ class ConfigValidator {
    * @returns {Object} 验证结果
    */
   validateCompleteness(config) {
-    console.log('🔍 检查配置完整性...');
+    console.log('[INFO] 检查配置完整性...');
     
     const issues = [];
     
@@ -384,9 +384,9 @@ class ConfigValidator {
     this._validateTimeConfig(config, issues);
     
     if (issues.length === 0) {
-      console.log('✅ 配置完整性检查通过');
+      console.log('[OK] 配置完整性检查通过');
     } else {
-      console.log('⚠️ 配置完整性检查发现问题:');
+      console.log('[WARNING] 配置完整性检查发现问题:');
       issues.forEach(issue => {
         console.log(`  - ${issue}`);
       });
@@ -404,7 +404,7 @@ class ConfigValidator {
    * @returns {Object} 测试结果
    */
   performanceTest(config) {
-    console.log('🚀 开始性能测试...');
+    console.log('[INFO] 开始性能测试...');
     
     const results = {};
     
@@ -428,7 +428,7 @@ class ConfigValidator {
     
     results.accessTime = accessTime;
     
-    console.log('📊 性能测试结果:');
+    console.log('[INFO] 性能测试结果:');
     console.log(`  - 配置大小: ${results.configSize} bytes`);
     console.log(`  - 加载时间: ${results.loadTime.toFixed(2)} ms`);
     console.log(`  - 访问性能: ${results.accessTime.toFixed(2)} ms (1000次访问)`);
@@ -443,12 +443,12 @@ class ConfigValidator {
     }
     
     if (performance_issues.length > 0) {
-      console.log('⚠️ 性能问题:');
+      console.log('[WARNING] 性能问题:');
       performance_issues.forEach(issue => {
         console.log(`  - ${issue}`);
       });
     } else {
-      console.log('✅ 性能测试通过');
+      console.log('[OK] 性能测试通过');
     }
     
     return {
@@ -463,7 +463,7 @@ class ConfigValidator {
    * @returns {Object} 综合测试结果
    */
   runAllTests(config) {
-    console.log('🧪 开始配置文件综合测试...');
+    console.log('[INFO] 开始配置文件综合测试...');
     console.log('='.repeat(50));
     
     const results = {
@@ -479,9 +479,9 @@ class ConfigValidator {
                     results.performance.issues.length === 0;
     
     if (allValid) {
-      console.log('🎉 所有测试通过！配置文件可以安全使用。');
+      console.log('[OK] 所有测试通过！配置文件可以安全使用。');
     } else {
-      console.log('❌ 测试发现问题，请检查并修复后重新测试。');
+      console.log('[ERROR] 测试发现问题，请检查并修复后重新测试。');
     }
     
     return {
@@ -622,7 +622,7 @@ async function main() {
     return results;
     
   } catch (error) {
-    console.error('❌ 配置验证失败:', error);
+    console.error('[ERROR] 配置验证失败:', error);
     return {
       error: error.message,
       overall: false

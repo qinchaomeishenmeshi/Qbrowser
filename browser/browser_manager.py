@@ -107,15 +107,15 @@ class BrowserManager:
             
             if Path(self.config.live_room_extension_path).exists():
                 valid_extensions.append(self.config.live_room_extension_path)
-                logger.info(f"✅ Live Room 插件路径有效: {self.config.live_room_extension_path}")
+                logger.info(f"[OK] Live Room 插件路径有效: {self.config.live_room_extension_path}")
             else:
-                logger.warning(f"⚠️ Live Room 插件路径不存在: {self.config.live_room_extension_path}")
+                logger.warning(f"[WARNING] Live Room 插件路径不存在: {self.config.live_room_extension_path}")
             
             if Path(self.config.block_videos_extension_path).exists():
                 valid_extensions.append(self.config.block_videos_extension_path)
-                logger.info(f"✅ Block Videos 插件路径有效: {self.config.block_videos_extension_path}")
+                logger.info(f"[OK] Block Videos 插件路径有效: {self.config.block_videos_extension_path}")
             else:
-                logger.warning(f"⚠️ Block Videos 插件路径不存在: {self.config.block_videos_extension_path}")
+                logger.warning(f"[WARNING] Block Videos 插件路径不存在: {self.config.block_videos_extension_path}")
             
             # 配置并启动 Chromium（持久化用户数据）
             co = (
@@ -131,9 +131,9 @@ class BrowserManager:
                 extension_paths = ",".join(valid_extensions)
                 co.set_argument(f"--load-extension={extension_paths}")
                 co.set_argument(f"--disable-extensions-except={extension_paths}")
-                logger.info(f"✅ 使用--load-extension加载插件: {len(valid_extensions)}个")
+                logger.info(f"[OK] 使用--load-extension加载插件: {len(valid_extensions)}个")
             else:
-                logger.warning("⚠️ 没有有效的插件可以加载")
+                logger.warning("[WARNING] 没有有效的插件可以加载")
             
             self.browser = Chromium(co)
             logger.info(f"Browser started for user: {self.user_id}")
@@ -194,7 +194,7 @@ class BrowserManager:
                     self.last_urls_file.write_text(
                         json.dumps(urls, ensure_ascii=False, indent=2)
                     )
-                    logger.info(f"✅ Saved {len(urls)} unique URLs.")
+                    logger.info(f"[OK] Saved {len(urls)} unique URLs.")
                 else:
                     logger.info("ℹ️ No URLs to save.")
 
@@ -210,7 +210,7 @@ class BrowserManager:
                 except Exception as e:
                     logger.warning(f"删除本地空白页缓存失败: {e}")
         except Exception as e:
-            logger.error(f"❌ Cleanup error: {e}", exc_info=True)
+            logger.error(f"[ERROR] Cleanup error: {e}", exc_info=True)
 
     @property
     def is_running(self) -> bool:

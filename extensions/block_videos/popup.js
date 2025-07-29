@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chrome.tabs.sendMessage(currentTab.id, {type: 'getVideoCount'}, (response) => {
                 const count = response?.count ?? 0;
                 statusDiv.textContent = isBlocked
-                    ? `✅ 已屏蔽此站，共屏蔽 ${count} 个视频`
+                    ? `[OK] 已屏蔽此站，共屏蔽 ${count} 个视频`
                     : `⭕ 未屏蔽此站`;
 
                 renderBlockedList(domainList);
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chrome.tabs.sendMessage(currentTab.id, {type: 'getVideoCount'}, (response) => {
                     const count = response?.count ?? 0;
                     statusDiv.textContent = shouldBlock
-                        ? `✅ 已屏蔽此站，共屏蔽 ${count} 个视频`
+                        ? `[OK] 已屏蔽此站，共屏蔽 ${count} 个视频`
                         : `⭕ 未屏蔽此站`;
 
                     renderBlockedList(domainList);
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const li = document.createElement('li');
             li.textContent = domain + ' ';
             const btn = document.createElement('button');
-            btn.textContent = '❌取消';
+            btn.textContent = '[X]取消';
             btn.style.marginLeft = '10px';
             btn.addEventListener('click', () => {
                 removeDomain(domain);

@@ -35,25 +35,25 @@ templates = Jinja2Templates(directory=resource_path("templates"))
 # 定义 lifespan 生命周期处理函数
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("🚀 定时任务服务启动中...")
+    logger.info("[INFO] 定时任务服务启动中...")
 
     try:
         await scheduler_client.start()
-        logger.info("✅ 定时任务调度器启动成功")
+        logger.info("[OK] 定时任务调度器启动成功")
         task_count = len(scheduler_client.task_configs)
         enabled_count = sum(1 for config in scheduler_client.task_configs.values() if config.enabled)
-        logger.info(f"📋 已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+        logger.info(f"[INFO] 已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
     except Exception as e:
-        logger.error(f"❌ 启动定时任务调度器失败: {e}")
+        logger.error(f"[ERROR] 启动定时任务调度器失败: {e}")
 
     yield  # 应用生命周期执行中...
 
-    logger.info("🛑 定时任务服务关闭中...")
+    logger.info("[INFO] 定时任务服务关闭中...")
     try:
         await scheduler_client.stop()
-        logger.info("✅ 定时任务调度器已停止")
+        logger.info("[OK] 定时任务调度器已停止")
     except Exception as e:
-        logger.error(f"❌ 停止定时任务调度器失败: {e}")
+        logger.error(f"[ERROR] 停止定时任务调度器失败: {e}")
 
 
 # 创建 FastAPI 应用并绑定 lifespan
@@ -97,11 +97,11 @@ async def health_check():
 
 def main():
     print("\n" + "=" * 60)
-    print("🕐 直播间数据采集定时任务系统")
-    print("=" * 60)
-    print("📡 API 文档: http://localhost:8000/docs")
-    print("🎛️  管理界面: http://localhost:8000/scheduler/dashboard")
-    print("🔍 健康检查: http://localhost:8000/health")
+    print("[INFO] 直播间数据采集定时任务系统")
+    print("="*50)
+    print("[INFO] API 文档: http://localhost:8000/docs")
+    print("[INFO] 管理界面: http://localhost:8000/scheduler/dashboard")
+    print("[INFO] 健康检查: http://localhost:8000/health")
     print("=" * 60 + "\n")
 
     # 确保数据目录存在

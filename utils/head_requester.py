@@ -33,7 +33,7 @@ class HeadRequester:
                 cookies=cookies,
                 allow_redirects=allow_redirects
             )
-            print("✅ HEAD 请求成功")
+            print("[OK] HEAD 请求成功")
             return {
                 "status_code": response.status_code,
                 "headers": dict(response.headers),

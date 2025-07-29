@@ -3,12 +3,12 @@
     <div class="page-header">
       <div class="page-actions">
         <button @click="createBrowser" class="btn btn-primary">
-          <span>➕</span>
+          <span>[+]</span>
           创建浏览器实例
         </button>
         <button @click="refreshBrowsers" class="btn btn-secondary" :disabled="isLoading">
           <span v-if="isLoading" class="loading"></span>
-          <span v-else>🔄</span>
+          <span v-else>[REFRESH]</span>
           刷新
         </button>
       </div>
@@ -32,7 +32,7 @@
         </div>
         <div class="card-body">
           <div v-if="browsers.length === 0" class="empty-state">
-            <div class="empty-icon">🌐</div>
+            <div class="empty-icon">[BROWSER]</div>
             <h3>暂无浏览器实例</h3>
             <p>点击上方按钮创建第一个浏览器实例</p>
           </div>
@@ -78,7 +78,7 @@
                               class="btn btn-small btn-success"
                               :disabled="isOperating"
                               title="启动浏览器">
-                        ▶️
+                        [PLAY]
                       </button>
                       <button
                               v-if="browser.status === 'running'"
@@ -86,14 +86,14 @@
                               class="btn btn-small btn-warning"
                               :disabled="isOperating"
                               title="停止浏览器">
-                        ⏸️
+                        [PAUSE]
                       </button>
                       <button
                               @click="deleteBrowser(browser.user_id)"
                               class="btn btn-small btn-danger"
                               :disabled="isOperating"
                               title="删除浏览器">
-                        🗑️
+                        [DELETE]
                       </button>
                     </div>
                   </td>

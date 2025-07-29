@@ -3,12 +3,12 @@
     <div class="page-header">
       <div class="page-actions">
         <button @click="installExtension" class="btn btn-primary">
-          <span>📦</span>
+          <span>[PACKAGE]</span>
           安装扩展
         </button>
         <button @click="refreshExtensions" class="btn btn-secondary" :disabled="isLoading">
           <span v-if="isLoading" class="loading"></span>
-          <span v-else>🔄</span>
+          <span v-else>[REFRESH]</span>
           刷新
         </button>
       </div>
@@ -19,7 +19,7 @@
       <div class="grid grid-4">
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon total">🧩</div>
+            <div class="stat-icon total">[EXT]</div>
             <div class="stat-info">
               <h3>总扩展数</h3>
               <p class="stat-number">{{ extensions.length }}</p>
@@ -29,7 +29,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon enabled">✅</div>
+            <div class="stat-icon enabled">[OK]</div>
             <div class="stat-info">
               <h3>已启用</h3>
               <p class="stat-number text-success">{{ enabledExtensions }}</p>
@@ -39,7 +39,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon disabled">⏸️</div>
+            <div class="stat-icon disabled">[PAUSE]</div>
             <div class="stat-info">
               <h3>已禁用</h3>
               <p class="stat-number text-warning">{{ disabledExtensions }}</p>
@@ -49,7 +49,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon updates">🔄</div>
+            <div class="stat-icon updates">[UPDATE]</div>
             <div class="stat-info">
               <h3>可更新</h3>
               <p class="stat-number text-info">{{ updatableExtensions }}</p>
@@ -79,7 +79,7 @@
         </div>
         <div class="card-body">
           <div v-if="filteredExtensions.length === 0" class="empty-state">
-            <div class="empty-icon">🧩</div>
+            <div class="empty-icon">[EXT]</div>
             <h3>暂无扩展</h3>
             <p>点击上方按钮安装第一个扩展</p>
           </div>
@@ -96,7 +96,7 @@
                        :src="extension.icon"
                        :alt="extension.name"
                        @error="handleIconError">
-                  <span v-else class="default-icon">🧩</span>
+                  <span v-else class="default-icon">[EXT]</span>
                 </div>
                 <div class="extension-info">
                   <h3 class="extension-name">{{ extension.name }}</h3>
@@ -238,13 +238,13 @@
                    @click="selectStoreExtension(ext)">
                 <div class="store-ext-icon">
                   <img v-if="ext.icon" :src="ext.icon" :alt="ext.name">
-                  <span v-else>🧩</span>
+                  <span v-else>[EXT]</span>
                 </div>
                 <div class="store-ext-info">
                   <h4>{{ ext.name }}</h4>
                   <p>{{ ext.description }}</p>
                   <div class="store-ext-meta">
-                    <span class="rating">⭐ {{ ext.rating }}</span>
+                    <span class="rating">[STAR] {{ ext.rating }}</span>
                     <span class="downloads">{{ ext.downloads }} 下载</span>
                   </div>
                 </div>

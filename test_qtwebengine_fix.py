@@ -21,10 +21,10 @@ def test_qtwebengine_import():
         # 测试在QApplication创建前导入QtWebEngineWidgets
         try:
             from PyQt6.QtWebEngineWidgets import QWebEngineView
-            print("✓ QtWebEngineWidgets导入成功")
+            print("[OK] QtWebEngineWidgets导入成功")
             webengine_available = True
         except ImportError as e:
-            print(f"⚠ QtWebEngineWidgets导入失败: {e}")
+            print(f"[WARNING] QtWebEngineWidgets导入失败: {e}")
             webengine_available = False
         
         # 模拟app.py中的导入顺序
@@ -33,15 +33,15 @@ def test_qtwebengine_import():
         
         # 设置Qt属性
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
-        print("✓ Qt.AA_ShareOpenGLContexts属性设置成功")
+        print("[OK] Qt.AA_ShareOpenGLContexts属性设置成功")
         
         # 测试现代UI导入（不创建实例）
         try:
             from ui.modern_app import ModernApp
-            print("✓ ModernApp导入成功")
+            print("[OK] ModernApp导入成功")
             
         except Exception as e:
-            print(f"✗ ModernApp导入失败: {e}")
+            print(f"[ERROR] ModernApp导入失败: {e}")
             return False
         
         print("\n测试结果:")
@@ -52,7 +52,7 @@ def test_qtwebengine_import():
         return True
         
     except Exception as e:
-        print(f"✗ 测试失败: {e}")
+        print(f"[ERROR] 测试失败: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -68,28 +68,28 @@ def test_fallback_mechanism():
             
         # 检查是否包含降级处理代码
         if 'QWebEngineView is not None' in content:
-            print("✓ 发现QtWebEngine可用性检查代码")
+            print("[OK] 发现QtWebEngine可用性检查代码")
         else:
-            print("✗ 未发现QtWebEngine可用性检查代码")
+            print("[ERROR] 未发现QtWebEngine可用性检查代码")
             return False
             
         if 'fallback_label' in content:
-            print("✓ 发现降级UI代码")
+            print("[OK] 发现降级UI代码")
         else:
-            print("✗ 未发现降级UI代码")
+            print("[ERROR] 未发现降级UI代码")
             return False
             
         if 'open_scheduler_in_browser' in content:
-            print("✓ 发现外部浏览器打开功能")
+            print("[OK] 发现外部浏览器打开功能")
         else:
-            print("✗ 未发现外部浏览器打开功能")
+            print("[ERROR] 未发现外部浏览器打开功能")
             return False
             
-        print("✓ 降级机制代码检查通过")
+        print("[OK] 降级机制代码检查通过")
         return True
         
     except Exception as e:
-        print(f"✗ 降级机制测试失败: {e}")
+        print(f"[ERROR] 降级机制测试失败: {e}")
         return False
 
 if __name__ == "__main__":
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     
     print("\n" + "=" * 50)
     if success1 and success2:
-        print("🎉 所有测试通过！QtWebEngine修复成功。")
+        print("[OK] 所有测试通过！QtWebEngine修复成功。")
         sys.exit(0)
     else:
-        print("❌ 部分测试失败，请检查修复代码。")
+        print("[ERROR] 部分测试失败，请检查修复代码。")
         sys.exit(1)

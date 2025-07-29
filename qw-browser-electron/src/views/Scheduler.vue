@@ -3,12 +3,12 @@
     <div class="page-header">
       <div class="page-actions">
         <button @click="createTask" class="btn btn-primary">
-          <span>➕</span>
+          <span>[+]</span>
           创建任务
         </button>
         <button @click="refreshTasks" class="btn btn-secondary" :disabled="isLoading">
           <span v-if="isLoading" class="loading"></span>
-          <span v-else>🔄</span>
+          <span v-else>[REFRESH]</span>
           刷新
         </button>
       </div>
@@ -19,7 +19,7 @@
       <div class="grid grid-4">
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon total">📋</div>
+            <div class="stat-icon total">[TASK]</div>
             <div class="stat-info">
               <h3>总任务数</h3>
               <p class="stat-number">{{ tasks.length }}</p>
@@ -29,7 +29,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon running">▶️</div>
+            <div class="stat-icon running">[PLAY]</div>
             <div class="stat-info">
               <h3>运行中</h3>
               <p class="stat-number text-success">{{ runningTasks }}</p>
@@ -39,7 +39,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon scheduled">⏰</div>
+            <div class="stat-icon scheduled">[CLOCK]</div>
             <div class="stat-info">
               <h3>已调度</h3>
               <p class="stat-number text-info">{{ scheduledTasks }}</p>
@@ -49,7 +49,7 @@
 
         <div class="card stat-card">
           <div class="card-body">
-            <div class="stat-icon failed">❌</div>
+            <div class="stat-icon failed">[ERROR]</div>
             <div class="stat-info">
               <h3>失败</h3>
               <p class="stat-number text-danger">{{ failedTasks }}</p>
@@ -74,7 +74,7 @@
         </div>
         <div class="card-body">
           <div v-if="filteredTasks.length === 0" class="empty-state">
-            <div class="empty-icon">📋</div>
+            <div class="empty-icon">[TASK]</div>
             <h3>暂无任务</h3>
             <p>点击上方按钮创建第一个定时任务</p>
           </div>
@@ -124,25 +124,25 @@
                               @click="startTask(task.id)"
                               class="btn btn-small btn-success"
                               :disabled="isOperating">
-                        ▶️
+                        [PLAY]
                       </button>
                       <button
                               v-if="task.status === 'running' || task.status === 'scheduled'"
                               @click="stopTask(task.id)"
                               class="btn btn-small btn-warning"
                               :disabled="isOperating">
-                        ⏸️
+                        [PAUSE]
                       </button>
                       <button
                               @click="editTask(task)"
                               class="btn btn-small btn-secondary">
-                        ✏️
+                        [EDIT]
                       </button>
                       <button
                               @click="deleteTask(task.id)"
                               class="btn btn-small btn-danger"
                               :disabled="isOperating || task.status === 'running'">
-                        🗑️
+                        [DELETE]
                       </button>
                     </div>
                   </td>

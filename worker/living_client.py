@@ -240,6 +240,10 @@ async def save_history_list_fn(data):
             flattened_data.extend(data_result)
         data = flattened_data
         logger.info(f"保存的数据内容: {data}")
+        # 如果数据为空，直接返回False
+        if not data:
+            logger.warning("没有数据需要保存")
+            return False
         # 调用后端接口同步直播回放数据
         result = await default_api_client.sync_live_replay_data(data)
         

@@ -32,7 +32,7 @@ def test_qt_display_fix():
         os.environ.setdefault('QT_OPENGL', 'desktop')
         os.environ.setdefault('QT_DEVICE_PIXEL_RATIO', 'auto')
         
-        print("✅ Windows显示器修复方案已应用")
+        print("[OK] Windows显示器修复方案已应用")
     else:
         print("非Windows系统，跳过Windows特定修复")
         QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
@@ -40,9 +40,9 @@ def test_qt_display_fix():
     # 创建应用程序
     try:
         app = QApplication(sys.argv)
-        print("✅ QApplication创建成功")
+        print("[OK] QApplication创建成功")
     except Exception as e:
-        print(f"❌ QApplication创建失败: {e}")
+        print(f"[ERROR] QApplication创建失败: {e}")
         return False
     
     # 检查显示器信息
@@ -61,9 +61,9 @@ def test_qt_display_fix():
             print(f"  缩放比例: {screen.devicePixelRatio():.2f}")
             print(f"  主显示器: {'是' if screen == app.primaryScreen() else '否'}")
         
-        print("✅ 显示器信息获取成功")
+        print("[OK] 显示器信息获取成功")
     except Exception as e:
-        print(f"❌ 显示器信息获取失败: {e}")
+        print(f"[ERROR] 显示器信息获取失败: {e}")
         return False
     
     # 创建测试窗口
@@ -93,11 +93,11 @@ def test_qt_display_fix():
         window.setCentralWidget(central_widget)
         window.show()
         
-        print("\n✅ 测试窗口创建成功")
+        print("\n[OK] 测试窗口创建成功")
         print("\n=== 测试结果 ===")
-        print("✅ Qt显示器修复方案工作正常")
-        print("✅ 没有出现 qt.qpa.screen 错误")
-        print("✅ 应用程序可以正常显示")
+        print("[OK] Qt显示器修复方案工作正常")
+        print("[OK] 没有出现 qt.qpa.screen 错误")
+        print("[OK] 应用程序可以正常显示")
         
         # 运行5秒后自动关闭
         from PyQt6.QtCore import QTimer
@@ -111,7 +111,7 @@ def test_qt_display_fix():
         return True
         
     except Exception as e:
-        print(f"❌ 测试窗口创建失败: {e}")
+        print(f"[ERROR] 测试窗口创建失败: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -120,8 +120,8 @@ def test_qt_display_fix():
 if __name__ == "__main__":
     success = test_qt_display_fix()
     if success:
-        print("\n🎉 Qt显示器修复测试通过！")
+        print("\n[OK] Qt显示器修复测试通过！")
         sys.exit(0)
     else:
-        print("\n❌ Qt显示器修复测试失败！")
+        print("\n[ERROR] Qt显示器修复测试失败！")
         sys.exit(1)

@@ -37,10 +37,10 @@ jobs:
     - name: Install uv
       run: |
         if (-not (Test-Path "$env:USERPROFILE\.cargo\bin\uv.exe")) {
-          Write-Host "📦 Installing uv..."
+          Write-Host "[INFO] Installing uv..."
           irm https://astral.sh/uv/install.ps1 | iex
         } else {
-          Write-Host "✅ uv already installed"
+          Write-Host "[OK] uv already installed"
         }
         
     - name: Verify uv installation
@@ -63,10 +63,10 @@ jobs:
         $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
         
         # 只安装生产依赖和调度器依赖，排除开发依赖
-        Write-Host "📦 Installing production dependencies with uv sync..."
+        Write-Host "[INFO] Installing production dependencies with uv sync..."
         uv sync --extra scheduler
         
-        Write-Host "📦 Installing PyInstaller separately..."
+        Write-Host "[INFO] Installing PyInstaller separately..."
         uv add pyinstaller>=6.0.0
         
     - name: Create necessary directories
@@ -92,17 +92,17 @@ jobs:
       run: |
         $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
         
-        Write-Host "🧪 Testing core dependencies..."
-        uv run python -c "import PyQt6; print('✅ PyQt6 imported successfully')"
-        uv run python -c "import fastapi; print('✅ FastAPI imported successfully')"
-        uv run python -c "import uvicorn; print('✅ Uvicorn imported successfully')"
-        uv run python -c "import DrissionPage; print('✅ DrissionPage imported successfully')"
+        Write-Host "[INFO] Testing core dependencies..."
+        uv run python -c "import PyQt6; print('[OK] PyQt6 imported successfully')"
+        uv run python -c "import fastapi; print('[OK] FastAPI imported successfully')"
+        uv run python -c "import uvicorn; print('[OK] Uvicorn imported successfully')"
+        uv run python -c "import DrissionPage; print('[OK] DrissionPage imported successfully')"
         
-        Write-Host "🧪 Testing scheduler dependencies..."
-        uv run python -c "import apscheduler; print('✅ APScheduler imported successfully')"
+        Write-Host "[INFO] Testing scheduler dependencies..."
+        uv run python -c "import apscheduler; print('[OK] APScheduler imported successfully')"
         
-        Write-Host "🧪 Testing WebEngine (optional)..."
-        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('✅ QtWebEngine available'); except: print('⚠️ QtWebEngine not available, will use fallback')"
+        Write-Host "[INFO] Testing WebEngine (optional)..."
+        uv run python -c "try: from PyQt6.QtWebEngineWidgets import QWebEngineView; print('[OK] QtWebEngine available'); except: print('[WARNING] QtWebEngine not available, will use fallback')"
         
     - name: Build Windows EXE (Optimized)
       run: |

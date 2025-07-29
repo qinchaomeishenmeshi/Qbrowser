@@ -9,11 +9,11 @@ import threading
 # 支持轻量版构建（不包含WebEngine）
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
-    print("✅ QtWebEngineWidgets 导入成功 - 完整版模式")
+    print("[OK] QtWebEngineWidgets 导入成功 - 完整版模式")
     LITE_MODE = False
 except ImportError as e:
-    print(f"⚠️ QtWebEngineWidgets 导入失败: {e}")
-    print("🔧 启用轻量版模式 - 将使用外部浏览器")
+    print(f"[WARNING] QtWebEngineWidgets 导入失败: {e}")
+    print("[INFO] 启用轻量版模式 - 将使用外部浏览器")
     QWebEngineView = None
     LITE_MODE = True
 
