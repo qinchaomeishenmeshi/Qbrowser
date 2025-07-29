@@ -15,6 +15,7 @@ datas = [
     ('conf', 'conf'),
     ('user_ids_cache.json', '.'),
     ('user_ports_cache.json', '.'),
+    ('user_ids.txt', '.'),  # 添加用户ID配置文件
     ('static', 'static'),
     ('templates', 'templates'),
     ('data', 'data'),

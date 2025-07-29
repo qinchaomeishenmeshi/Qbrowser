@@ -94,6 +94,9 @@ class App(QMainWindow):
 
         # 使用QTimer在Qt事件循环启动后执行异步初始化
         QTimer.singleShot(0, self._schedule_async_init)
+        
+        # 延迟加载user_ids.txt配置文件，确保UI完全初始化
+        QTimer.singleShot(50, self.load_user_ids_on_startup)
 
     def _schedule_async_init(self):
         """使用事件循环安排异步初始化任务"""
@@ -323,9 +326,43 @@ class App(QMainWindow):
             self.log_area.verticalScrollBar().maximum()
         )
 
+    def load_user_ids_on_startup(self):
+        """应用启动时自动加载用户ID配置文件"""
+        try:
+            from conf import writable_path
+            # 优先从可写目录加载，如果不存在则从资源目录加载
+            writable_file_path = writable_path("user_ids.txt")
+            resource_file_path = resource_path("user_ids.txt")
+            
+            file_path = None
+            if os.path.exists(writable_file_path):
+                file_path = writable_file_path
+            elif os.path.exists(resource_file_path):
+                file_path = resource_file_path
+            
+            if file_path:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                    if content and self.text_edit:  # 确保text_edit已初始化且有数据
+                        self.text_edit.setText(content)
+                        self.save_cache()  # 同步到缓存
+                        ids = [line.strip() for line in content.split('\n') if line.strip()]
+                        logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
+                    elif not content:
+                        logger.info("user_ids.txt文件为空")
+            else:
+                logger.info("未找到user_ids.txt文件，将使用空配置")
+        except Exception as e:
+            logger.error(f"启动时加载user_ids.txt失败: {e}")
+    
     def load_user_ids(self):
+        """手动选择并加载用户ID配置文件"""
+        from conf import writable_path
+        # 优先从可写目录开始选择
+        default_dir = os.path.dirname(writable_path("user_ids.txt"))
+        
         path, _ = QFileDialog.getOpenFileName(
-            self, "选择 user_ids.txt 文件", "", "文本文件 (*.txt)"
+            self, "选择 user_ids.txt 文件", default_dir, "文本文件 (*.txt)"
         )
         if path:
             try:
@@ -497,15 +534,47 @@ class App(QMainWindow):
             logger.error(f"加载端口映射失败: {e}")
 
     async def save_ports(self):
-        """异步保存端口映射"""
+        """保存端口映射到文件"""
         try:
-            await self.browser_service.save_ports()
-            logger.info("端口映射保存成功")
+            await browser_service.save_ports()
+            logger.info("端口映射已保存")
         except Exception as e:
             logger.error(f"保存端口映射失败: {e}")
+            
+    def save_user_ids_to_file(self):
+        """保存当前用户ID到user_ids.txt配置文件"""
+        try:
+            from conf import writable_path
+            # 获取当前文本编辑器中的用户ID
+            current_text = self.text_edit.toPlainText().strip()
+            if not current_text:
+                self.log_signal.log_updated.emit("没有用户ID需要保存")
+                return
+                
+            # 处理用户ID列表，去除空行和重复项
+            user_ids = [line.strip() for line in current_text.split('\n') if line.strip()]
+            user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
+            
+            # 保存到可写目录的user_ids.txt文件
+            file_path = writable_path("user_ids.txt")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(user_ids))
+                
+            self.log_signal.log_updated.emit(f"已保存 {len(user_ids)} 个用户ID到配置文件")
+            logger.info(f"成功保存用户ID到 {file_path}，共 {len(user_ids)} 个")
+            
+        except Exception as e:
+            self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
+            logger.error(f"保存user_ids.txt失败: {e}")
     
     def closeEvent(self, event):
-        """窗口关闭时自动关闭 frpc 服务和定时任务服务"""
+        """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""
+        # 保存当前用户ID到配置文件
+        try:
+            self.save_user_ids_to_file()
+        except Exception as e:
+            logger.error(f"关闭时保存用户ID失败: {e}")
+            
         # 停止定时任务服务
         try:
             loop = asyncio.get_event_loop()

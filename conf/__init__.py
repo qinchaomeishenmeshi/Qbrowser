@@ -13,6 +13,17 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
+def writable_path(relative_path):
+    """获取可写文件路径，打包后使用exe所在目录"""
+    if getattr(sys, "frozen", False):
+        # 打包后使用exe所在目录作为可写目录
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # 开发环境使用项目根目录
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
+
+
 # 项目根目录
 BASE_DIR = resource_path("")
 DATA_DIR = resource_path("data")

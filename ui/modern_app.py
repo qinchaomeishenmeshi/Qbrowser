@@ -73,8 +73,11 @@ class ModernApp(QMainWindow):
         # 使用同步方法加载基本缓存
         self.load_cache()
 
-        # 使用QTimer在Qt事件循环启动后执行异步初始化
+        # 使用QTimer在Qt事件循环启动后执行异步初始化和配置加载
         QTimer.singleShot(0, self._schedule_async_init)
+        
+        # 延迟加载user_ids.txt配置文件，确保UI完全初始化
+        QTimer.singleShot(100, self.load_user_ids_on_startup)
 
     def setup_fonts(self):
         """设置应用字体"""
@@ -937,13 +940,49 @@ class ModernApp(QMainWindow):
     save_ports = App.save_ports
     _start_frpc = App._start_frpc
 
-    def load_user_ids(self):
-        """加载用户ID配置文件 - 基于App类但改进UI交互"""
+    def load_user_ids_on_startup(self):
+        """应用启动时自动加载用户ID配置文件"""
         try:
-            # 使用与App类相同的方式加载user_ids.txt
-            file_path = resource_path("user_ids.txt")
+            from conf import writable_path
+            # 优先从可写目录加载，如果不存在则从资源目录加载
+            writable_file_path = writable_path("user_ids.txt")
+            resource_file_path = resource_path("user_ids.txt")
+            
+            file_path = None
+            if os.path.exists(writable_file_path):
+                file_path = writable_file_path
+            elif os.path.exists(resource_file_path):
+                file_path = resource_file_path
+            
+            if file_path:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    ids = [line.strip() for line in f.readlines() if line.strip()]
+                    if ids and self.text_edit:  # 确保text_edit已初始化且有数据
+                        self.text_edit.setText("\n".join(ids))
+                        self.save_cache()  # 同步到缓存
+                        logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
+                    elif not ids:
+                        logger.info("user_ids.txt文件为空")
+            else:
+                logger.info("未找到user_ids.txt文件，将使用空配置")
+        except Exception as e:
+            logger.error(f"启动时加载user_ids.txt失败: {e}")
+    
+    def load_user_ids(self):
+        """手动加载用户ID配置文件 - 基于App类但改进UI交互"""
+        try:
+            from conf import writable_path
+            # 优先从可写目录加载，如果不存在则从资源目录加载
+            writable_file_path = writable_path("user_ids.txt")
+            resource_file_path = resource_path("user_ids.txt")
+            
+            file_path = None
+            if os.path.exists(writable_file_path):
+                file_path = writable_file_path
+            elif os.path.exists(resource_file_path):
+                file_path = resource_file_path
 
-            if os.path.exists(file_path):
+            if file_path:
                 with open(file_path, "r", encoding="utf-8") as f:
                     ids = [line.strip() for line in f.readlines() if line.strip()]
                     self.text_edit.setText("\n".join(ids))
@@ -955,8 +994,40 @@ class ModernApp(QMainWindow):
             self.log_signal.log_updated.emit(f"加载配置失败: {e}")
             logger.error(f"加载user_ids.txt失败: {e}")
             
+    def save_user_ids_to_file(self):
+        """保存当前用户ID到user_ids.txt配置文件"""
+        try:
+            from conf import writable_path
+            # 获取当前文本编辑器中的用户ID
+            current_text = self.text_edit.toPlainText().strip()
+            if not current_text:
+                self.log_signal.log_updated.emit("没有用户ID需要保存")
+                return
+                
+            # 处理用户ID列表，去除空行和重复项
+            user_ids = [line.strip() for line in current_text.split('\n') if line.strip()]
+            user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
+            
+            # 保存到可写目录的user_ids.txt文件
+            file_path = writable_path("user_ids.txt")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(user_ids))
+                
+            self.log_signal.log_updated.emit(f"已保存 {len(user_ids)} 个用户ID到配置文件")
+            logger.info(f"成功保存用户ID到 {file_path}，共 {len(user_ids)} 个")
+            
+        except Exception as e:
+            self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
+            logger.error(f"保存user_ids.txt失败: {e}")
+            
     def closeEvent(self, event):
-        """窗口关闭时自动关闭 frpc 服务和定时任务服务"""
+        """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""
+        # 保存当前用户ID到配置文件
+        try:
+            self.save_user_ids_to_file()
+        except Exception as e:
+            logger.error(f"关闭时保存用户ID失败: {e}")
+            
         # 停止定时任务服务
         try:
             loop = asyncio.get_event_loop()
