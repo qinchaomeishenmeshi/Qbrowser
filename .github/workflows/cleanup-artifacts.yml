@@ -41,6 +41,7 @@ jobs:
           REPO: ${{ github.repository }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
+          cat << EOF > cleanup_artifacts.py
           import os
           import requests
           import json
@@ -152,9 +153,7 @@ jobs:
           
           if __name__ == '__main__':
               cleanup_artifacts()
-          
           EOF
-          
           python3 cleanup_artifacts.py
           
       - name: Report cleanup results
