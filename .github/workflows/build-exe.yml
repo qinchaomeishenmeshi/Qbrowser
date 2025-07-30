@@ -230,6 +230,26 @@ jobs:
         path: qw-browser-windows-exe-full.zip
         retention-days: 3
         
+    - name: Trigger cleanup workflow
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          console.log('触发清理旧artifacts工作流...');
+          try {
+            const result = await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'cleanup-artifacts.yml',
+              ref: 'main'
+            });
+            console.log('✅ 清理工作流已触发:', result.status);
+          } catch (error) {
+            console.log('⚠️  触发清理工作流失败:', error.message);
+            // 忽略错误，继续执行
+          }
+        
 
         
   create-release:

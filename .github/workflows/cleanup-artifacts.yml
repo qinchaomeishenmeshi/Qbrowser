@@ -1,0 +1,172 @@
+name: Cleanup Old Artifacts
+
+# 触发条件：在构建完成后运行，或手动触发
+on:
+  workflow_run:
+    workflows: ["Build Windows EXE", "Quick Build Windows EXE"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '是否只查看不删除 (dry run)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# 权限配置
+permissions:
+  actions: write  # 删除artifacts需要
+  contents: read
+
+jobs:
+  cleanup-old-artifacts:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          
+      - name: Install dependencies
+        run: |
+          pip install requests
+          
+      - name: Cleanup old artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          import os
+          import requests
+          import json
+          from datetime import datetime, timedelta
+          
+          def cleanup_artifacts():
+              """清理除最近一次成功构建外的所有产物"""
+              repo = os.environ['REPO']
+              token = os.environ['GITHUB_TOKEN']
+              dry_run = os.environ.get('DRY_RUN', 'false').lower() == 'true'
+              
+              headers = {
+                  'Authorization': f'token {token}',
+                  'Accept': 'application/vnd.github.v3+json'
+              }
+              
+              base_url = f'https://api.github.com/repos/{repo}'
+              
+              try:
+                  # 获取所有artifacts
+                  print("获取所有artifacts...")
+                  response = requests.get(f'{base_url}/actions/artifacts', headers=headers)
+                  response.raise_for_status()
+                  artifacts = response.json()['artifacts']
+                  
+                  if not artifacts:
+                      print("没有找到任何artifacts")
+                      return
+                  
+                  print(f"找到 {len(artifacts)} 个artifacts")
+                  
+                  # 按创建时间排序（最新的在前）
+                  artifacts.sort(key=lambda x: x['created_at'], reverse=True)
+                  
+                  # 获取最近7天的artifacts
+                  cutoff_date = datetime.now() - timedelta(days=7)
+                  recent_artifacts = []
+                  old_artifacts = []
+                  
+                  for artifact in artifacts:
+                      created_at = datetime.fromisoformat(artifact['created_at'].replace('Z', '+00:00'))
+                      if created_at >= cutoff_date:
+                          recent_artifacts.append(artifact)
+                      else:
+                          old_artifacts.append(artifact)
+                  
+                  print(f"最近7天的artifacts: {len(recent_artifacts)} 个")
+                  print(f"7天前的artifacts: {len(old_artifacts)} 个")
+                  
+                  # 保留最近的成功构建产物
+                  artifacts_to_delete = []
+                  
+                  # 首先删除7天前的所有artifacts
+                  artifacts_to_delete.extend(old_artifacts)
+                  
+                  # 对于最近7天的artifacts，保留最新的1-2个，删除其余的
+                  if len(recent_artifacts) > 2:
+                      artifacts_to_delete.extend(recent_artifacts[2:])  # 从第3个开始删除
+                  
+                  if not artifacts_to_delete:
+                      print("没有需要删除的artifacts")
+                      return
+                  
+                  print(f"准备删除 {len(artifacts_to_delete)} 个artifacts:")
+                  
+                  # 删除artifacts
+                  deleted_count = 0
+                  failed_count = 0
+                  
+                  for artifact in artifacts_to_delete:
+                      artifact_name = artifact['name']
+                      artifact_id = artifact['id']
+                      created_at = artifact['created_at']
+                      size_mb = artifact['size_in_bytes'] / (1024 * 1024)
+                      
+                      print(f"  {'[DRY RUN] 将删除' if dry_run else '删除'}: {artifact_name} (ID: {artifact_id}, 创建于: {created_at}, 大小: {size_mb:.2f}MB)")
+                      
+                      if not dry_run:
+                          try:
+                              delete_response = requests.delete(
+                                  f'{base_url}/actions/artifacts/{artifact_id}',
+                                  headers=headers
+                              )
+                              if delete_response.status_code == 204:
+                                  deleted_count += 1
+                                  print(f"    ✓ 已删除")
+                              else:
+                                  failed_count += 1
+                                  print(f"    ✗ 删除失败: {delete_response.status_code}")
+                          except Exception as e:
+                              failed_count += 1
+                              print(f"    ✗ 删除时出错: {e}")
+                  
+                  print(f"\n清理完成:")
+                  print(f"  成功删除: {deleted_count} 个")
+                  print(f"  删除失败: {failed_count} 个")
+                  print(f"  保留artifacts: {len(artifacts) - len(artifacts_to_delete)} 个")
+                  
+                  if dry_run:
+                      print("\n⚠️  这是dry run模式，没有实际删除任何文件")
+                      print("如需实际删除，请重新运行并将 dry_run 设为 false")
+                  
+              except requests.exceptions.RequestException as e:
+                  print(f"API请求失败: {e}")
+                  exit(1)
+              except Exception as e:
+                  print(f"发生错误: {e}")
+                  exit(1)
+          
+          if __name__ == '__main__':
+              cleanup_artifacts()
+          
+          EOF
+          
+          python3 cleanup_artifacts.py
+          
+      - name: Report cleanup results
+        if: always()
+        run: |
+          echo "✅ 清理任务完成"
+          echo "📊 查看存储使用情况:"
+          echo "   仓库: ${{ github.repository }}"
+          echo "   工作流: ${{ github.workflow }}"
+          echo "   运行ID: ${{ github.run_id }}"
+          echo "   📋 查看artifacts: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "   💰 查看GitHub账单: https://github.com/settings/billing"
+          echo ""
+          echo "🔍 如需手动清理，请访问:"
+          echo "   https://github.com/${{ github.repository }}/actions"
