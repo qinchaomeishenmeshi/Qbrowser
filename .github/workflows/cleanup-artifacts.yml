@@ -77,12 +77,14 @@ jobs:
                   artifacts.sort(key=lambda x: x['created_at'], reverse=True)
                   
                   # 获取最近7天的artifacts
-                  cutoff_date = datetime.now() - timedelta(days=7)
+                  from datetime import timezone
+                  cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
                   recent_artifacts = []
                   old_artifacts = []
                   
                   for artifact in artifacts:
-                      created_at = datetime.fromisoformat(artifact['created_at'].replace('Z', '+00:00'))
+                      created_at_str = artifact['created_at'].replace('Z', '+00:00')
+                      created_at = datetime.fromisoformat(created_at_str)
                       if created_at >= cutoff_date:
                           recent_artifacts.append(artifact)
                       else:
