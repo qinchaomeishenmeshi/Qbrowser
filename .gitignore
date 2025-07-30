@@ -52,8 +52,6 @@ htmlcov/
 
 # 项目特定
 /browser_data/
-/user_ids_cache.json
-/user_ports_cache.json
 
 # 系统文件
 .DS_Store
