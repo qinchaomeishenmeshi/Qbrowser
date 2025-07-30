@@ -185,12 +185,50 @@ jobs:
           exit 1
         }
         
+    - name: Compress build artifacts
+      run: |
+        $buildDir = "dist\全网直播浏览器"
+        $zipFile = "qw-browser-windows-exe-full.zip"
+        
+        Write-Host "[INFO] Compressing build artifacts..."
+        Compress-Archive -Path "$buildDir\*" -DestinationPath $zipFile -CompressionLevel Optimal
+        
+        $zipSize = (Get-Item $zipFile).Length / 1MB
+        Write-Host "[OK] Compressed file size: $([math]::Round($zipSize, 2)) MB"
+        
+    - name: Clean up build artifacts
+      run: |
+        Write-Host "[INFO] Cleaning up build artifacts..."
+        # 删除build目录和dist目录（除了压缩包）
+        if (Test-Path "build") {
+          Remove-Item -Recurse -Force "build"
+          Write-Host "[OK] Removed build directory"
+        }
+        if (Test-Path "dist") {
+          Remove-Item -Recurse -Force "dist"
+          Write-Host "[OK] Removed dist directory"
+        }
+        # 清理缓存文件
+        if (Test-Path "__pycache__") {
+          Remove-Item -Recurse -Force "__pycache__"
+        }
+        Write-Host "[OK] Cleanup completed"
+        
+    - name: Report storage usage
+      run: |
+        Write-Host "[INFO] Storage Usage Report:"
+        Write-Host "Repository: ${{ github.repository }}"
+        Write-Host "Workflow: ${{ github.workflow }}"
+        Write-Host "Run ID: ${{ github.run_id }}"
+        Write-Host "Artifact retention: 3 days"
+        Write-Host "To check storage usage: https://github.com/settings/billing"
+        
     - name: Upload Full Version Artifact
       uses: actions/upload-artifact@v4
       with:
         name: qw-browser-windows-exe-full
-        path: dist/全网直播浏览器/
-        retention-days: 30
+        path: qw-browser-windows-exe-full.zip
+        retention-days: 3
         
 
         

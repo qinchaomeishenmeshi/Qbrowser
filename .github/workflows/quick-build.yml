@@ -96,10 +96,22 @@ jobs:
           exit 1
         }
         
+    - name: Compress build artifacts
+      if: ${{ github.event.inputs.upload_artifact == 'true' }}
+      run: |
+        $buildDir = "dist\全网直播浏览器"
+        $zipFile = "qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip"
+        
+        Write-Host "[INFO] Compressing build artifacts..."
+        Compress-Archive -Path "$buildDir\*" -DestinationPath $zipFile -CompressionLevel Optimal
+        
+        $zipSize = (Get-Item $zipFile).Length / 1MB
+        Write-Host "[OK] Compressed file size: $([math]::Round($zipSize, 2)) MB"
+        
     - name: Upload build artifact
       if: ${{ github.event.inputs.upload_artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}
-        path: dist/全网直播浏览器/
-        retention-days: 7
+        path: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip
+        retention-days: 3
