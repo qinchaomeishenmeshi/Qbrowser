@@ -20,6 +20,7 @@ const APP_STATE = {
   cacheData: "",
   isSyncing: false,
   livePlanData: null, // 用于存储直播计划数据
+  abData: null, // 用于存储AB数据
 };
 
 // #endregion
@@ -94,6 +95,12 @@ function handleFetchResponses(event) {
     url.includes("/data/life/live/case/agreement/get") &&
     status === 200
   ) {
+    handleAgreementResponse(body);
+  } else if (url.includes("/api/anchor/creative/get_ab") && status === 200) {
+    console.log("拦截到AB数据:", body);
+
+    APP_STATE.abData = body;
+  } else {
     handleAgreementResponse(url);
   }
 }
@@ -194,16 +201,31 @@ function setupMixedCutSyncButton() {
           }
 
           const productList = planData.products.products;
+
           console.log("开始处理商品列表:", productList);
           createTopTips(`开始同步 ${productList.length} 个商品...`, {
             type: "info",
           });
+          const promotion_ids = productList.map(
+            (product) => product.promotion_id
+          );
+          const { data: promotionsV2Data } = await getPromotionsV2(
+            promotion_ids
+          );
+          console.log("promotionsV2Data", promotionsV2Data);
+          const promotions = promotionsV2Data.promotions || [];
+          if (!promotions.length) {
+            createTopTips("请先将商品添加至中控台", { type: "error" });
+            return;
+          }
 
-          const productPromises = productList.map(async (product) => {
-            const promotionId = product.product_id;
-            if (!promotionId) return;
+          const productPromises = promotions.map(async (product) => {
+            console.log("product", product);
 
-            console.log(`正在处理商品 ID: ${promotionId}`);
+            const product_id = product.product_id;
+
+            console.log(`正在处理商品 ID: ${product_id}`);
+            if (!product_id) return;
 
             const url = `https://haohuo.jinritemai.com/aweme/v2/shop/promotion/pack/detail/?is_h5=1&origin_type=pc_buyin_selection_decision`;
             const UserAgent =
@@ -211,10 +233,10 @@ function setupMixedCutSyncButton() {
             const headers = {
               Accept: "application/json, text/plain, */*",
               "Content-Type": "application/x-www-form-urlencoded",
-              Referer: `https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=${promotionId}&origin_type=pc_buyin_selection_decision`,
+              Referer: `https://haohuo.jinritemai.com/ecommerce/trade/detail/index.html?id=${product_id}&origin_type=pc_buyin_selection_decision`,
               "User-Agent": UserAgent,
             };
-            const body = `promotion_id=${promotionId}&enter_from=&meta_param=&is_h5=1`;
+            const body = `promotion_id=${product_id}&enter_from=&meta_param=&is_h5=1`;
 
             try {
               const responseData = await new Promise((resolve, reject) => {
@@ -255,38 +277,38 @@ function setupMixedCutSyncButton() {
 
               if (responseData.status_code === 0) {
                 console.log(
-                  `商品 ${promotionId} 同步成功:`,
+                  `商品 ${product_id} 同步成功:`,
                   responseData.detail_info
                 );
                 const formattedData = formatProductDetails(responseData);
                 if (formattedData) {
-                  console.log("formattedData:", formattedData);
                   product.detailInfo = formattedData.detail;
-                  product.configStr = formattedData.config.join(",");
-                  product.infoStr = formattedData.info.join(",");
                   product.fromType = "7";
                 } else {
                   console.warn(
-                    `商品 ${promotionId} 的详情数据格式不正确，无法格式化。`
+                    `商品 ${product_id} 的详情数据格式不正确，无法格式化。`
                   );
                 }
               } else {
                 throw new Error(
-                  responseData.error || `获取商品 ${promotionId} 详情失败`
+                  responseData.error || `获取商品 ${product_id} 详情失败`
                 );
               }
             } catch (error) {
-              console.error(`商品 ${promotionId} 同步失败:`, error);
-              createTopTips(`商品 ${promotionId} 同步失败`, { type: "error" });
+              console.error(`商品 ${product_id} 同步失败:`, error);
+              createTopTips(`商品 ${product_id} 同步失败`, { type: "error" });
             }
           });
 
           await Promise.allSettled(productPromises);
 
+          //
+
           // 等所有商品处理结束后 获取最终productList
-          console.log("所有商品处理完成，最终的 productList:", productList);
+          console.log("所有商品处理完成，最终的 promotions:", promotions);
           const planName = planData.title || "";
-          await buYinSendProductsListToBackground(productList, planName);
+
+          await buYinSendProductsListToBackground(promotions, planName);
 
           createTopTips("所有商品已处理完毕", { type: "success" });
         } catch (error) {

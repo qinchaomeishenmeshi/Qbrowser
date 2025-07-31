@@ -144,7 +144,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log(request, "onMessage:request");
   if (
     request.action === "FETCH_EC_PRODUCT_LIST" ||
-    request.action === "FETCH_PRODUCT_DETAIL"
+    request.action === "FETCH_PRODUCT_DETAIL" ||
+    request.action === "FETCH_AB_DATA"
   ) {
     const { url, options = {} } = request.data || {}; // Provide defaults
 
