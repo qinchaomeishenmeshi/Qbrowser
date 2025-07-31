@@ -261,7 +261,7 @@ function setupMixedCutSyncButton() {
                 const formattedData = formatProductDetails(responseData);
                 if (formattedData) {
                   console.log("formattedData:", formattedData);
-                  product.detailInfo = JSON.stringify(formattedData.detail);
+                  product.detailInfo = formattedData.detail;
                   product.configStr = formattedData.config.join(",");
                   product.infoStr = formattedData.info.join(",");
                   product.fromType = "7";
@@ -523,25 +523,31 @@ async function buYinSendProductsListToBackground(productsList, planName) {
     document.querySelector(".btn-item-role-exchange-name__title")
       ?.textContent || "chrome-plugins";
   console.log("抖音账号名称:", dyAccountName);
-  // 将productsList中所有key从所有_间隔格式修改为小驼峰格式。如果本来就是小驼峰的则不处理
-  productsList.forEach((product) => {
-    Object.keys(product).forEach((key) => {
-      if (key.includes("_")) {
-        const newKey = key.replace(/_([a-z])/g, (match, p1) =>
-          p1.toUpperCase()
-        );
-        product[newKey] = product[key];
-        delete product[key];
-      }
-    });
-  });
+  // 递归将对象的所有key从下划线格式转换为小驼峰格式
+  const convertKeysToCamelCase = (obj) => {
+    if (Array.isArray(obj)) {
+      return obj.map((v) => convertKeysToCamelCase(v));
+    } else if (obj !== null && typeof obj === "object") {
+      return Object.keys(obj).reduce((acc, key) => {
+        const newKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+        acc[newKey] = convertKeysToCamelCase(obj[key]);
+        return acc;
+      }, {});
+    }
+    return obj;
+  };
+
+  // 转换productsList中的所有key
+  let convertedProductsList = convertKeysToCamelCase(productsList);
+
+  console.log("转换后的商品列表:", convertedProductsList);
 
   const params = {
     attr: "1",
     name: planName,
     dyAccountNo: dyAccountName,
     dyAccountName: dyAccountName,
-    products: productsList,
+    products: convertedProductsList,
   };
 
   console.log("发送百应商品数据到后台", params);
@@ -562,13 +568,26 @@ async function buYinSendProductsListToBackground(productsList, planName) {
         },
       },
       (response) => {
+        console.log("response", response);
+
         if (chrome.runtime.lastError) {
-          console.error("Error sending message:", chrome.runtime.lastError);
+          const message = `同步百应商品失败: ${chrome.runtime.lastError.message}`;
+          console.error(message);
+          createTopTips(message, { type: "error" });
           reject(chrome.runtime.lastError);
-        } else if (response.success) {
+        } else if (response.data?.code == 200) {
+          const message = "同步百应商品成功";
+          createTopTips(message, { type: "success" });
           resolve(response.data);
         } else {
-          console.error("Error in background script:", response.error);
+          const message = `同步百应商品失败: ${
+            response.error?.message || "未知错误"
+          }`;
+          console.error(
+            "Error in background script:",
+            response.data?.msg || "未知错误"
+          );
+          createTopTips(message, { type: "error" });
           reject(response.error);
         }
       }
