@@ -544,7 +544,7 @@ async function buYinSendProductsListToBackground(productsList, planName) {
 
   const params = {
     attr: "1",
-    name: planName,
+    dyPlanName: planName,
     dyAccountNo: dyAccountName,
     dyAccountName: dyAccountName,
     products: convertedProductsList,
