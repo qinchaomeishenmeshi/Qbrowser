@@ -273,21 +273,19 @@ class BrowserOperator:
 
     async def attach_get_cookies(self, user_ids: List[str], site_key: str = "baiying"):
         """
-        批量获取并保存用户的cookies信息
+        批量获取并保存用户的cookies信息（优化为并发处理）
         """
-        results = []
-        try:
-            for user_id in user_ids:
+        async def process_user(user_id):
+            try:
                 logger.info(f"处理用户 {user_id} 的 {site_key} 站点cookies")
                 success = await self.collect_site_cookies(user_id, site_key)
-                results.append({"user_id": user_id, "success": success})
+                return {"user_id": user_id, "success": success}
+            except Exception as e:
+                logger.error(f"处理用户 {user_id} 时发生错误: {e}")
+                return {"user_id": user_id, "success": False}
 
-                # 稍作延迟，避免并发问题
-                await asyncio.sleep(0.5)
-
-        except Exception as e:
-            logger.error(f"批量处理 cookies 时发生错误: {e}")
-
+        tasks = [process_user(user_id) for user_id in user_ids]
+        results = await asyncio.gather(*tasks)
         return results
 
     async def get_user_cookies(
