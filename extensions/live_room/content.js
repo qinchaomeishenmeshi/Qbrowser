@@ -40,6 +40,7 @@ function init() {
 
   if (window.location.hostname === "eos.douyin.com") {
     syncPunishList();
+    checkLiveStatus();
   }
 
   if (
@@ -894,6 +895,89 @@ function getDyAccountNo() {
   if (accountName) {
     console.log("获取到抖音名:", accountName);
     localStorage.setItem("dyRoomName", accountName);
+  }
+}
+
+/**
+ * 检查直播状态
+ * 调用抖音菜单接口，判断CurrentLive菜单项的name字段是"直播间"还是"正在直播"
+ * 并将状态存储到localStorage中
+ */
+async function checkLiveStatus() {
+  console.log("开始检查直播状态");
+  
+  try {
+    const response = await fetch("https://eos.douyin.com/data/life/live/menu/detail/v1/", {
+      "headers": {
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "accept-language": "zh-CN,zh;q=0.9",
+        "cache-control": "max-age=0",
+        "priority": "u=0, i",
+        "sec-ch-ua": '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"macOS"',
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "sec-fetch-user": "?1",
+        "upgrade-insecure-requests": "1"
+      },
+      "body": null,
+      "method": "GET",
+      "mode": "cors",
+      "credentials": "include"
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("菜单接口返回数据:", data);
+
+    // 查找CurrentLive菜单项
+    let currentLiveName = null;
+    if (data.menu && data.menu.sub_menu) {
+      for (const mainMenu of data.menu.sub_menu) {
+        if (mainMenu.sub_menu) {
+          for (const subMenu of mainMenu.sub_menu) {
+            if (subMenu.menu_key === "CurrentLive") {
+              currentLiveName = subMenu.name;
+              break;
+            }
+          }
+        }
+        if (currentLiveName) break;
+      }
+    }
+
+    if (currentLiveName) {
+      console.log(`找到CurrentLive菜单项，name字段为: ${currentLiveName}`);
+      
+      // 判断直播状态
+      const isLiving = currentLiveName === "正在直播";
+      const liveStatus = {
+        currentLiveName: currentLiveName,
+        isLiving: isLiving,
+        lastCheckTime: new Date().toISOString()
+      };
+      
+      // 存储到localStorage
+      localStorage.setItem("liveStatus", JSON.stringify(liveStatus));
+      console.log("直播状态已保存到localStorage:", liveStatus);
+      
+      // 显示提示信息
+      createTopTips(`直播状态: ${currentLiveName}`, { 
+        type: isLiving ? "success" : "info" 
+      });
+    } else {
+      console.warn("未找到CurrentLive菜单项");
+      createTopTips("未找到直播状态信息", { type: "warning" });
+    }
+
+  } catch (error) {
+    console.error("检查直播状态失败:", error);
+    createTopTips(`检查直播状态失败: ${error.message}`, { type: "error" });
   }
 }
 
