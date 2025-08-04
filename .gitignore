@@ -60,3 +60,5 @@ Thumbs.db
 static/
 qw-browser-electron/node_modules/
 data/
+user_ports_cache.json
+user_ids_cache.json
