@@ -5,7 +5,7 @@
   const AGREEMENT_GET_PATH = "/data/life/live/case/agreement/get";
   const LIVE_CORE_DARA = "/compass_api/author/live/live_screen/core_data";
   const LIVE_PLANS_PATH = "/api/anchor/livepc/get_live_plans";
-  const GET_AB_PATH = "/api/anchor/creative/get_ab";
+  const PACK_DETAIL_PATH = "/pc/selection/decision/pack_detail";
 
   function shouldIntercept(url) {
     return (
@@ -13,14 +13,14 @@
       url.includes(AGREEMENT_GET_PATH) ||
       url.includes(LIVE_CORE_DARA) ||
       url.includes(LIVE_PLANS_PATH) ||
-      url.includes(GET_AB_PATH)
+      url.includes(PACK_DETAIL_PATH)
     );
   }
 
-  function dispatch(url, status, body) {
+  function dispatch(url, status, body, requestBody = null) {
     window.dispatchEvent(
       new CustomEvent("fetchResponse", {
-        detail: { url, status, body },
+        detail: { url, status, body, requestBody },
       })
     );
   }
@@ -30,11 +30,19 @@
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input.url;
     if (shouldIntercept(url)) {
+      const requestBody = init && init.body ? init.body : null;
       return _fetch.call(this, input, init).then((response) => {
         response
           .clone()
           .text()
-          .then((body) => dispatch(url, response.status, body));
+          .then((body) => {
+            // 对于pack_detail接口，传递请求体信息
+            if (url.includes(PACK_DETAIL_PATH)) {
+              dispatch(url, response.status, body, requestBody);
+            } else {
+              dispatch(url, response.status, body);
+            }
+          });
         return response;
       });
     }

@@ -20,7 +20,6 @@ const APP_STATE = {
   cacheData: "",
   isSyncing: false,
   livePlanData: null, // 用于存储直播计划数据
-  abData: null, // 用于存储AB数据
 };
 
 // #endregion
@@ -50,6 +49,15 @@ function init() {
   ) {
     setupMixedCutSyncButton();
   }
+
+  // // 检测是否进入商品推广页面，如果是则模拟请求
+  // if (
+  //   window.location.href.startsWith(
+  //     "https://buyin.jinritemai.com/dashboard/merch-picking-library/merch-promoting"
+  //   )
+  // ) {
+  //   simulatePackDetailRequest();
+  // }
 }
 
 // #endregion
@@ -76,13 +84,19 @@ function handleChromeMessages(request, sender, sendResponse) {
     get_replay_punish_list().then((res) => {
       console.log("punish_list", res);
     });
+  } else if (request.action === "SHOW_TASK_RESULT") {
+    console.log("收到后台任务结果:", request.data);
+    createTopTips("后台任务已完成，数据已获取", { type: "success" });
+    // 这里可以处理返回的数据
+    handlePackDetailResult(request.data, request.packId);
+    sendResponse({ success: true });
   } else {
     console.log("其他消息", request);
   }
 }
 
 function handleFetchResponses(event) {
-  const { url, status, body } = event.detail;
+  const { url, status, body, requestBody } = event.detail;
   console.log("接口监听:", { url, status });
 
   if (url.includes("/api/anchor/livepc/get_live_plans") && status === 200) {
@@ -96,10 +110,22 @@ function handleFetchResponses(event) {
     status === 200
   ) {
     handleAgreementResponse(body);
-  } else if (url.includes("/api/anchor/creative/get_ab") && status === 200) {
-    console.log("拦截到AB数据:", body);
-
-    APP_STATE.abData = body;
+  } else if (
+    url.includes("/pc/selection/decision/pack_detail") &&
+    status === 200
+  ) {
+    console.log("拦截到pack_detail数据:", body);
+    // 从请求体中提取biz_id
+    let packId = "unknown";
+    if (requestBody) {
+      try {
+        const requestData = JSON.parse(requestBody);
+        packId = requestData.biz_id || "unknown";
+      } catch (e) {
+        console.warn("解析请求体失败:", e);
+      }
+    }
+    handlePackDetailResult(JSON.parse(body), packId);
   } else {
     handleAgreementResponse(url);
   }
@@ -471,6 +497,112 @@ function createTopTips(text, options = {}) {
   tipElement.addEventListener("click", removeTip);
 
   return { element: tipElement, close: removeTip };
+}
+
+// #endregion
+
+// =================================================================================
+// #region Pack Detail Simulation Functions
+// =================================================================================
+
+/**
+ * 模拟发送pack_detail请求
+ */
+async function simulatePackDetailRequest() {
+  console.log("开始模拟pack_detail请求");
+
+  // 从URL中提取id参数
+  const urlParams = new URLSearchParams(window.location.search);
+  const bizId = urlParams.get("id");
+
+  if (!bizId) {
+    console.warn("未找到商品ID，无法模拟请求");
+    return;
+  }
+
+  console.log("提取到商品ID:", bizId);
+  const signBuyin = await getSignBuyin();
+  const params = new URLSearchParams({
+    ewid: "127d19629b5f6ea3169dc747fa9aa9dd",
+    msToken: signBuyin.ms_token,
+    a_bogus: signBuyin.a_bogus,
+    verifyFp: "verify_mbk5uosj_CsPxDRNK_tGiU_4rqo_BCxB_EKnYl1LNS7w1",
+    fp: "verify_mbk5uosj_CsPxDRNK_tGiU_4rqo_BCxB_EKnYl1LNS7w1",
+  });
+  // 构造请求URL和数据
+  const url = `https://buyin.jinritemai.com/pc/selection/decision/pack_detail?${params}`;
+
+  const requestBody = {
+    scene_info: {
+      request_page: 2,
+    },
+    other_params: {},
+    biz_id: bizId,
+    biz_id_type: 2,
+    enter_from: "pc.unknow.unknow",
+    data_module: "core",
+    extra: {},
+  };
+
+  const headers = {
+    accept: "application/json, text/plain, */*",
+    "accept-language": "zh-CN,zh;q=0.9",
+    "content-type": "application/json",
+    priority: "u=1, i",
+    "sec-ch-ua":
+      '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"macOS"',
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-origin",
+    "x-secsdk-csrf-token":
+      "000100000001b9fa7e3099d7c4688c5f8993fc479b4a97f4f9316281835587b160391bb3d05c18578fc2e39296ab",
+  };
+
+  // 发送fetch请求，让拦截器捕获响应
+  createTopTips("正在获取商品详情...", { type: "info" });
+
+  fetch(url, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(requestBody),
+  })
+    .then((response) => {
+      console.log("pack_detail请求已发送，状态:", response.status);
+      // 不在这里处理响应，让拦截器处理
+      if (!response.ok) {
+        createTopTips("获取商品详情失败", { type: "error" });
+      }
+    })
+    .catch((error) => {
+      console.error("pack_detail请求失败:", error);
+      createTopTips("获取商品详情失败", { type: "error" });
+    });
+}
+
+/**
+ * 处理pack_detail请求的结果
+ */
+function handlePackDetailResult(data, packId) {
+  console.log("处理pack_detail结果:", { data, packId });
+
+  try {
+    // 这里可以根据需要处理返回的数据
+    if (data && data.status_code === 0) {
+      console.log("pack_detail请求成功，数据:", data.data);
+      createTopTips(`商品 ${packId} 详情获取成功`, { type: "success" });
+
+      // 可以在这里添加更多的数据处理逻辑
+      // 例如：显示商品信息、更新UI等
+    } else {
+      console.warn("pack_detail请求失败:", data);
+      createTopTips("商品详情获取失败", { type: "error" });
+    }
+  } catch (error) {
+    console.error("处理pack_detail结果时出错:", error);
+    createTopTips("处理数据时出错", { type: "error" });
+  }
 }
 
 // #endregion
