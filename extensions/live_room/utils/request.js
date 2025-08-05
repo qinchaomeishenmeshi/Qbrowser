@@ -103,6 +103,16 @@ const getSignBuyin = async () => {
   try {
     const response = await new Promise((resolve, reject) => {
       var raw = JSON.stringify({
+        scene_info: {
+          request_page: 2,
+        },
+        biz_id: "3766154142163272068",
+        biz_id_type: 2,
+        enter_from: "pc.unknow.unknow",
+        data_module: "pc-non-core",
+        extra: {
+          use_kol_product: "1",
+        },
         source_type: "force",
         "User-Agent":
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",

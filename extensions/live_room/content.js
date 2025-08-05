@@ -72,14 +72,14 @@ function init() {
     setupMixedCutSyncButton();
   }
 
-  // // 检测是否进入商品推广页面，如果是则模拟请求
-  // if (
-  //   window.location.href.startsWith(
-  //     "https://buyin.jinritemai.com/dashboard/merch-picking-library/merch-promoting"
-  //   )
-  // ) {
-  //   simulatePackDetailRequest();
-  // }
+  // 检测是否进入商品推广页面，如果是则模拟请求
+  if (
+    window.location.href.startsWith(
+      "https://buyin.jinritemai.com/dashboard/merch-picking-library/merch-promoting"
+    )
+  ) {
+    simulatePackDetailRequest();
+  }
 }
 
 /**
@@ -219,7 +219,7 @@ function handleChromeMessages(request, sender, sendResponse) {
 }
 
 function handleFetchResponses(event) {
-  const { url, status, body, requestBody } = event.detail;
+  const { url, status, body } = event.detail;
   console.log("接口监听:", { url, status });
 
   if (url.includes("/api/anchor/livepc/get_live_plans") && status === 200) {
@@ -237,18 +237,7 @@ function handleFetchResponses(event) {
     url.includes("/pc/selection/decision/pack_detail") &&
     status === 200
   ) {
-    console.log("拦截到pack_detail数据:", body);
-    // 从请求体中提取biz_id
-    let packId = "unknown";
-    if (requestBody) {
-      try {
-        const requestData = JSON.parse(requestBody);
-        packId = requestData.biz_id || "unknown";
-      } catch (e) {
-        console.warn("解析请求体失败:", e);
-      }
-    }
-    handlePackDetailResult(JSON.parse(body), packId);
+    handlePackDetailResult(JSON.parse(body));
   } else {
     handleAgreementResponse(url);
   }
@@ -680,8 +669,12 @@ async function simulatePackDetailRequest() {
     ewid: "127d19629b5f6ea3169dc747fa9aa9dd",
     msToken: signBuyin.ms_token,
     a_bogus: signBuyin.a_bogus,
-    verifyFp: "verify_mbk5uosj_CsPxDRNK_tGiU_4rqo_BCxB_EKnYl1LNS7w1",
-    fp: "verify_mbk5uosj_CsPxDRNK_tGiU_4rqo_BCxB_EKnYl1LNS7w1",
+    // msToken:
+    // "8m4PjFeCJeQY4-kBssEnnKUTYBzyAnDj_zTCWF3QjVxp7HJtURhqHbNVMGWY0qtP58mHHlmKe7WuiYuINz-tUohcljJyOsAa26LJuztu4uoTRx-0whdax5oJ5NStCTQQiUExWEqEonKhJLmwX37zNospjDaSHVOq7-drzCNGNuAKRmIoxbmynQnX",
+    // a_bogus:
+    // "my4VkF6yYxW5PplGmOkJt1QlGUVlrTuyfrTxWeFTyoP3OhMb7xBIh9xfcqKf4BOUDuB3i9V7in8dYdfOT2D6MHnkKmkkuqtR2z55V86o0qi6GlGmgNR8C8RzowMK0mJwaA9XN1f5AsMN2fnAIrVTWp-GH5zq55EdbNMjD2LyCEWgDC8kin3kOHD2N6Jqmj%3D%3D",
+    verifyFp: "verify_mdwgzymu_QBL6lC1i_ZW9L_4kSD_8M7b_FQHDPO4j2b4Z",
+    fp: "verify_mdwgzymu_QBL6lC1i_ZW9L_4kSD_8M7b_FQHDPO4j2b4Z",
   });
   // 构造请求URL和数据
   const url = `https://buyin.jinritemai.com/pc/selection/decision/pack_detail?${params}`;
@@ -690,28 +683,16 @@ async function simulatePackDetailRequest() {
     scene_info: {
       request_page: 2,
     },
-    other_params: {},
     biz_id: bizId,
     biz_id_type: 2,
     enter_from: "pc.unknow.unknow",
     data_module: "core",
-    extra: {},
+    extra: { use_kol_product: "1" },
   };
 
   const headers = {
-    accept: "application/json, text/plain, */*",
-    "accept-language": "zh-CN,zh;q=0.9",
-    "content-type": "application/json",
-    priority: "u=1, i",
-    "sec-ch-ua":
-      '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"macOS"',
-    "sec-fetch-dest": "empty",
-    "sec-fetch-mode": "cors",
-    "sec-fetch-site": "same-origin",
     "x-secsdk-csrf-token":
-      "000100000001b9fa7e3099d7c4688c5f8993fc479b4a97f4f9316281835587b160391bb3d05c18578fc2e39296ab",
+      "00010000000147fb5783dea5ad475ab365e85f4200e59c404472fe3a2b364fb34111518b05471858c7cde603a360",
   };
 
   // 发送fetch请求，让拦截器捕获响应
@@ -738,14 +719,14 @@ async function simulatePackDetailRequest() {
 /**
  * 处理pack_detail请求的结果
  */
-function handlePackDetailResult(data, packId) {
-  console.log("处理pack_detail结果:", { data, packId });
-
+function handlePackDetailResult(data) {
   try {
     // 这里可以根据需要处理返回的数据
-    if (data && data.status_code === 0) {
+    if (data && data.code === 0) {
       console.log("pack_detail请求成功，数据:", data.data);
-      createTopTips(`商品 ${packId} 详情获取成功`, { type: "success" });
+      createTopTips(`商品详情获取成功`, {
+        type: "success",
+      });
 
       // 可以在这里添加更多的数据处理逻辑
       // 例如：显示商品信息、更新UI等
