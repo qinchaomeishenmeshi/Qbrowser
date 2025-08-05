@@ -1147,13 +1147,10 @@ async function checkLiveStatus() {
         }
       }
 
-      // 如果是未开播状态，延迟添加违规监控按钮
-      if (!isLiving) {
-        console.log("未开播，准备添加违规监控按钮");
-        setTimeout(() => {
-          addHighFrequencySyncButton();
-        }, 1000); // 延迟1秒执行，确保DOM元素有足够时间加载
-      }
+      // 延迟1秒执行，确保DOM元素有足够时间加载
+      setTimeout(() => {
+        addHighFrequencySyncButton();
+      }, 1000);
 
       // 显示提示信息
       createTopTips(`${liveStatus.isLiving ? "直播中" : "未开播"}`, {
