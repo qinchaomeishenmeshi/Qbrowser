@@ -20,6 +20,10 @@ const APP_STATE = {
   cacheData: "",
   isSyncing: false,
   livePlanData: null, // 用于存储直播计划数据
+  violationCheckInterval: null, // 违规弹窗检查定时器
+  highFrequencyButtonAdded: false, // 跟踪违规监控按钮是否已添加
+  highFrequencySyncInterval: null, // 违规监控定时器
+  isHighFrequencySyncActive: false, // 违规监控是否激活
 };
 
 // #endregion
@@ -30,17 +34,34 @@ const APP_STATE = {
 
 document.addEventListener("DOMContentLoaded", init);
 
+// 页面卸载时清理资源
+window.addEventListener("beforeunload", cleanup);
+
 function init() {
   console.log("页面加载完成 DOMContentLoaded");
 
-  setupAccountObserver();
+  // 脚本初始化
   injectFetchInterceptor();
+  // 事件监听初始化
   setupEventListeners();
-  setupPeriodicTasks();
 
   if (window.location.hostname === "eos.douyin.com") {
-    syncPunishList();
+    // 账号状态监听初始化
+    setupAccountObserver();
+    // 直播状态检查任务
     checkLiveStatus();
+    // 违规记录同步任务
+    setupPeriodicTasks();
+
+    // 检查页面加载时的直播状态，如果已在直播中则启动违规弹窗检查
+    const savedLiveStatus = localStorage.getItem("liveStatus");
+    if (savedLiveStatus) {
+      const liveStatus = JSON.parse(savedLiveStatus);
+      if (liveStatus.isLiving) {
+        console.log("页面加载时检测到直播中状态，启动违规弹窗检查");
+        startViolationCheck();
+      }
+    }
   }
 
   if (
@@ -59,6 +80,107 @@ function init() {
   // ) {
   //   simulatePackDetailRequest();
   // }
+}
+
+/**
+ * 添加违规监控按钮到current-live-room元素中
+ * 使用MutationObserver等待元素出现
+ */
+function addHighFrequencySyncButton() {
+  try {
+    // 检查是否已经添加过按钮
+    if (APP_STATE.highFrequencyButtonAdded) {
+      console.log("违规监控按钮已添加过，跳过重复添加");
+      return;
+    }
+
+    // 首先尝试直接查找元素
+    const currentLiveRoomElement = document.getElementById("current-live-room");
+    if (currentLiveRoomElement) {
+      addButtonToElement(currentLiveRoomElement);
+      return;
+    }
+
+    console.log("current-live-room元素未找到，开始监听DOM变化");
+
+    // 使用MutationObserver监听DOM变化
+    const observer = new MutationObserver((mutations, obs) => {
+      const element = document.getElementById("current-live-room");
+      if (element) {
+        console.log("检测到current-live-room元素已加载");
+        obs.disconnect();
+        addButtonToElement(element);
+        clearTimeout(timeoutId);
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // 设置超时机制，避免无限等待
+    const timeoutId = setTimeout(() => {
+      observer.disconnect();
+      console.warn("等待current-live-room元素超时");
+    }, 30000); // 30秒超时
+  } catch (error) {
+    console.error("添加违规监控按钮失败:", error);
+  }
+}
+
+/**
+ * 将按钮添加到指定元素中
+ * @param {Element} currentLiveRoomElement - 目标元素
+ */
+function addButtonToElement(currentLiveRoomElement) {
+  // 检查是否已存在违规监控按钮，避免重复添加
+  const existingButton = currentLiveRoomElement.querySelector(
+    "#high-frequency-sync-btn"
+  );
+  if (existingButton) {
+    console.log("违规监控按钮已存在，跳过添加");
+    APP_STATE.highFrequencyButtonAdded = true;
+    return;
+  }
+
+  // 创建违规监控按钮
+  const syncButton = document.createElement("button");
+  syncButton.id = "high-frequency-sync-btn";
+  syncButton.textContent = "开始违规监控";
+  syncButton.style.cssText = `
+    background-color: #2ed573;
+    color: #ffffff;
+    border: 1px solid #2ed573;
+    font-weight: 600;
+    outline: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+  `;
+
+  // 添加事件监听器
+  syncButton.addEventListener("mouseenter", function () {
+    this.style.opacity = "0.8";
+  });
+
+  syncButton.addEventListener("mouseleave", function () {
+    this.style.opacity = "1";
+  });
+
+  syncButton.addEventListener("click", function () {
+    console.log("点击了违规监控按钮");
+    toggleHighFrequencySync(syncButton);
+  });
+
+  // 将按钮添加到元素中
+  currentLiveRoomElement.appendChild(syncButton);
+
+  // 更新状态，标记按钮已添加
+  APP_STATE.highFrequencyButtonAdded = true;
+  console.log("违规监控按钮已添加到current-live-room元素中");
 }
 
 // #endregion
@@ -162,8 +284,27 @@ function setupAccountObserver() {
 function setupPeriodicTasks() {
   // 每小时同步一次违规记录
   setInterval(syncPunishList, 3600000);
-  // 每3秒检查一次违规弹窗
-  setInterval(() => {
+
+  // 每3分钟检查一次直播状态（仅在eos.douyin.com域名下）
+  if (window.location.hostname === "eos.douyin.com") {
+    setInterval(() => {
+      console.log("定时检查直播状态...");
+      checkLiveStatus();
+    }, 180000); // 3分钟 = 180000毫秒
+  }
+}
+
+/**
+ * 启动违规弹窗检查定时器
+ */
+function startViolationCheck() {
+  if (APP_STATE.violationCheckInterval) {
+    console.log("违规弹窗检查已在运行中");
+    return;
+  }
+
+  console.log("启动违规弹窗检查定时器");
+  APP_STATE.violationCheckInterval = setInterval(() => {
     const modal_wrapper = document.querySelector(
       ".okee-main-modal-wrapper .okee-main-modal-body .okee-main-content-container .okee-main-content-header.okee-main-modal-content-header"
     );
@@ -171,6 +312,17 @@ function setupPeriodicTasks() {
       getModalText();
     }
   }, 3000);
+}
+
+/**
+ * 停止违规弹窗检查定时器
+ */
+function stopViolationCheck() {
+  if (APP_STATE.violationCheckInterval) {
+    console.log("停止违规弹窗检查定时器");
+    clearInterval(APP_STATE.violationCheckInterval);
+    APP_STATE.violationCheckInterval = null;
+  }
 }
 
 // #endregion
@@ -474,6 +626,7 @@ function createTopTips(text, options = {}) {
     info: "#1677ff",
     success: "#52c41a",
     error: "#f5222d",
+    warning: "#faad14",
   };
   style.backgroundColor = typeColors[type] || typeColors.info;
 
@@ -905,28 +1058,33 @@ function getDyAccountNo() {
  */
 async function checkLiveStatus() {
   console.log("开始检查直播状态");
-  
+
   try {
-    const response = await fetch("https://eos.douyin.com/data/life/live/menu/detail/v1/", {
-      "headers": {
-        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "accept-language": "zh-CN,zh;q=0.9",
-        "cache-control": "max-age=0",
-        "priority": "u=0, i",
-        "sec-ch-ua": '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"macOS"',
-        "sec-fetch-dest": "document",
-        "sec-fetch-mode": "navigate",
-        "sec-fetch-site": "none",
-        "sec-fetch-user": "?1",
-        "upgrade-insecure-requests": "1"
-      },
-      "body": null,
-      "method": "GET",
-      "mode": "cors",
-      "credentials": "include"
-    });
+    const response = await fetch(
+      "https://eos.douyin.com/data/life/live/menu/detail/v1/",
+      {
+        headers: {
+          accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "accept-language": "zh-CN,zh;q=0.9",
+          "cache-control": "max-age=0",
+          priority: "u=0, i",
+          "sec-ch-ua":
+            '"Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"',
+          "sec-ch-ua-mobile": "?0",
+          "sec-ch-ua-platform": '"macOS"',
+          "sec-fetch-dest": "document",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-site": "none",
+          "sec-fetch-user": "?1",
+          "upgrade-insecure-requests": "1",
+        },
+        body: null,
+        method: "GET",
+        mode: "cors",
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -953,32 +1111,156 @@ async function checkLiveStatus() {
 
     if (currentLiveName) {
       console.log(`找到CurrentLive菜单项，name字段为: ${currentLiveName}`);
-      
+
       // 判断直播状态
       const isLiving = currentLiveName === "正在直播";
       const liveStatus = {
         currentLiveName: currentLiveName,
         isLiving: isLiving,
-        lastCheckTime: new Date().toISOString()
+        lastCheckTime: new Date().toISOString(),
       };
-      
+
+      // 获取之前的直播状态
+      const previousLiveStatus = localStorage.getItem("liveStatus");
+      const previousIsLiving = previousLiveStatus
+        ? JSON.parse(previousLiveStatus).isLiving
+        : false;
+
       // 存储到localStorage
       localStorage.setItem("liveStatus", JSON.stringify(liveStatus));
       console.log("直播状态已保存到localStorage:", liveStatus);
-      
+
+      // 根据直播状态变化控制违规弹窗检查
+      if (isLiving && !previousIsLiving) {
+        // 开始直播，启动违规弹窗检查
+        startViolationCheck();
+        console.log("检测到开始直播，已启动违规弹窗检查");
+      } else if (!isLiving && previousIsLiving) {
+        // 结束直播，停止违规弹窗检查
+        stopViolationCheck();
+        console.log("检测到结束直播，已停止违规弹窗检查");
+      } else if (isLiving) {
+        // 仍在直播中，确保违规弹窗检查正在运行
+        if (!APP_STATE.violationCheckInterval) {
+          startViolationCheck();
+          console.log("直播中但违规检查未运行，已重新启动");
+        }
+      }
+
+      // 如果是未开播状态，延迟添加违规监控按钮
+      if (!isLiving) {
+        console.log("未开播，准备添加违规监控按钮");
+        setTimeout(() => {
+          addHighFrequencySyncButton();
+        }, 1000); // 延迟1秒执行，确保DOM元素有足够时间加载
+      }
+
       // 显示提示信息
-      createTopTips(`直播状态: ${currentLiveName}`, { 
-        type: isLiving ? "success" : "info" 
+      createTopTips(`${liveStatus.isLiving ? "直播中" : "未开播"}`, {
+        type: isLiving ? "success" : "warning",
       });
     } else {
       console.warn("未找到CurrentLive菜单项");
       createTopTips("未找到直播状态信息", { type: "warning" });
     }
-
   } catch (error) {
     console.error("检查直播状态失败:", error);
     createTopTips(`检查直播状态失败: ${error.message}`, { type: "error" });
   }
+}
+
+/**
+ * 切换违规监控状态
+ * @param {HTMLElement} button - 违规监控按钮元素
+ */
+function toggleHighFrequencySync(button) {
+  if (APP_STATE.isHighFrequencySyncActive) {
+    // 停止违规监控
+    stopHighFrequencySync(button);
+  } else {
+    // 开始违规监控
+    startHighFrequencySync(button);
+  }
+}
+
+/**
+ * 开始违规监控
+ * @param {HTMLElement} button - 违规监控按钮元素
+ */
+function startHighFrequencySync(button) {
+  console.log("开始违规监控");
+
+  // 立即执行一次同步
+  syncPunishList();
+
+  // 设置每分钟执行一次的定时器
+  APP_STATE.highFrequencySyncInterval = setInterval(() => {
+    console.log("执行违规监控任务");
+    syncPunishList();
+  }, 60000); // 60000毫秒 = 1分钟
+
+  // 更新状态
+  APP_STATE.isHighFrequencySyncActive = true;
+
+  // 更新按钮文本和样式
+  button.textContent = "停止违规监控";
+  button.style.backgroundColor = "#fff2f5";
+  button.style.color = "#fe2c55";
+  button.style.fontWeight = "600";
+  button.style.border = "none";
+  button.style.outline = "none";
+
+  createTopTips("违规监控已开始，每分钟执行一次", { type: "success" });
+}
+
+/**
+ * 停止违规监控
+ * @param {HTMLElement} button - 违规监控按钮元素
+ */
+function stopHighFrequencySync(button) {
+  console.log("停止违规监控");
+
+  // 清除定时器
+  if (APP_STATE.highFrequencySyncInterval) {
+    clearInterval(APP_STATE.highFrequencySyncInterval);
+    APP_STATE.highFrequencySyncInterval = null;
+  }
+
+  // 更新状态
+  APP_STATE.isHighFrequencySyncActive = false;
+
+  // 恢复按钮文本和样式
+  button.textContent = "开始违规监控";
+  button.style.backgroundColor = "#2ed573";
+  button.style.color = "#ffffff";
+  button.style.fontWeight = "600";
+  button.style.border = "1px solid #2ed573";
+  button.style.outline = "none";
+
+  createTopTips("违规监控已停止", { type: "info" });
+}
+
+/**
+ * 页面卸载时清理所有定时器资源
+ */
+function cleanup() {
+  console.log("页面卸载，清理定时器资源");
+
+  // 清理违规检查定时器
+  if (APP_STATE.violationCheckInterval) {
+    clearInterval(APP_STATE.violationCheckInterval);
+    APP_STATE.violationCheckInterval = null;
+  }
+
+  // 清理违规监控定时器
+  if (APP_STATE.highFrequencySyncInterval) {
+    clearInterval(APP_STATE.highFrequencySyncInterval);
+    APP_STATE.highFrequencySyncInterval = null;
+  }
+
+  // 重置状态
+  APP_STATE.isHighFrequencySyncActive = false;
+  APP_STATE.highFrequencyButtonAdded = false;
 }
 
 // #endregion
