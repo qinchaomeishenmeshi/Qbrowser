@@ -1,14 +1,19 @@
 import asyncio
+import atexit
 import ctypes
 import os
+import signal
 import subprocess
 import sys
 import threading
+import traceback
+from functools import wraps
 
 # 预先导入 QtWebEngineWidgets 以避免导入顺序问题
 # 支持轻量版构建（不包含WebEngine）
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
+
     print("[OK] QtWebEngineWidgets 导入成功 - 完整版模式")
     LITE_MODE = False
 except ImportError as e:
@@ -35,14 +40,12 @@ from qasync import QEventLoop, asyncSlot
 
 from api.api_server import run_server
 from browser.browser_operator import browser_operator
-from conf import BASE_DIR, resource_path
+from conf import resource_path
 from service.browser_service import browser_service
 from utils.common_logger import get_logger
 from worker.scheduler_client import scheduler_client
 
 logger = get_logger(__name__)
-
-USE_MODERN_UI = True  # 设置为True启用新UI
 
 
 def is_admin():
@@ -94,7 +97,7 @@ class App(QMainWindow):
 
         # 使用QTimer在Qt事件循环启动后执行异步初始化
         QTimer.singleShot(0, self._schedule_async_init)
-        
+
         # 延迟加载user_ids.txt配置文件，确保UI完全初始化
         QTimer.singleShot(50, self.load_user_ids_on_startup)
 
@@ -122,9 +125,17 @@ class App(QMainWindow):
             try:
                 await self.scheduler_client.start()
                 task_count = len(self.scheduler_client.task_configs)
-                enabled_count = sum(1 for config in self.scheduler_client.task_configs.values() if config.enabled)
-                logger.info(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
-                self.log_signal.log_updated.emit(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+                enabled_count = sum(
+                    1
+                    for config in self.scheduler_client.task_configs.values()
+                    if config.enabled
+                )
+                logger.info(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
+                self.log_signal.log_updated.emit(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
             except Exception as e:
                 logger.error(f"定时任务调度器启动失败: {e}")
                 self.log_signal.log_updated.emit(f"定时任务调度器启动失败: {e}")
@@ -147,7 +158,6 @@ class App(QMainWindow):
             self.log_signal.log_updated.emit("应用初始化完成")
 
             # 更新所有任务的设备列表
-    
 
             self.log_signal.log_updated.emit("定时任务配置已更新")
         except Exception as e:
@@ -330,23 +340,26 @@ class App(QMainWindow):
         """应用启动时自动加载用户ID配置文件"""
         try:
             from conf import writable_path
+
             # 优先从可写目录加载，如果不存在则从资源目录加载
             writable_file_path = writable_path("user_ids.txt")
             resource_file_path = resource_path("user_ids.txt")
-            
+
             file_path = None
             if os.path.exists(writable_file_path):
                 file_path = writable_file_path
             elif os.path.exists(resource_file_path):
                 file_path = resource_file_path
-            
+
             if file_path:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
                     if content and self.text_edit:  # 确保text_edit已初始化且有数据
                         self.text_edit.setText(content)
                         self.save_cache()  # 同步到缓存
-                        ids = [line.strip() for line in content.split('\n') if line.strip()]
+                        ids = [
+                            line.strip() for line in content.split("\n") if line.strip()
+                        ]
                         logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
                     elif not content:
                         logger.info("user_ids.txt文件为空")
@@ -354,13 +367,14 @@ class App(QMainWindow):
                 logger.info("未找到user_ids.txt文件，将使用空配置")
         except Exception as e:
             logger.error(f"启动时加载user_ids.txt失败: {e}")
-    
+
     def load_user_ids(self):
         """手动选择并加载用户ID配置文件"""
         from conf import writable_path
+
         # 优先从可写目录开始选择
         default_dir = os.path.dirname(writable_path("user_ids.txt"))
-        
+
         path, _ = QFileDialog.getOpenFileName(
             self, "选择 user_ids.txt 文件", default_dir, "文本文件 (*.txt)"
         )
@@ -540,33 +554,38 @@ class App(QMainWindow):
             logger.info("端口映射已保存")
         except Exception as e:
             logger.error(f"保存端口映射失败: {e}")
-            
+
     def save_user_ids_to_file(self):
         """保存当前用户ID到user_ids.txt配置文件"""
         try:
             from conf import writable_path
+
             # 获取当前文本编辑器中的用户ID
             current_text = self.text_edit.toPlainText().strip()
             if not current_text:
                 self.log_signal.log_updated.emit("没有用户ID需要保存")
                 return
-                
+
             # 处理用户ID列表，去除空行和重复项
-            user_ids = [line.strip() for line in current_text.split('\n') if line.strip()]
+            user_ids = [
+                line.strip() for line in current_text.split("\n") if line.strip()
+            ]
             user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
-            
+
             # 保存到可写目录的user_ids.txt文件
             file_path = writable_path("user_ids.txt")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(user_ids))
-                
-            self.log_signal.log_updated.emit(f"已保存 {len(user_ids)} 个用户ID到配置文件")
+
+            self.log_signal.log_updated.emit(
+                f"已保存 {len(user_ids)} 个用户ID到配置文件"
+            )
             logger.info(f"成功保存用户ID到 {file_path}，共 {len(user_ids)} 个")
-            
+
         except Exception as e:
             self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
             logger.error(f"保存user_ids.txt失败: {e}")
-    
+
     def closeEvent(self, event):
         """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""
         # 保存当前用户ID到配置文件
@@ -574,7 +593,7 @@ class App(QMainWindow):
             self.save_user_ids_to_file()
         except Exception as e:
             logger.error(f"关闭时保存用户ID失败: {e}")
-            
+
         # 停止定时任务服务
         try:
             loop = asyncio.get_event_loop()
@@ -588,7 +607,7 @@ class App(QMainWindow):
         except Exception as e:
             logger.error(f"停止定时任务调度器失败: {e}")
             self.log_signal.log_updated.emit(f"停止定时任务调度器失败: {e}")
-        
+
         # 停止 frpc 服务
         if self.frpc_process is not None:
             try:
@@ -609,42 +628,81 @@ class App(QMainWindow):
 
 
 def main():
-    # 显示管理员权限提示
+    """应用程序入口：初始化Qt兼容性、事件循环、全局异常处理与优雅退出
+    - 在创建 QApplication 前进行 Qt 兼容性设置，避免属性缺失导致崩溃
+    - 建立 qasync 事件循环，统一管理 async 任务
+    - 安装未捕获异常处理器，保证错误能被记录到控制台
+    - 绑定 SIGINT/SIGTERM 与 atexit 钩子，确保优雅关闭事件循环
+    """
+    # Windows 管理员权限提示
     if sys.platform == "win32" and not is_admin():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")
         print("建议: 右键点击程序，选择'以管理员身份运行'")
 
-    # 在创建QApplication之前设置Qt属性，解决QtWebEngineWidgets导入问题和显示器接口问题
-    # 使用兼容性工具模块，避免不同Qt版本的AttributeError问题
+    # 在创建 QApplication 之前设置 Qt 属性，解决 QtWebEngineWidgets 导入问题和显示器接口问题
+    # 使用兼容性工具模块，避免不同 Qt 版本的 AttributeError 问题
     from utils.qt_compatibility import initialize_qt_compatibility
-    
-    # 初始化Qt兼容性设置
+
+    # 初始化 Qt 兼容性设置
     qt_init_success = initialize_qt_compatibility()
     if not qt_init_success:
         print("[WARNING] Qt兼容性初始化部分失败，程序可能无法正常运行")
-    
+
+    # 安装未捕获异常处理器，避免静默崩溃
+    def handle_uncaught_exception(exc_type, exc, tb):
+        print("\n[ERROR] 未捕获异常:")
+        traceback.print_exception(exc_type, exc, tb)
+
+    sys.excepthook = handle_uncaught_exception
+
+    # 创建 Qt 应用与 qasync 事件循环
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
-    if USE_MODERN_UI:
-        # 导入新UI
+    # 支持 Ctrl+C 与系统终止信号优雅退出
+    def _graceful_shutdown(signame: str):
+        print(f"\n[INFO] 收到信号 {signame}，正在尝试优雅退出...")
         try:
-            from ui.modern_app import ModernApp
-
-            w = ModernApp()
+            if loop.is_running():
+                loop.call_soon_threadsafe(loop.stop)
         except Exception as e:
-            print(f"加载新UI失败: {e}，将使用经典UI")
-            import traceback
+            print(f"[WARNING] 停止事件循环时发生异常: {e}")
 
-            traceback.print_exc()  # 打印完整的堆栈跟踪
-            w = App()
-    else:
-        w = App()
+    if sys.platform != "win32":
+        try:
+            signal.signal(signal.SIGINT, lambda *_: _graceful_shutdown("SIGINT"))
+            signal.signal(signal.SIGTERM, lambda *_: _graceful_shutdown("SIGTERM"))
+        except Exception as e:
+            print(f"[WARNING] 绑定信号处理失败: {e}")
 
+    # 进程退出清理，确保 loop 关闭
+    @atexit.register
+    def _cleanup_on_exit():
+        try:
+            if loop.is_running():
+                loop.stop()
+            if not loop.is_closed():
+                loop.close()
+        except Exception as e:
+            print(f"[WARNING] 清理事件循环失败: {e}")
+
+    # 延迟导入 UI，避免初始化开销影响日志输出
+    from ui.modern_app import ModernApp
+
+    w = ModernApp()
     w.show()
+
+    # 进入事件循环
     with loop:
-        loop.run_forever()
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            print("\n[INFO] 收到键盘中断，准备退出...")
+        finally:
+            # 确保事件循环被关闭
+            if not loop.is_closed():
+                loop.close()
 
 
 if __name__ == "__main__":
