@@ -72,14 +72,14 @@ function init() {
     setupMixedCutSyncButton();
   }
 
-  // 检测是否进入商品推广页面，如果是则模拟请求
-  if (
-    window.location.href.startsWith(
-      "https://buyin.jinritemai.com/dashboard/merch-picking-library/merch-promoting"
-    )
-  ) {
-    simulatePackDetailRequest();
-  }
+  // // 检测是否进入商品推广页面，如果是则模拟请求
+  // if (
+  //   window.location.href.startsWith(
+  //     "https://buyin.jinritemai.com/dashboard/merch-picking-library/merch-promoting"
+  //   )
+  // ) {
+  //   simulatePackDetailRequest();
+  // }
 }
 
 /**
@@ -649,9 +649,9 @@ function createTopTips(text, options = {}) {
 // =================================================================================
 
 /**
- * 模拟发送pack_detail请求
+ * 模拟发送pack_detail请求(风险控制暂时无法使用)
  */
-async function simulatePackDetailRequest() {
+async function _simulatePackDetailRequest() {
   console.log("开始模拟pack_detail请求");
 
   // 从URL中提取id参数
