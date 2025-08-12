@@ -79,6 +79,194 @@ async def get_extensions_status():
     }
 
 
+@api_router.get("/extensions/{user_id}")
+async def get_user_extensions_status(user_id: str):
+    """获取指定用户浏览器的扩展状态"""
+    manager = await browser_store.get(user_id)
+    if not manager or not manager.is_running:
+        raise HTTPException(status_code=404, detail=f"用户 {user_id} 的浏览器实例未运行")
+    
+    try:
+        # 通过 JavaScript 检查浏览器中的扩展
+        tab = manager.browser.get_tab()
+        if not tab:
+            raise HTTPException(status_code=500, detail="无法获取浏览器标签页")
+        
+        logger.info(f"开始检查用户 {user_id} 的扩展状态，当前页面: {tab.url}")
+        
+        # 等待页面加载完成
+        try:
+            tab.wait.load_start()
+            logger.info(f"页面开始加载: {tab.url}")
+        except Exception as wait_e:
+            logger.warning(f"等待页面加载失败: {wait_e}")
+        
+        # 增加额外等待时间确保页面完全加载
+        await asyncio.sleep(3)
+        
+        # 执行 JavaScript 来检查扩展
+        js_code = """
+        (() => {
+            try {
+                console.log('=== 开始检查扩展状态 ===');
+                const extensions = [];
+                const info = {
+                    url: window.location.href,
+                    readyState: document.readyState,
+                    timestamp: new Date().toISOString(),
+                    page_title: document.title
+                };
+                
+                // 检查 Chrome 扩展 API
+                info.chrome_available = typeof chrome !== 'undefined';
+                info.runtime_available = typeof chrome !== 'undefined' && !!chrome.runtime;
+                console.log('Chrome API available:', info.chrome_available);
+                console.log('Runtime available:', info.runtime_available);
+                
+                if (info.chrome_available && info.runtime_available) {
+                    try {
+                        // 尝试获取扩展 ID
+                        if (chrome.runtime.id) {
+                            info.extension_id = chrome.runtime.id;
+                            console.log('Extension ID:', chrome.runtime.id);
+                        }
+                        extensions.push({
+                            name: 'Chrome扩展API可用',
+                            status: 'active',
+                            type: 'chrome_extension_api',
+                            extension_id: chrome.runtime.id || 'unknown'
+                        });
+                    } catch (e) {
+                        console.error('Chrome API error:', e);
+                        extensions.push({
+                            name: 'Chrome扩展API错误',
+                            status: 'error',
+                            error: e.toString(),
+                            type: 'chrome_extension_api'
+                        });
+                    }
+                }
+                
+                // 检查页面中是否有扩展注入的元素
+                const extensionSelectors = [
+                    '[data-extension]',
+                    '[id*="extension"]', 
+                    '[class*="extension"]',
+                    '[data-live-room]',
+                    '[data-block-videos]',
+                    '.live-room-extension',
+                    '.video-blocker',
+                    '#live-room-control',
+                    '#video-block-extension'
+                ];
+                
+                let totalElements = 0;
+                extensionSelectors.forEach(selector => {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        if (elements.length > 0) {
+                            totalElements += elements.length;
+                            console.log(`Found ${elements.length} elements for selector: ${selector}`);
+                            extensions.push({
+                                name: `扩展元素: ${selector}`,
+                                status: 'detected',
+                                count: elements.length,
+                                type: 'dom_injection'
+                            });
+                        }
+                    } catch (selectorError) {
+                        console.error(`Selector error for ${selector}:`, selectorError);
+                    }
+                });
+                
+                // 检查是否有扩展相关的全局变量
+                const globalVars = ['extensionLoaded', 'liveRoomExtension', 'blockVideosExtension'];
+                globalVars.forEach(varName => {
+                    try {
+                        if (window[varName]) {
+                            console.log(`Found global variable: ${varName}`);
+                            extensions.push({
+                                name: `全局变量: ${varName}`,
+                                status: 'detected',
+                                value: typeof window[varName],
+                                type: 'global_variable'
+                            });
+                        }
+                    } catch (globalError) {
+                        console.error(`Global variable check error for ${varName}:`, globalError);
+                    }
+                });
+                
+                // 检查扩展脚本
+                const scripts = Array.from(document.scripts).filter(s => 
+                    s.src && (s.src.includes('extension') || s.src.includes('chrome-extension'))
+                );
+                info.extension_scripts = scripts.length;
+                console.log('Extension scripts found:', scripts.length);
+                
+                // 检查 body 类名
+                const bodyClasses = document.body.className;
+                info.body_classes = bodyClasses;
+                info.has_extension_classes = bodyClasses.includes('extension') || bodyClasses.includes('plugin');
+                
+                info.extensions = extensions;
+                info.total_extension_elements = totalElements;
+                info.user_agent = navigator.userAgent;
+                
+                console.log('=== 扩展检查完成 ===', info);
+                return info;
+            } catch (error) {
+                console.error('扩展检查出错:', error);
+                const errorResult = {
+                    error: error.toString(),
+                    stack: error.stack,
+                    url: window.location.href,
+                    timestamp: new Date().toISOString()
+                };
+                console.log('错误结果:', errorResult);
+                return errorResult;
+            }
+        })()
+        """
+        
+        logger.info(f"执行扩展检查 JavaScript 代码...")
+        try:
+            result = tab.run_js(js_code)
+            logger.info(f"JavaScript 执行成功，结果类型: {type(result)}")
+            logger.info(f"JavaScript 执行结果: {result}")
+        except Exception as js_error:
+            logger.error(f"JavaScript 执行失败: {js_error}", exc_info=True)
+            result = {"js_execution_error": str(js_error), "error_type": type(js_error).__name__}
+        
+        return {
+            "user_id": user_id,
+            "browser_running": True,
+            "port": manager.port,
+            "tab_url": tab.url,
+            "extension_check": result,
+            "configured_extensions": [
+                "live_room (直播中控)",
+                "block_videos (视频屏蔽器)"
+            ],
+            "message": "扩展状态检查完成"
+        }
+        
+    except Exception as e:
+        logger.error(f"检查用户 {user_id} 扩展状态失败: {e}", exc_info=True)
+        return {
+            "user_id": user_id,
+            "browser_running": True,
+            "port": manager.port,
+            "extension_check": None,
+            "error": str(e),
+            "configured_extensions": [
+                "live_room (直播中控)",
+                "block_videos (视频屏蔽器)"
+            ],
+            "message": f"扩展状态检查失败: {e}"
+        }
+
+
 @api_router.get("/scheduler/recent")
 async def get_recent_tasks():
     """获取最近的任务"""

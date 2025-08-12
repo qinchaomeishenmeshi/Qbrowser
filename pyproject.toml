@@ -17,9 +17,9 @@ dependencies = [
     "cssselect==1.3.0",
     "datarecorder==3.6.2",
     "downloadkit==2.0.7",
-    "drissionpage~=4.1.0.18",
+    "drissionpage~=4.1.1.2",
     "et-xmlfile==2.0.0",
-    "fastapi~=0.115.12",
+    "fastapi[all]~=0.115.12",
     "filelock==3.18.0",
     "frozenlist==1.6.2",
     "h11==0.16.0",
@@ -37,7 +37,7 @@ dependencies = [
     "pyqt6==6.9.0",
     "pyqt6-qt6==6.9.1",
     "pyqt6-sip==13.10.2",
-    "pyqt6-webengine",
+    "pyqt6-webengine>=6.9.0",
 
     "qasync==0.27.1",
     "requests~=2.32.3",
@@ -52,18 +52,17 @@ dependencies = [
     "uvicorn~=0.34.3",
     "websocket-client==1.8.0",
     "yarl==1.20.0",
-]
-
-[project.optional-dependencies]
-# 调度器相关依赖
-scheduler = [
     "apscheduler>=3.10.4",
-    "jinja2>=3.1.2",
     "aiofiles>=23.2.1",
     "python-multipart>=0.0.6",
     "python-dateutil>=2.8.2",
     "orjson>=3.9.10",
+    "tzlocal>=5.0.1",
 ]
+
+[project.optional-dependencies]
+# 调度器相关依赖
+scheduler = []
 
 # 数据分析相关依赖（可选）
 data-analysis = [
