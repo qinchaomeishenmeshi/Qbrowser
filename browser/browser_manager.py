@@ -122,7 +122,6 @@ class BrowserManager:
                 ChromiumOptions()
                 .set_local_port(self.port)
                 .set_user_data_path(str(self.user_data_dir))
-                .set_argument("--enable-extensions")
                 .set_argument("--window-size", "1910,1070")
             )
             
