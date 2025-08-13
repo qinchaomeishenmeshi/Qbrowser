@@ -445,6 +445,14 @@ async def save_live_room_list_fn(data):
             flattened_data.extend(data_result)
         data = flattened_data
         logger.info(f"保存的数据内容: {data}")
+        # 如果data为空数组或null等，则不调用后端接口
+        # 区分 None 和 空数组
+        if data is None:
+            logger.info("数据为 None，不调用后端接口")
+            return True
+        if isinstance(data, list) and len(data) == 0:
+            logger.info("数据为空数组，不调用后端接口")
+            return True
         # 调用后端接口同步直播回放数据
         result = await default_api_client.sync_live_room_list(data)
 
