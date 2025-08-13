@@ -295,7 +295,7 @@
 
               <div class="form-group">
                 <button @click="clearCache" class="btn btn-warning">
-                  <span>🗑️</span>
+                  <span>[删除]</span>
                   清理缓存
                 </button>
               </div>
@@ -438,7 +438,7 @@
 
               <div class="form-group">
                 <button @click="clearLogs" class="btn btn-warning">
-                  <span>🗑️</span>
+                  <span>[删除]</span>
                   清理日志
                 </button>
                 <button @click="exportLogs" class="btn btn-secondary">

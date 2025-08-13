@@ -42,26 +42,26 @@ def set_chrome_path(path: str):
         # 清除自定义路径
         success = chrome_path_manager.set_chrome_path(None)
         if success:
-            print("✅ 已清除自定义Chrome路径，将使用系统默认路径")
+            print("[OK] 已清除自定义Chrome路径，将使用系统默认路径")
         else:
-            print("❌ 清除Chrome路径失败")
+            print("[ERROR] 清除Chrome路径失败")
         return
     
     # 设置自定义路径
     path_obj = Path(path)
     if not path_obj.exists():
-        print(f"❌ 路径不存在: {path}")
+        print(f"[ERROR] 路径不存在: {path}")
         return
     
     if not path_obj.is_file():
-        print(f"❌ 路径不是文件: {path}")
+        print(f"[ERROR] 路径不是文件: {path}")
         return
     
     success = chrome_path_manager.set_chrome_path(str(path_obj.resolve()))
     if success:
-        print(f"✅ Chrome路径设置成功: {path}")
+        print(f"[OK] Chrome路径设置成功: {path}")
     else:
-        print(f"❌ Chrome路径设置失败: {path}")
+        print(f"[ERROR] Chrome路径设置失败: {path}")
     print()
 
 def interactive_setup():
@@ -167,7 +167,7 @@ def main():
             
     except Exception as e:
         logger.error(f"执行失败: {e}")
-        print(f"❌ 执行失败: {e}")
+        print(f"[ERROR] 执行失败: {e}")
         sys.exit(1)
 
 if __name__ == '__main__':

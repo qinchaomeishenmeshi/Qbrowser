@@ -17,10 +17,10 @@ def start_server(host: str = "127.0.0.1", port: int = 8000, debug: bool = True):
         port: 服务器端口，默认为8000
         debug: 是否启用调试模式，默认为True
     """
-    print(f"🚀 启动API服务器...")
-    print(f"📍 服务地址: http://{host}:{port}")
-    print(f"🔧 Chrome配置页面: http://{host}:{port}/chrome/config")
-    print(f"📚 API文档: http://{host}:{port}/docs")
+    print(f"[INFO] 启动API服务器...")
+    print(f"[INFO] 服务地址: http://{host}:{port}")
+    print(f"[INFO] Chrome配置页面: http://{host}:{port}/chrome/config")
+    print(f"[INFO] API文档: http://{host}:{port}/docs")
     print("\n按 Ctrl+C 停止服务器")
     
     try:
@@ -43,9 +43,9 @@ def start_server(host: str = "127.0.0.1", port: int = 8000, debug: bool = True):
                 log_level="warning"
             )
     except KeyboardInterrupt:
-        print("\n👋 服务器已停止")
+        print("\n[INFO] 服务器已停止")
     except Exception as e:
-        print(f"❌ 服务器启动失败: {e}")
+        print(f"[ERROR] 服务器启动失败: {e}")
 
 if __name__ == "__main__":
     import argparse

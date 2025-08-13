@@ -28,10 +28,10 @@ class ConfigManager {
       
       this.config = await response.json();
       this.isLoaded = true;
-      console.log('✅ 配置文件加载成功');
+      console.log('[OK] 配置文件加载成功');
       return this.config;
     } catch (error) {
-      console.error('❌ 配置文件加载失败:', error);
+      console.error('[ERROR] 配置文件加载失败:', error);
       // 返回默认配置以防止应用崩溃
       return this.getDefaultConfig();
     }

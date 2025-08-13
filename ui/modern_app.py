@@ -1,6 +1,8 @@
 import asyncio
 import os
+import subprocess
 import sys
+import webbrowser
 
 # PyQt导入
 from PyQt6.QtCore import Qt, QTimer, QUrl
@@ -59,6 +61,7 @@ class ModernApp(QMainWindow):
         self.browser_operator = browser_operator
         self.frpc_process = None
         self.scheduler_client = scheduler_client
+        self.settings_server_process = None
 
         # 初始化UI
         self.setup_fonts()
@@ -220,6 +223,12 @@ class ModernApp(QMainWindow):
         self.scheduler_btn.clicked.connect(self.show_scheduler)
         self.nav_button_group.addButton(self.scheduler_btn)
         sidebar_layout.addWidget(self.scheduler_btn)
+
+        # 添加设置按钮
+        self.settings_btn = self.create_nav_button("设置", "settings")
+        self.settings_btn.clicked.connect(self.show_settings)
+        self.nav_button_group.addButton(self.settings_btn)
+        sidebar_layout.addWidget(self.settings_btn)
 
         # 添加伸缩项，使按钮靠上对齐
         sidebar_layout.addStretch()
@@ -1050,6 +1059,16 @@ class ModernApp(QMainWindow):
                 self.log_signal.log_updated.emit("frpc 服务已关闭")
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭 frpc 失败: {e}")
+        
+        # 停止设置服务器进程
+        if self.settings_server_process is not None:
+            try:
+                self.settings_server_process.terminate()
+                self.settings_server_process.wait(timeout=5)
+                self.log_signal.log_updated.emit("设置服务器已关闭")
+            except Exception as e:
+                self.log_signal.log_updated.emit(f"关闭设置服务器失败: {e}")
+        
         event.accept()
 
     async def _stop_scheduler(self):
@@ -1059,3 +1078,37 @@ class ModernApp(QMainWindow):
             logger.info("定时任务调度器已停止")
         except Exception as e:
             logger.error(f"停止定时任务调度器失败: {e}")
+    
+    def show_settings(self):
+        """显示设置页面 - 启动Chrome配置服务并在浏览器中打开"""
+        try:
+            # 检查设置服务器是否已经运行
+            if self.settings_server_process is None or self.settings_server_process.poll() is not None:
+                self._start_settings_server()
+            
+            # 在浏览器中打开Chrome配置页面
+            webbrowser.open('http://127.0.0.1:7010/chrome/config')
+            self.log_signal.log_updated.emit("已打开Chrome配置页面")
+            
+        except Exception as e:
+            self.log_signal.log_updated.emit(f"打开设置页面失败: {e}")
+            logger.error(f"打开设置页面失败: {e}")
+    
+    def _start_settings_server(self):
+        """启动设置服务器"""
+        try:
+            # 启动API服务器，指定端口7010并禁用调试模式
+            self.settings_server_process = subprocess.Popen([
+                sys.executable, "start_api_server.py", 
+                "--port", "7010", "--no-debug"
+            ])
+            
+            # 等待服务器启动
+            time.sleep(2)
+            
+            self.log_signal.log_updated.emit("设置服务器已启动 (端口: 7010)")
+            logger.info("设置服务器已启动")
+            
+        except Exception as e:
+             self.log_signal.log_updated.emit(f"启动设置服务器失败: {e}")
+             logger.error(f"启动设置服务器失败: {e}")

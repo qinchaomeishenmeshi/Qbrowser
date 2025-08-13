@@ -206,7 +206,7 @@ class BrowserManager:
                     )
                     logger.info(f"[OK] Saved {len(urls)} unique URLs.")
                 else:
-                    logger.info("ℹ️ No URLs to save.")
+                    logger.info("[INFO] No URLs to save.")
 
                 self.browser.quit()
 

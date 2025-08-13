@@ -79,6 +79,7 @@ class App(QMainWindow):
         self.browser_operator = browser_operator
         self.frpc_process = None
         self.scheduler_client = scheduler_client
+        self.settings_server_process = None
 
         # 检查管理员权限
         if sys.platform == "win32" and not is_admin():
@@ -286,10 +287,33 @@ class App(QMainWindow):
         )
         self.clear_btn.setFont(font)
 
+        # 设置菜单按钮样式
+        self.settings_btn = QPushButton("设置")
+        self.settings_btn.setFixedWidth(120)
+        self.settings_btn.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #9C27B0;
+                color: white;
+                border: 1px solid #7B1FA2;
+                border-radius: 5px;
+                padding: 8px;
+            }
+            QPushButton:hover {
+                background-color: #BA68C8;
+            }
+            QPushButton:pressed {
+                background-color: #7B1FA2;
+            }
+        """
+        )
+        self.settings_btn.setFont(font)
+
         btn_layout.addWidget(self.start_btn)
         btn_layout.addWidget(self.stop_btn)
         btn_layout.addWidget(self.load_btn)
         btn_layout.addWidget(self.clear_btn)
+        btn_layout.addWidget(self.settings_btn)
         main_layout.addLayout(btn_layout)
 
         # 进度条
@@ -328,6 +352,7 @@ class App(QMainWindow):
         self.start_btn.clicked.connect(self.start_browsers)
         self.stop_btn.clicked.connect(self.stop_browsers)
         self.load_btn.clicked.connect(self.load_user_ids)
+        self.settings_btn.clicked.connect(self.open_settings)
         self.clear_btn.clicked.connect(self.clear_cache)
 
     def update_log(self, msg: str):
@@ -616,6 +641,16 @@ class App(QMainWindow):
                 self.log_signal.log_updated.emit("frpc 服务已关闭")
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭 frpc 失败: {e}")
+
+        # 停止设置服务器
+        if self.settings_server_process is not None:
+            try:
+                self.settings_server_process.terminate()
+                self.settings_server_process.wait(timeout=5)
+                self.log_signal.log_updated.emit("设置服务器已关闭")
+            except Exception as e:
+                self.log_signal.log_updated.emit(f"关闭设置服务器失败: {e}")
+        
         event.accept()
 
     async def _stop_scheduler(self):
@@ -625,6 +660,56 @@ class App(QMainWindow):
             logger.info("定时任务调度器已停止")
         except Exception as e:
             logger.error(f"停止定时任务调度器失败: {e}")
+
+    def open_settings(self):
+        """打开设置界面"""
+        try:
+            # 检查设置服务器是否已启动
+            if self.settings_server_process is None or self.settings_server_process.poll() is not None:
+                # 启动设置服务器
+                self._start_settings_server()
+            
+            # 在浏览器中打开设置页面
+            import webbrowser
+            settings_url = "http://127.0.0.1:7010/chrome/config"
+            webbrowser.open(settings_url)
+            
+            self.log_signal.log_updated.emit("设置界面已在浏览器中打开")
+            logger.info("设置界面已在浏览器中打开")
+            
+        except Exception as e:
+            error_msg = f"打开设置界面失败: {e}"
+            self.log_signal.log_updated.emit(error_msg)
+            logger.error(error_msg)
+            QMessageBox.warning(self, "错误", error_msg)
+
+    def _start_settings_server(self):
+        """启动设置服务器"""
+        try:
+            # 构建启动命令
+            python_executable = sys.executable
+            script_path = os.path.join(os.path.dirname(__file__), "start_api_server.py")
+            
+            # 启动设置服务器进程
+            self.settings_server_process = subprocess.Popen(
+                [python_executable, script_path, "--port", "7010", "--no-debug"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+            )
+            
+            # 等待服务器启动
+            import time
+            time.sleep(2)
+            
+            self.log_signal.log_updated.emit("设置服务器已启动 (端口: 7010)")
+            logger.info("设置服务器已启动 (端口: 7010)")
+            
+        except Exception as e:
+            error_msg = f"启动设置服务器失败: {e}"
+            self.log_signal.log_updated.emit(error_msg)
+            logger.error(error_msg)
+            raise e
 
 
 def main():

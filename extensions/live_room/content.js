@@ -972,7 +972,7 @@ async function get_replay_punish_list() {
 
     if (!list || list.length === 0) {
       createTopTips("同步完成：无新的违规记录", { type: "success" });
-      console.log("ℹ️ 当前无违规记录");
+      console.log("[INFO] 当前无违规记录");
       return;
     }
 
