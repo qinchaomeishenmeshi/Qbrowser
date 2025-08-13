@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse
 
 from api.api_business import business_router
 from api.scheduler_api import router as scheduler_router
+from api.chrome_config_api import router as chrome_config_router
 from browser.browser_manager import BrowserManager
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
@@ -393,6 +394,7 @@ async def start_all_browsers(
 app.include_router(api_router, prefix="/api")  # 浏览器管理接口
 app.include_router(business_router)  # 业务接口
 app.include_router(scheduler_router)  # 定时任务管理接口
+app.include_router(chrome_config_router, prefix="/api")  # Chrome配置接口
 
 
 # 定时任务管理界面路由
@@ -406,6 +408,12 @@ async def dashboard_redirect(request: Request):
 async def scheduler_dashboard(request: Request):
     """定时任务管理界面"""
     return templates.TemplateResponse("scheduler_dashboard.html", {"request": request})
+
+
+@app.get("/chrome/config", response_class=HTMLResponse)
+async def chrome_config_page(request: Request):
+    """Chrome配置管理界面"""
+    return templates.TemplateResponse("chrome_config.html", {"request": request})
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000):

@@ -9,6 +9,7 @@ from DrissionPage._base.chromium import Chromium
 from DrissionPage._configs.chromium_options import ChromiumOptions
 
 from conf import BASE_DIR, resource_path
+from conf.browser_config import chrome_path_manager
 from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
@@ -118,9 +119,19 @@ class BrowserManager:
                 logger.warning(f"[WARNING] Block Videos 插件路径不存在: {self.config.block_videos_extension_path}")
             
             # 配置并启动 Chromium（持久化用户数据）
+            co = ChromiumOptions()
+            
+            # 设置自定义Chrome路径（如果配置了的话）
+            chrome_path = chrome_path_manager.get_chrome_path()
+            if chrome_path:
+                logger.info(f"使用Chrome路径: {chrome_path}")
+                co.set_browser_path(chrome_path)
+            else:
+                logger.warning("未找到Chrome路径，将使用系统默认")
+            
+            # 设置其他配置
             co = (
-                ChromiumOptions()
-                .set_local_port(self.port)
+                co.set_local_port(self.port)
                 .set_user_data_path(str(self.user_data_dir))
                 .set_argument("--window-size", "1910,1070")
             )

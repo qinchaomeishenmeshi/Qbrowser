@@ -131,7 +131,13 @@ pip install -r requirements.txt
    - 每行输入一个实例ID
    - 实例ID将用于区分不同的浏览器会话
 
-2. 端口配置（可选）
+2. Chrome浏览器路径配置
+   - 系统会自动检测Chrome浏览器路径
+   - 支持自定义Chrome可执行文件路径
+   - 提供多种配置方式：命令行工具、Web界面、API接口
+   - 配置文件：`chrome_config.json`
+
+3. 端口配置（可选）
    - 默认API服务端口：6001
    - 如需修改，请在 `conf.py` 中调整
 
@@ -220,6 +226,145 @@ Q: 遇到 "qt.qpa.screen: Unable to open monitor interface" 错误怎么办？
 A: 这是Windows系统上的Qt显示器接口问题，已在代码中添加修复方案。如果仍有问题，请参考 `QT_DISPLAY_ERROR_FIX.md` 文件中的详细解决方案，包括更新显卡驱动、调整显示设置、使用兼容性模式等。
 
 Q: GitHub Actions构建时遇到Unicode编码错误怎么办？
+A: 这是Windows系统编码问题，已在构建脚本中添加UTF-8编码设置。详细解决方案请参考 `UNICODE_ENCODING_FIX.md` 文件。
+
+## Chrome浏览器路径配置
+
+### 功能概述
+本项目支持自定义Chrome浏览器的可执行文件路径，提供了多种配置方式来满足不同用户的需求。<mcreference link="https://www.drissionpage.cn/get_start/before_start/" index="1">1</mcreference>
+
+### 支持的浏览器
+- Google Chrome
+- Microsoft Edge
+- Chromium
+- Brave Browser
+
+### 配置方式
+
+#### 1. 命令行工具配置
+
+使用内置的命令行工具进行配置：
+
+```bash
+# 显示当前配置
+python chrome_config_tool.py --show
+
+# 检测系统中可用的Chrome浏览器
+python chrome_config_tool.py --detect
+
+# 设置自定义Chrome路径
+python chrome_config_tool.py --set "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+# 清除自定义路径（使用系统默认）
+python chrome_config_tool.py --clear
+
+# 交互式配置（推荐）
+python chrome_config_tool.py --interactive
+```
+
+#### 2. Web界面配置
+
+启动API服务器后，访问Chrome配置页面：
+
+```bash
+# 启动API服务器
+python start_api_server.py
+
+# 在浏览器中访问配置页面
+http://localhost:8000/chrome/config
+```
+
+Web界面功能：
+- 📋 查看当前配置信息
+- 🔍 自动检测系统中可用的Chrome浏览器
+- ⚙️ 设置自定义Chrome路径
+- 🗑️ 清除自定义配置
+
+#### 3. API接口配置
+
+通过RESTful API进行配置：
+
+```bash
+# 获取当前配置
+curl http://localhost:8000/api/chrome-config/current
+
+# 检测可用浏览器
+curl http://localhost:8000/api/chrome-config/detect
+
+# 设置Chrome路径
+curl -X POST http://localhost:8000/api/chrome-config/set-path \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/path/to/chrome"}'
+
+# 清除自定义路径
+curl -X DELETE http://localhost:8000/api/chrome-config/clear-path
+```
+
+### 配置文件
+
+Chrome路径配置保存在 `chrome_config.json` 文件中：
+
+```json
+{
+  "chrome_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+}
+```
+
+### 默认路径检测
+
+系统会自动检测以下默认路径：
+
+**macOS:**
+- `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`
+- `/Applications/Chromium.app/Contents/MacOS/Chromium`
+- `/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge`
+- `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser`
+
+**Windows:**
+- `C:\Program Files\Google\Chrome\Application\chrome.exe`
+- `C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`
+- `C:\Users\{username}\AppData\Local\Google\Chrome\Application\chrome.exe`
+- `C:\Program Files\Microsoft\Edge\Application\msedge.exe`
+- `C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`
+
+**Linux:**
+- `/usr/bin/google-chrome`
+- `/usr/bin/chromium-browser`
+- `/usr/bin/chromium`
+- `/snap/bin/chromium`
+- `/usr/bin/microsoft-edge`
+- `/usr/bin/brave-browser`
+
+### 使用优先级
+
+1. **自定义路径** - 如果设置了自定义路径且文件存在，优先使用
+2. **系统默认路径** - 按照默认路径列表顺序检测，使用第一个找到的
+3. **DrissionPage默认** - 如果都未找到，使用DrissionPage的默认配置
+
+### 故障排除
+
+**问题：Chrome路径设置失败**
+- 检查路径是否正确
+- 确认文件存在且有执行权限
+- 验证是否为Chrome可执行文件
+
+**问题：检测不到Chrome浏览器**
+- 确认Chrome已正确安装
+- 检查安装路径是否在默认路径列表中
+- 使用自定义路径手动设置
+
+**问题：浏览器启动失败**
+- 检查Chrome版本兼容性
+- 确认系统权限设置
+- 查看详细错误日志
+
+### 注意事项
+
+1. **权限要求**：确保Chrome可执行文件有执行权限
+2. **版本兼容**：建议使用较新版本的Chrome浏览器
+3. **路径格式**：使用绝对路径，避免相对路径
+4. **配置持久化**：配置会自动保存到文件，重启后仍然有效
+5. **多平台支持**：配置工具会根据操作系统自动适配路径格式
 A: 这是Windows构建环境中的字符编码问题，已在构建工作流中添加UTF-8编码设置和Unicode字符替换。详细的修复方案请参考 `UNICODE_ENCODING_FIX.md` 文件，包括环境变量设置、字符替换规则和语法错误修复等。
 
 ## 许可证
