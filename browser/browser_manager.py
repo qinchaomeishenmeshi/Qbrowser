@@ -136,12 +136,11 @@ class BrowserManager:
                 .set_argument("--window-size", "1910,1070")
             )
             
-            # 使用 add_extension() 方法加载插件（DrissionPage 推荐方式）
+           # 使用--load-extension参数加载插件（更可靠的方式）
             if valid_extensions:
-                for extension_path in valid_extensions:
-                    logger.info(f"正在添加插件: {extension_path}")
-                    co.add_extension(extension_path)
-                logger.info(f"[OK] 已使用 add_extension() 方法加载插件: {len(valid_extensions)}个")
+                extension_paths = ",".join(valid_extensions)
+                co.set_argument(f"--load-extension={extension_paths}")
+                logger.info(f"[OK] 使用--load-extension加载插件: {len(valid_extensions)}个")
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
             
