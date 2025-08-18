@@ -53,12 +53,19 @@ htmlcov/
 # 项目特定
 /browser_data/
 
+# 配置文件
+config/config.json
+config/local.json
+.env
+.env.local
+.env.production
+.env.development
+
 # 系统文件
 .DS_Store
 Thumbs.db
 /.cursorrules
 static/
-qw-browser-electron/node_modules/
 data/
 user_ports_cache.json
 user_ids_cache.json

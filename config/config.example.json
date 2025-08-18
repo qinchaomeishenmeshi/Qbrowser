@@ -1,0 +1,56 @@
+{
+  "network": {
+    "host": "127.0.0.1",
+    "api_port": 6001,
+    "scheduler_port": 8000,
+    "browser_start_port": 9111,
+    "cors_origins": ["*"]
+  },
+  "browser": {
+    "headless": false,
+    "disable_web_security": true,
+    "disable_features": [
+      "VizDisplayCompositor",
+      "TranslateUI"
+    ],
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "window_size": [1920, 1080],
+    "timeout": 30,
+    "max_instances": 10
+  },
+  "scheduler": {
+    "timezone": "Asia/Shanghai",
+    "max_workers": 4,
+    "job_defaults": {
+      "coalesce": false,
+      "max_instances": 1,
+      "misfire_grace_time": 30
+    },
+    "executors": {
+      "default": {
+        "type": "threadpool",
+        "max_workers": 4
+      }
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}",
+    "rotation": "10 MB",
+    "retention": "7 days",
+    "compression": "zip"
+  },
+  "security": {
+    "api_key": null,
+    "jwt_secret": null,
+    "jwt_expire_hours": 24,
+    "rate_limit_per_minute": 60,
+    "allowed_hosts": ["localhost", "127.0.0.1"]
+  },
+  "database": {
+    "url": "sqlite:///data/app.db",
+    "pool_size": 5,
+    "max_overflow": 10,
+    "pool_timeout": 30
+  }
+}

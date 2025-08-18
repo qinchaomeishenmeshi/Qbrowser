@@ -10,7 +10,20 @@ logger = get_logger(__name__)
 
 
 class CookiesManager:
-    def __init__(self, storage_dir: Path):
+    """
+    Cookies管理器，负责用户cookies和headers的存储、检索和生命周期管理。
+    
+    支持多站点cookies管理，提供缓存机制和过期检查功能。
+    所有操作都是线程安全的，使用异步锁保护并发访问。
+    """
+    
+    def __init__(self, storage_dir: Path) -> None:
+        """
+        初始化Cookies管理器。
+        
+        Args:
+            storage_dir: cookies存储目录路径
+        """
         self.storage_dir = storage_dir
         self.storage_dir.mkdir(parents=True, exist_ok=True)
         self._lock = asyncio.Lock()
@@ -46,7 +59,7 @@ class CookiesManager:
         headers: Optional[dict] = None,
         expires_in_days: int = 7,
         site_key: str = None
-    ):
+    ) -> None:
         """
         保存用户的cookies和headers信息
         
@@ -130,7 +143,7 @@ class CookiesManager:
 
         return data.get('headers')
 
-    async def _load_cookies(self, user_id: str, site_key: str = None):
+    async def _load_cookies(self, user_id: str, site_key: str = None) -> None:
         """
         从文件加载用户的cookies信息
         
@@ -166,7 +179,7 @@ class CookiesManager:
             logger.error(f"检查 cookies 过期时间出错: {e}")
             return True
 
-    async def remove_cookies(self, user_id: str, site_key: str = None):
+    async def remove_cookies(self, user_id: str, site_key: str = None) -> None:
         """
         删除用户的cookies信息
         
@@ -215,7 +228,7 @@ class CookiesManager:
                 cache_key = self._get_cache_key(user_id, site_key)
                 self._cache.pop(cache_key, None)
 
-    async def clear_all(self):
+    async def clear_all(self) -> None:
         """
         清除所有用户的cookies信息
         """
@@ -271,4 +284,4 @@ class CookiesManager:
                         result[user_id] = result.get(user_id, {})
                         result[user_id][actual_site_key or "default"] = self._cache[cache_key]
                     
-        return result 
+        return result

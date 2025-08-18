@@ -1,7 +1,7 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Union
 
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
@@ -41,20 +41,33 @@ SITE_CONFIGS = {
 
 
 class RequestListener:
-    """
+    """请求监听器类
+    
     封装 DrissionPage 请求监听逻辑：
     - 启动监听特定的 api_uri
     - 执行页面加载并等待
     - 停止监听并返回请求头和数据包
     """
 
-    def __init__(self, tab, api_uri: str, timeout: int = 5):
+    def __init__(self, tab: Any, api_uri: str, timeout: int = 5) -> None:
+        """初始化请求监听器
+        
+        Args:
+            tab: 浏览器标签页对象
+            api_uri: 要监听的API路径
+            timeout: 监听超时时间（秒），默认5秒
+        """
         self.tab = tab
         self.api_uri = api_uri
         self.timeout = timeout
         self.packet = None
 
-    def listen_for(self):
+    def listen_for(self) -> Optional[Any]:
+        """开始监听并等待请求
+        
+        Returns:
+            捕获到的请求包，如果超时则返回None
+        """
         self.tab.listen.start(self.api_uri)
         try:
             self.packet = self.tab.listen.wait(timeout=self.timeout)
@@ -64,25 +77,40 @@ class RequestListener:
         finally:
             self.tab.listen.stop()
 
-    def get_request_headers(self) -> Optional[dict]:
+    def get_request_headers(self) -> Optional[Dict[str, str]]:
+        """获取请求头信息
+        
+        Returns:
+            请求头字典，如果没有捕获到请求则返回None
+        """
         if self.packet:
             return dict(self.packet.request.headers)
         return None
 
 
 class BrowserOperator:
-    """
-    浏览器操作类：
+    """浏览器操作类
+    
+    负责浏览器操作和数据收集：
     - 负责浏览器操作
     - 管理cookies和headers
     - 实例管理交给 browser_service
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """初始化浏览器操作器"""
         self.cookies_manager = CookiesManager(Path(resource_path("data/cookies")))
 
-    def get_or_create_tab(self, browser, url):
-        """获取现有tab或创建新tab"""
+    def get_or_create_tab(self, browser: Any, url: str) -> Any:
+        """获取现有标签页或创建新标签页
+        
+        Args:
+            browser: 浏览器实例
+            url: 目标URL
+            
+        Returns:
+            浏览器标签页对象
+        """
         try:
             # 查找现有tabs中是否有匹配的URL
             for tab in browser.get_tabs():

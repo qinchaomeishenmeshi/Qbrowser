@@ -959,7 +959,7 @@ async function get_replay_punish_list() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: "1258293549605997", // TODO: This seems to be a hardcoded value
+          user_id: APP_STATE.dyAccountNo || localStorage.getItem("dyAccountNo") || "1258293549605997", // 动态获取用户ID，如果获取失败则使用默认值
           begin_date,
           end_date,
           compare_begin_date: begin_date, // Simplified logic as per original

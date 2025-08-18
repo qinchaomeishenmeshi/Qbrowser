@@ -1,8 +1,7 @@
 # 公共的logger配置
 import sys
 import os
-import os
-from typing import Optional
+from typing import Optional, Set
 from loguru import logger
 
 # 导入资源路径函数
@@ -10,7 +9,16 @@ try:
     from conf import resource_path
 except ImportError:
     # 如果导入失败，使用默认的相对路径
-    def resource_path(relative_path):
+    def resource_path(relative_path: str) -> str:
+        """
+        获取资源文件的绝对路径。
+        
+        Args:
+            relative_path: 相对路径
+            
+        Returns:
+            资源文件的绝对路径
+        """
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
 
 # 日志配置
@@ -25,7 +33,7 @@ LOG_FILE = os.path.join(resource_path("logs"), "app_{time:YYYY-MM-DD}.log")
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 # 防止重复添加sink
-_added_sinks = set()
+_added_sinks: Set[str] = set()
 
 def get_logger(name: Optional[str] = None, log_to_file: bool = True):
     """

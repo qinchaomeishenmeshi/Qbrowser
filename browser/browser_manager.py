@@ -3,7 +3,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from DrissionPage._base.chromium import Chromium
 from DrissionPage._configs.chromium_options import ChromiumOptions
@@ -16,6 +16,14 @@ logger = get_logger(__name__)
 
 
 def get_absolute_extension_path(relative_path: str) -> str:
+    """获取插件的绝对路径
+    
+    Args:
+        relative_path: 相对路径
+        
+    Returns:
+        插件的绝对路径字符串
+    """
     # 兼容打包exe后的情况，使用resource_path确保路径正确
     try:
         # 首先尝试使用resource_path（兼容打包后的情况）
@@ -42,7 +50,18 @@ class BrowserConfig:
 
 
 class BrowserManager:
-    def __init__(self, user_id: str, port=9111):
+    """浏览器管理器类
+    
+    负责单个浏览器实例的生命周期管理，包括初始化、配置、启动和清理。
+    """
+    
+    def __init__(self, user_id: str, port: int = 9111) -> None:
+        """初始化浏览器管理器
+        
+        Args:
+            user_id: 用户ID
+            port: 浏览器调试端口，默认9111
+        """
         self.user_id = user_id
         self.port = port
         self.config = BrowserConfig()
@@ -54,10 +73,16 @@ class BrowserManager:
         self.browser: Optional[Chromium] = None
 
     def get_user_blank_html_path(self) -> str:
-        """
+        """为每个用户生成专属的本地空白页
+        
         为每个 user_id 生成专属的本地空白页，带 user_id 标识。
-        - 模板和生成的 html 都放在 BASE_DIR/static 下，避免 PyInstaller 路径混乱。
-        - 返回生成的本地 html 文件的 file:// URI 路径。
+        模板和生成的 html 都放在 BASE_DIR/static 下，避免 PyInstaller 路径混乱。
+        
+        Returns:
+            生成的本地 html 文件的 file:// URI 路径
+            
+        Raises:
+            Exception: 文件读写操作失败时抛出异常
         """
         static_dir = Path(resource_path("static"))
         static_dir.mkdir(parents=True, exist_ok=True)
@@ -102,6 +127,16 @@ class BrowserManager:
         return user_blank_path.as_uri()
 
     def initialize(self) -> bool:
+        """初始化浏览器实例
+        
+        配置并启动Chromium浏览器，加载插件，恢复上次打开的标签页。
+        
+        Returns:
+            初始化成功返回True，失败返回False
+            
+        Raises:
+            Exception: 浏览器初始化过程中发生的任何异常
+        """
         try:
             # 检查插件路径是否存在
             valid_extensions = []
@@ -180,7 +215,14 @@ class BrowserManager:
             self.cleanup()
             return False
 
-    def cleanup(self):
+    def cleanup(self) -> None:
+        """清理浏览器实例和相关资源
+        
+        保存当前打开的标签页URL，关闭浏览器，清理临时文件。
+        
+        Raises:
+            Exception: 清理过程中发生的任何异常
+        """
         try:
             if self.browser:
                 urls = []
@@ -223,13 +265,27 @@ class BrowserManager:
 
     @property
     def is_running(self) -> bool:
+        """检查浏览器是否正在运行
+        
+        Returns:
+            浏览器实例存在且运行中返回True，否则返回False
+        """
         return self.browser is not None
 
-    def close(self):
+    def close(self) -> None:
+        """关闭浏览器实例
+        
+        直接关闭浏览器，不保存状态。
+        """
         if self.browser:
             self.browser.quit()
             logger.info(f"Browser closed for user: {self.user_id}")
 
     @property
     def uptime(self) -> Optional[float]:
+        """获取浏览器运行时间
+        
+        Returns:
+            浏览器运行时间（秒），如果浏览器未运行则返回None
+        """
         return time.time() - self.browser.start_time if self.browser else None

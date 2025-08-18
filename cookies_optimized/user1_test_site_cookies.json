@@ -1,0 +1,10 @@
+{
+  "cookies": {
+    "session_id": "abc123",
+    "token": "token1"
+  },
+  "headers": {},
+  "updated_at": "2025-08-18T17:00:40.914068",
+  "expires_at": "2025-09-17T17:00:40.914068",
+  "site_key": "test_site"
+}
