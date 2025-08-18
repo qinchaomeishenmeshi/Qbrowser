@@ -130,11 +130,11 @@ class BrowserManager:
                 logger.warning("未找到Chrome路径，将使用系统默认")
             
             # 设置其他配置
-            co = (
-                co.set_local_port(self.port)
-                .set_user_data_path(str(self.user_data_dir))
-                .set_argument("--window-size", "1910,1070")
-            )
+            co.set_local_port(self.port)
+            co.set_user_data_path(str(self.user_data_dir))
+            co.set_argument("--window-size", "1910,1070")
+            co.set_argument("--enable-extensions")
+            
             
            # 使用--load-extension参数加载插件（更可靠的方式）
             if valid_extensions:
