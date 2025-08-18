@@ -8,6 +8,8 @@ import sys
 import threading
 import traceback
 from functools import wraps
+import fcntl
+import tempfile
 
 # 预先导入 QtWebEngineWidgets 以避免导入顺序问题
 # 支持轻量版构建（不包含WebEngine）
@@ -46,6 +48,63 @@ from utils.common_logger import get_logger
 from worker.scheduler_client import scheduler_client
 
 logger = get_logger(__name__)
+
+# 全局变量：应用程序锁文件句柄
+_app_lock_file = None
+
+
+def check_single_instance():
+    """检查是否已有应用程序实例在运行
+    
+    Returns:
+        bool: True表示可以启动（没有其他实例），False表示已有实例在运行
+    """
+    global _app_lock_file
+    
+    try:
+        # 创建锁文件路径
+        lock_file_path = os.path.join(tempfile.gettempdir(), 'qw_browser_app.lock')
+        
+        # 打开锁文件
+        _app_lock_file = open(lock_file_path, 'w')
+        
+        # 尝试获取文件锁（非阻塞）
+        fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        
+        # 写入当前进程ID
+        _app_lock_file.write(str(os.getpid()))
+        _app_lock_file.flush()
+        
+        logger.info(f"应用程序启动成功，进程ID: {os.getpid()}")
+        return True
+        
+    except (IOError, OSError) as e:
+        if _app_lock_file:
+            _app_lock_file.close()
+            _app_lock_file = None
+        
+        # 检查是否是因为文件已被锁定
+        if e.errno == 35 or 'Resource temporarily unavailable' in str(e):
+            logger.warning("检测到应用程序已在运行，无法启动新实例")
+            return False
+        else:
+            logger.error(f"检查单例时发生错误: {e}")
+            return False
+
+
+def release_single_instance():
+    """释放应用程序实例锁"""
+    global _app_lock_file
+    
+    if _app_lock_file:
+        try:
+            fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_UN)
+            _app_lock_file.close()
+            logger.info("应用程序锁已释放")
+        except Exception as e:
+            logger.error(f"释放应用程序锁时发生错误: {e}")
+        finally:
+            _app_lock_file = None
 
 
 def is_admin():
@@ -714,11 +773,18 @@ class App(QMainWindow):
 
 def main():
     """应用程序入口：初始化Qt兼容性、事件循环、全局异常处理与优雅退出
+    - 检查单例启动，防止重复运行
     - 在创建 QApplication 前进行 Qt 兼容性设置，避免属性缺失导致崩溃
     - 建立 qasync 事件循环，统一管理 async 任务
     - 安装未捕获异常处理器，保证错误能被记录到控制台
     - 绑定 SIGINT/SIGTERM 与 atexit 钩子，确保优雅关闭事件循环
     """
+    # 检查是否已有实例在运行
+    if not check_single_instance():
+        print("[ERROR] 应用程序已在运行，请勿重复启动！")
+        print("[INFO] 如需重新启动，请先关闭现有实例")
+        sys.exit(1)
+    
     # Windows 管理员权限提示
     if sys.platform == "win32" and not is_admin():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")
@@ -753,6 +819,9 @@ def main():
                 loop.call_soon_threadsafe(loop.stop)
         except Exception as e:
             print(f"[WARNING] 停止事件循环时发生异常: {e}")
+        finally:
+            # 释放应用程序单例锁
+            release_single_instance()
 
     if sys.platform != "win32":
         try:
@@ -761,7 +830,7 @@ def main():
         except Exception as e:
             print(f"[WARNING] 绑定信号处理失败: {e}")
 
-    # 进程退出清理，确保 loop 关闭
+    # 进程退出清理，确保 loop 关闭和释放单例锁
     @atexit.register
     def _cleanup_on_exit():
         try:
@@ -771,6 +840,9 @@ def main():
                 loop.close()
         except Exception as e:
             print(f"[WARNING] 清理事件循环失败: {e}")
+        finally:
+            # 释放应用程序单例锁
+            release_single_instance()
 
     # 延迟导入 UI，避免初始化开销影响日志输出
     from ui.modern_app import ModernApp
@@ -788,6 +860,8 @@ def main():
             # 确保事件循环被关闭
             if not loop.is_closed():
                 loop.close()
+            # 释放应用程序单例锁
+            release_single_instance()
 
 
 if __name__ == "__main__":

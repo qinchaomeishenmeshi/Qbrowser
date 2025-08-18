@@ -1,25 +1,14 @@
-import sys
-from PyQt6.QtWidgets import QApplication
-from qasync import QEventLoop
-import asyncio
+"""应用程序备用启动入口
 
-from app import App, USE_MODERN_UI
+此文件作为app.py的备用启动入口，统一调用app.py的main函数。
+这样确保了启动逻辑的一致性，避免重复实现和潜在的冲突。
 
-# 提前导入 ModernApp，以解决 QtWebEngineWidgets 的初始化问题
-if USE_MODERN_UI:
-    from ui.modern_app import ModernApp
+推荐使用: python app.py
+备用方式: python run_app.py
+"""
+
+from app import main
 
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    loop = QEventLoop(app)
-    asyncio.set_event_loop(loop)
-
-    if USE_MODERN_UI:
-        main_window = ModernApp()
-    else:
-        main_window = App()
-
-    main_window.show()
-
-    with loop:
-        loop.run_forever()
+    # 统一调用app.py的main函数，确保启动逻辑一致
+    main()
