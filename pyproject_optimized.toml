@@ -3,7 +3,7 @@ name = "qw-browser"
 version = "0.1.0"
 description = "QW Browser - 多浏览器实例管理工具"
 readme = "README.md"
-requires-python = ">=3.9"  # 降低Python版本要求以提高兼容性
+requires-python = ">=3.8"  # 降低Python版本要求以提高兼容性
 dependencies = [
     "aiohappyeyeballs==2.6.1",
     "aiohttp>=3.12.8",
@@ -189,6 +189,6 @@ exclude_lines = [
     "raise NotImplementedError",
     "if 0:",
     "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
+    "class .*\bProtocol\):",
+    "@(abc\.)?abstractmethod",
 ]

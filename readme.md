@@ -15,9 +15,48 @@ QW-Browser 是一个强大的多浏览器实例管理工具，提供图形化界
 - 🔒 单例启动机制，防止重复运行
 
 ## 系统要求
-- Python 3.8+
-- 操作系统：Windows/macOS/Linux
+- Python 3.8+ (推荐 3.9-3.12)
+- 操作系统: Windows 10+, macOS 10.15+, Linux (Ubuntu 20.04+)
 - PyQt6 (包含QtWebEngineWidgets模块，用于现代UI)
+
+## 依赖配置
+
+### 📦 核心依赖版本说明
+
+- **Python版本**: 建议使用 Python 3.8-3.12，当前配置要求 >=3.12 (可能过于严格)
+- **PyQt6**: 使用 6.9.0 版本，在某些系统上可能需要降级到 6.7.x
+- **psutil**: 当前使用 7.0.0，如遇问题可降级到 5.9.x-6.0.x 范围
+- **DrissionPage**: 使用波浪号约束 ~=4.1.0.17，建议改为范围约束
+
+### ⚠️ 已知依赖问题
+
+1. **Python版本要求过高**: `requires-python = ">=3.12"` 可能限制用户使用
+2. **psutil 7.0.0**: 最新版本在某些系统上可能不稳定
+3. **PyQt6版本**: 6.9.0 在部分macOS版本上存在兼容性问题
+4. **版本约束不一致**: 混合使用了 `==`, `~=`, `>=` 等约束方式
+
+### 🔧 依赖优化建议
+
+如需优化依赖配置，可参考以下文件：
+- `dependency_analysis_report.md` - 详细的依赖分析报告
+- `pyproject_optimized.toml` - 优化后的配置文件
+- `check_dependencies.py` - 依赖检查脚本
+
+### 📋 可选依赖组
+
+```bash
+# 安装完整版本（包含所有功能）
+uv sync --extra full
+
+# 仅安装数据分析功能
+uv sync --extra data-analysis
+
+# 仅安装开发工具
+uv sync --extra dev
+
+# 仅安装测试工具
+uv sync --extra test
+```
 
 ## 启动方式
 
