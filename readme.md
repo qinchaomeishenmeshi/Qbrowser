@@ -13,6 +13,26 @@ QW-Browser 是一个强大的多浏览器实例管理工具，提供图形化界
 - 🌐 跨平台支持（Windows/macOS/Linux）
 - 🔐 统一的Cookies管理
 - 🔒 单例启动机制，防止重复运行
+- ⏰ 定时任务调度系统
+- 🎨 现代化UI设计（支持主题切换）
+- 🔄 远程更新功能
+
+## 📚 项目架构
+
+本项目采用模块化设计，支持多种启动方式和部署模式。详细的代码架构分析请参考：
+
+- **[代码架构分析文档](code_architecture_analysis.md)** - 详细的启动文件逻辑梳理
+- **[远程更新系统文档](remote_update_system.md)** - 远程更新功能说明
+- **[依赖分析报告](dependency_analysis_report.md)** - 依赖配置优化建议
+
+### 🚀 启动方式对比
+
+| 启动方式 | 用途 | 界面 | 服务 | 适用场景 |
+|---------|------|------|------|----------|
+| `python app.py` | 完整应用 | GUI界面 | 所有服务 | 日常使用 |
+| `python run_app.py` | 备用启动 | GUI界面 | 所有服务 | 备用方式 |
+| `python start_api_server.py` | API服务 | Web界面 | API服务 | 服务器部署 |
+| `python start_scheduler_server.py` | 定时任务 | Web界面 | 调度服务 | 任务管理 |
 
 ## 系统要求
 - Python 3.8+ (推荐 3.9-3.12)
