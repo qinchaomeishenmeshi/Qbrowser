@@ -20,7 +20,7 @@ from conf import resource_path
 logger = get_logger(__name__)
 
 app = FastAPI()
-api_router = APIRouter()
+api_router = APIRouter(tags=["浏览器管理"])
 
 # 配置模板和静态文件
 templates = Jinja2Templates(directory=resource_path("templates"))
@@ -44,16 +44,13 @@ def get_store():
     return app.state.manager_store
 
 
-@api_router.get("/health")
+@api_router.get("/health", summary="健康检查")
 async def health_check():
     """健康检查端点"""
     return {"status": "ok", "message": "Backend is running"}
 
 
-# 已移除重复的 /status 接口，功能已被 /browser/status 接口覆盖
-
-
-@api_router.get("/browser/status")
+@api_router.get("/browser/status", summary="获取浏览器状态")
 async def get_browser_status():
     """获取浏览器状态"""
     count = await browser_store.count()
@@ -67,25 +64,22 @@ async def get_browser_status():
     }
 
 
-@api_router.get("/extensions/status")
+@api_router.get("/extensions/status", summary="获取全局扩展状态")
 async def get_extensions_status():
     """获取全局扩展状态"""
     # 统计所有用户的扩展状态
     managers = await browser_store.get_all()
     active_browsers = [m for m in managers if m.is_running]
-    
+
     return {
         "status": "running",
         "total_browsers": len(active_browsers),
-        "configured_extensions": [
-            "live_room (直播中控)",
-            "block_videos (视频屏蔽器)"
-        ],
+        "configured_extensions": ["live_room (直播中控)", "block_videos (视频屏蔽器)"],
         "message": f"扩展服务运行中，{len(active_browsers)} 个浏览器实例活跃",
     }
 
 
-@api_router.get("/extensions/{user_id}")
+@api_router.get("/extensions/{user_id}", summary="获取用户扩展状态")
 async def get_user_extensions_status(user_id: str):
     """获取指定用户浏览器的扩展状态"""
     manager = await browser_store.get(user_id)
@@ -278,7 +272,7 @@ async def get_user_extensions_status(user_id: str):
         }
 
 
-@api_router.get("/scheduler/recent")
+@api_router.get("/scheduler/recent", summary="获取最近任务")
 async def get_recent_tasks():
     """获取最近的任务"""
     # TODO: 实现真实的任务历史记录功能
@@ -287,40 +281,40 @@ async def get_recent_tasks():
         "tasks": [],
         "total_count": 0,
         "message": "暂无最近任务记录",
-        "note": "此接口需要集成任务调度系统后才能返回真实数据"
+        "note": "此接口需要集成任务调度系统后才能返回真实数据",
     }
 
 
-@api_router.get("/system/logs")
+@api_router.get("/system/logs", summary="获取系统日志")
 async def get_system_logs(limit: int = 10):
     """获取系统日志"""
     # TODO: 实现真实的日志读取功能
     # 可以从日志文件或日志系统中读取最近的日志记录
     import datetime
-    
+
     # 返回当前系统状态作为临时日志信息
     managers = await browser_store.get_all()
     active_count = len([m for m in managers if m.is_running])
-    
+
     current_time = datetime.datetime.now().isoformat()
-    
+
     return {
         "logs": [
             {
                 "timestamp": current_time,
                 "level": "INFO",
                 "message": f"系统运行正常，当前活跃浏览器实例: {active_count} 个",
-                "component": "browser_manager"
+                "component": "browser_manager",
             }
         ],
         "total_count": 1,
         "limit": limit,
         "message": "系统日志获取成功",
-        "note": "此接口需要集成日志系统后才能返回完整的历史日志"
+        "note": "此接口需要集成日志系统后才能返回完整的历史日志",
     }
 
 
-@api_router.get("/settings/ui")
+@api_router.get("/settings/ui", summary="获取UI设置")
 async def get_ui_settings():
     """获取UI设置"""
     return {
@@ -329,7 +323,7 @@ async def get_ui_settings():
     }
 
 
-@api_router.post("/settings/ui")
+@api_router.post("/settings/ui", summary="保存UI设置")
 async def save_ui_settings(settings: dict):
     """保存UI设置"""
     # 这里可以将设置保存到数据库或文件
@@ -337,7 +331,7 @@ async def save_ui_settings(settings: dict):
     return {"success": True, "message": "UI settings saved successfully"}
 
 
-@api_router.get("/active_instances")
+@api_router.get("/active_instances", summary="获取活跃实例")
 async def get_active_instances():
     """获取所有激活的浏览器实例"""
     # 从 browser_store 获取所有浏览器管理器实例
@@ -406,7 +400,7 @@ async def launch_browser(user_id: str, url: str = "") -> dict:
     }
 
 
-@api_router.post("/start/{user_id}")
+@api_router.post("/start/{user_id}", summary="启动浏览器")
 async def start_browser(
     user_id: str, url: str = Query(default="", description="要打开的页面url，可选")
 ):
@@ -416,13 +410,13 @@ async def start_browser(
     return result
 
 
-@api_router.post("/stop")
+@api_router.post("/stop", summary="停止所有浏览器")
 async def stop_all():
     await browser_store.clear()
     return {"status": "success", "message": "所有浏览器已关闭"}
 
 
-@api_router.post("/start_all")
+@api_router.post("/start_all", summary="批量启动浏览器")
 async def start_all_browsers(
     user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
     url: str = Query(default="", description="要打开的页面url，可选"),
@@ -431,17 +425,16 @@ async def start_all_browsers(
     return {"results": results}
 
 
-@api_router.post("/connect/{user_id}")
+@api_router.post("/connect/{user_id}", summary="连接现有浏览器")
 async def connect_existing_browser(
-    user_id: str, 
-    port: int = Query(..., description="要连接的浏览器端口号")
+    user_id: str, port: int = Query(..., description="要连接的浏览器端口号")
 ):
     """连接到已打开的浏览器实例
-    
+
     Args:
         user_id: 用户ID
         port: 浏览器运行的端口号
-        
+
     Returns:
         连接结果信息
     """
@@ -453,177 +446,175 @@ async def connect_existing_browser(
                 "user_id": user_id,
                 "status": "already_connected",
                 "port": existing_manager.port,
-                "message": f"用户 {user_id} 的浏览器实例已存在"
+                "message": f"用户 {user_id} 的浏览器实例已存在",
             }
-        
+
         # 创建新的浏览器管理器实例
         manager = BrowserManager(user_id=user_id, port=port)
-        
+
         # 尝试连接到现有浏览器进程
         from DrissionPage import ChromiumPage, ChromiumOptions
-        
+
         co = ChromiumOptions()
         co.set_local_port(port)
-        
+
         try:
             # 尝试连接到现有浏览器
             browser = ChromiumPage(addr_or_opts=co)
-            
+
             # 验证连接是否成功
-            if browser and hasattr(browser, 'tabs_count'):
+            if browser and hasattr(browser, "tabs_count"):
                 manager.browser = browser
-                
+
                 # 将管理器添加到存储中
                 await browser_store.add(manager)
-                
+
                 logger.info(f"成功连接到用户 {user_id} 的浏览器实例 (端口: {port})")
-                
+
                 return {
                     "user_id": user_id,
                     "status": "connected",
                     "port": port,
-                    "message": f"成功连接到端口 {port} 上的浏览器实例"
+                    "message": f"成功连接到端口 {port} 上的浏览器实例",
                 }
             else:
                 return {
                     "user_id": user_id,
                     "status": "connection_failed",
                     "port": port,
-                    "message": "连接到浏览器实例失败，可能浏览器未运行或端口不正确"
+                    "message": "连接到浏览器实例失败，可能浏览器未运行或端口不正确",
                 }
-                
+
         except Exception as connect_error:
-            logger.error(f"连接浏览器实例失败 (用户: {user_id}, 端口: {port}): {connect_error}")
+            logger.error(
+                f"连接浏览器实例失败 (用户: {user_id}, 端口: {port}): {connect_error}"
+            )
             return {
                 "user_id": user_id,
                 "status": "connection_error",
                 "port": port,
-                "message": f"连接失败: {str(connect_error)}"
+                "message": f"连接失败: {str(connect_error)}",
             }
-            
+
     except Exception as e:
         logger.error(f"连接浏览器实例时发生错误 (用户: {user_id}): {e}")
-        raise HTTPException(
-             status_code=500, 
-             detail=f"连接浏览器实例失败: {str(e)}"
-         )
+        raise HTTPException(status_code=500, detail=f"连接浏览器实例失败: {str(e)}")
 
 
-@api_router.post("/connect_batch")
-async def connect_batch_browsers(
-    request: dict
-):
+@api_router.post("/connect_batch", summary="批量连接浏览器")
+async def connect_batch_browsers(request: dict):
     """批量连接多个已打开的浏览器实例
-    
+
     Args:
         request: 请求体，包含connections字段，格式: {"connections": [{"user_id": "user1", "port": 9001}, ...]}
-        
+
     Returns:
         批量连接结果
     """
     connections = request.get("connections", [])
-    
+
     if not connections:
-        raise HTTPException(
-            status_code=400,
-            detail="请求体中缺少connections字段或为空"
-        )
-    
+        raise HTTPException(status_code=400, detail="请求体中缺少connections字段或为空")
+
     results = []
-    
+
     for connection in connections:
         user_id = connection.get("user_id")
         port = connection.get("port")
-        
+
         if not user_id or not port:
-            results.append({
-                "user_id": user_id or "unknown",
-                "status": "invalid_params",
-                "port": port or 0,
-                "message": "缺少必要参数 user_id 或 port"
-            })
+            results.append(
+                {
+                    "user_id": user_id or "unknown",
+                    "status": "invalid_params",
+                    "port": port or 0,
+                    "message": "缺少必要参数 user_id 或 port",
+                }
+            )
             continue
-            
+
         try:
             # 复用单个连接的逻辑
             result = await connect_existing_browser(user_id, port)
             results.append(result)
         except Exception as e:
-            results.append({
-                "user_id": user_id,
-                "status": "error",
-                "port": port,
-                "message": f"连接失败: {str(e)}"
-            })
-    
+            results.append(
+                {
+                    "user_id": user_id,
+                    "status": "error",
+                    "port": port,
+                    "message": f"连接失败: {str(e)}",
+                }
+            )
+
     return {"results": results}
 
 
-@api_router.get("/detect_browser/{port}")
+@api_router.get("/detect_browser/{port}", summary="检测端口浏览器")
 async def detect_browser_on_port(port: int):
     """检测指定端口是否有浏览器实例运行
-    
+
     Args:
         port: 要检测的端口号
-        
+
     Returns:
         检测结果信息
     """
     try:
         import socket
-        
+
         # 检查端口是否被占用
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
-        result = sock.connect_ex(('127.0.0.1', port))
+        result = sock.connect_ex(("127.0.0.1", port))
         sock.close()
-        
+
         if result == 0:
             # 端口被占用，尝试连接验证是否为浏览器
             try:
                 from DrissionPage import ChromiumPage, ChromiumOptions
-                
+
                 co = ChromiumOptions()
                 co.set_local_port(port)
-                
+
                 browser = ChromiumPage(addr_or_opts=co)
-                
-                if browser and hasattr(browser, 'tabs_count'):
+
+                if browser and hasattr(browser, "tabs_count"):
                     tabs_count = browser.tabs_count
                     browser.quit()  # 立即关闭测试连接
-                    
+
                     return {
                         "port": port,
                         "status": "browser_detected",
                         "tabs_count": tabs_count,
-                        "message": f"端口 {port} 上检测到浏览器实例，共 {tabs_count} 个标签页"
+                        "message": f"端口 {port} 上检测到浏览器实例，共 {tabs_count} 个标签页",
                     }
                 else:
                     return {
                         "port": port,
                         "status": "not_browser",
-                        "message": f"端口 {port} 被占用，但不是浏览器实例"
+                        "message": f"端口 {port} 被占用，但不是浏览器实例",
                     }
-                    
+
             except Exception as browser_error:
                 return {
                     "port": port,
                     "status": "connection_failed",
-                    "message": f"端口 {port} 被占用，但连接失败: {str(browser_error)}"
+                    "message": f"端口 {port} 被占用，但连接失败: {str(browser_error)}",
                 }
         else:
             return {
                 "port": port,
                 "status": "port_free",
-                "message": f"端口 {port} 未被占用"
+                "message": f"端口 {port} 未被占用",
             }
-            
+
     except Exception as e:
         logger.error(f"检测端口 {port} 时发生错误: {e}")
         return {
             "port": port,
             "status": "detection_error",
-            "message": f"检测失败: {str(e)}"
+            "message": f"检测失败: {str(e)}",
         }
 
 

@@ -8,10 +8,10 @@ from worker.eos_client import get_live_room_list_main,get_replay_punish_list_mai
 
 # from worker.live_client import test
 
-business_router = APIRouter()
+business_router = APIRouter(tags=["业务接口"])
 
 
-@business_router.post("/anchor_coupon/create")
+@business_router.post("/anchor_coupon/create", summary="创建主播优惠券")
 async def create_anchor_coupon(data: CouponRequest):
     # 1. 解析 user_id 列表
     payload = data.model_dump()
@@ -47,7 +47,7 @@ async def create_anchor_coupon(data: CouponRequest):
     return {"code": 200, "status": "success", "data": result.get("data")}
 
 
-@business_router.post("/live/data")
+@business_router.post("/live/data", summary="获取直播间数据")
 async def get_live_data(data: LivingRequest):
     """
     获取直播间数据
@@ -89,7 +89,7 @@ async def get_live_data(data: LivingRequest):
     return {"code": 200, "status": "success", "data": result.get("data")}
 
 
-@business_router.post("/live/live_screen/core_data")
+@business_router.post("/live/live_screen/core_data", summary="获取直播间大屏核心数据")
 async def get_live_screen_core_data(data: LivingCoreDataRequest):
     """
     获取直播间数据
@@ -127,7 +127,7 @@ async def get_live_screen_core_data(data: LivingCoreDataRequest):
     return {"code": 200, "status": "success", "data": result.get("data")}
 
 
-@business_router.post("/live/eos/data")
+@business_router.post("/live/eos/data", summary="获取EOS直播间数据")
 async def get_eos_live_data(data: LivingRequest):
     """
     获取EOS直播间数据
@@ -170,7 +170,7 @@ async def get_eos_live_data(data: LivingRequest):
 
 
 
-@business_router.post("/live/eos/punish")
+@business_router.post("/live/eos/punish", summary="获取EOS直播间违规数据")
 async def get_eos_punish_data(data: LivingRequest):
     """
     获取EOS直播间违规数据
