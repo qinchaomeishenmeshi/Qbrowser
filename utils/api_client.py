@@ -55,7 +55,7 @@ class InternalApiClient:
         try:
             timeout = aiohttp.ClientTimeout(total=self.timeout)
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                logger.info(f"发起{method}请求: {url}")
+                logger.debug(f"发起{method}请求: {url}")
                 logger.debug(f"请求头: {request_headers}")
                 logger.debug(f"请求数据: {data}")
 
@@ -67,7 +67,7 @@ class InternalApiClient:
                     params=params,
                 ) as response:
                     response_text = await response.text()
-                    logger.info(f"响应状态码: {response.status}")
+                    logger.debug(f"响应状态码: {response.status}")
                     logger.debug(f"响应内容: {response_text}")
 
                     # 尝试解析JSON响应

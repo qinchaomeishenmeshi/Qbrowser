@@ -185,14 +185,14 @@ class BrowserOperator:
                     logger.warning(f"无法转换 cookies 格式，类型: {type(raw_cookies)}")
                     results["cookies"] = {}
 
-            logger.info(
+            logger.debug(
                 f"已获取用户 {user_id} 的 cookies，共 {len(results['cookies'])} 项"
             )
 
             # 监听每个API路径
             for api_path in api_paths:
                 for retry in range(max_retries):
-                    logger.info(
+                    logger.debug(
                         f"尝试监听 {api_path} (第 {retry + 1}/{max_retries} 次)"
                     )
                     listener = RequestListener(tab, api_path)
@@ -218,7 +218,7 @@ class BrowserOperator:
                     # 如果失败且不是最后一次重试，则等待后再试
                     if retry < max_retries - 1:
                         time.sleep(retry_delay)
-                        logger.info(f"监听 {api_path} 失败，准备重试")
+                        logger.debug(f"监听 {api_path} 失败，准备重试")
 
             return results
 
@@ -305,11 +305,9 @@ class BrowserOperator:
         """
         async def process_user(user_id):
             try:
-                logger.info(f"处理用户 {user_id} 的 {site_key} 站点cookies")
                 success = await self.collect_site_cookies(user_id, site_key)
                 return {"user_id": user_id, "success": success}
             except Exception as e:
-                logger.error(f"处理用户 {user_id} 时发生错误: {e}")
                 return {"user_id": user_id, "success": False}
 
         tasks = [process_user(user_id) for user_id in user_ids]
@@ -352,7 +350,7 @@ class BrowserOperator:
         """
         cookies = await self.cookies_manager.get_cookies(user_id, site_key)
         if not cookies:
-            logger.info(f"用户 {user_id} 的 cookies 不存在，尝试收集")
+
             return await self.collect_site_cookies(user_id, site_key)
 
         return True

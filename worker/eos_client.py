@@ -1,9 +1,12 @@
 import asyncio
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple
 
 from datetime import datetime, timedelta
 import aiohttp
+
+# 新增：引入时间模块用于实现简单TTL缓存
+import time
 
 from browser.browser_operator import browser_operator, BrowserOperator, SITE_CONFIGS
 from utils.common_logger import get_logger
@@ -90,6 +93,38 @@ class EosClient:
         self.live_portrait_url = (
             "https://eos.douyin.com/life/api/live_screen/v4/portrait"
         )
+        # 新增：用户信息结果缓存（避免重复请求 get_index_user）
+        # 结构：{ user_id: {"ts": 时间戳, "data": 响应数据} }
+        self._user_info_cache: Dict[str, Dict[str, Any]] = {}
+        # 缓存TTL（秒），同一用户在TTL内重复请求直接命中缓存
+        self._user_info_cache_ttl: int = 300
+
+    # 新增：获取缓存的用户信息，命中且未过期则返回，否则返回None
+    def _get_cached_user_info(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取缓存中的用户信息
+        参数:
+            user_id: 用户ID
+        返回:
+            命中缓存时返回数据字典，否则返回 None
+        """
+        cache_item = self._user_info_cache.get(user_id)
+        if not cache_item:
+            return None
+        ts = cache_item.get("ts", 0)
+        if time.time() - ts > self._user_info_cache_ttl:
+            # 过期，清理并返回None
+            self._user_info_cache.pop(user_id, None)
+            return None
+        return cache_item.get("data")
+
+    # 新增：写入用户信息到缓存
+    def _set_cached_user_info(self, user_id: str, data: Dict[str, Any]) -> None:
+        """设置用户信息缓存
+        参数:
+            user_id: 用户ID
+            data: 用户信息响应数据
+        """
+        self._user_info_cache[user_id] = {"ts": time.time(), "data": data}
 
     @staticmethod
     async def _get_cookies_for_user(user_id: str, site_key="eos") -> Dict[str, str]:
@@ -121,11 +156,13 @@ class EosClient:
             )
             return cookies_dict
 
-        # 记录缺失的关键 cookies
+        # 确保包含关键的认证和会话 cookies（参考 core_data.py 中的成功配置）
+        try:
+            required_cookies = SITE_CONFIGS[site_key]["required_cookies"]  # type: ignore
+        except Exception:
+            required_cookies = []
         missing_cookies = [
-            cookie
-            for cookie in SITE_CONFIGS[site_key]["required_cookies"]
-            if cookie not in cookies_dict
+            cookie for cookie in required_cookies if cookie not in cookies_dict
         ]
         if missing_cookies:
             logger.warning(f"用户 {user_id} 缺失关键 cookies: {missing_cookies}")
@@ -145,7 +182,7 @@ class EosClient:
             "accept": "application/json, text/plain, */*",
             "accept-language": "zh-CN,zh;q=0.9",
             "priority": "u=1, i",
-            "referer": "https://eos.douyin.com/livesite/live/history?tab=diagnosis",
+            "referer": "https://eos.douyin.com/",
             "sec-ch-ua": '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
             "sec-ch-ua-mobile": "?0",
             "sec-ch-ua-platform": '"macOS"',
@@ -153,7 +190,6 @@ class EosClient:
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
-            "x-secsdk-csrf-token": "",
         }
 
         saved_headers = await browser_operator.get_user_headers(user_id, site_key)
@@ -174,18 +210,71 @@ class EosClient:
 
         return filtered_headers
 
+    # 新增：基础 cookie 校验函数，避免后续请求在明显未登录的情况下继续执行
+    @staticmethod
+    def _has_required_cookies(cookies: Dict[str, str], site_key: str = "eos") -> bool:
+        """判断 cookies 是否包含站点要求的关键字段"""
+        try:
+            required = set(SITE_CONFIGS[site_key]["required_cookies"])  # type: ignore
+        except Exception:
+            required = set()
+        return all(name in cookies for name in required)
+
+    async def check_login(
+        self, user_id: str, site_key: str = "eos"
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """
+        登录态校验（并返回用户信息，供后续复用，避免重复请求）：
+        1) 先检查关键 cookies 是否齐全；
+        2) 以当前 cookies/headers 调用用户信息接口进行轻量校验；
+        失败则记录详细日志，并返回 (False, 空字典)。
+        成功则返回 (True, 用户信息)。
+        """
+        # 1) 关键 cookies 是否齐全
+        cookies = await self._get_cookies_for_user(user_id, site_key)
+        headers = await self._get_headers_for_user(user_id, site_key)
+        if not cookies or not self._has_required_cookies(cookies, site_key):
+            logger.error(
+                f"用户 {user_id} 未登录或关键 cookies 缺失，终止后续请求。cookies_keys={list(cookies.keys()) if cookies else []}"
+            )
+            return False, {}
+
+        # 2) 通过 get_index_user 进行轻量接口校验（内部包含缓存，将在此处回填缓存）
+        try:
+            probe = await self.get_index_user(user_id)
+            status_code = int(probe.get("status_code", -1))
+            douyin_unique_id = probe.get("douyin_unique_id", "")
+            if status_code != 0 or not douyin_unique_id:
+                logger.error(
+                    f"用户 {user_id} 登录校验失败：status_code={status_code}, douyin_unique_id={douyin_unique_id}"
+                )
+                return False, probe if isinstance(probe, dict) else {}
+            return True, probe if isinstance(probe, dict) else {}
+        except Exception as e:
+            logger.error(f"用户 {user_id} 登录校验异常: {e}")
+            return False, {}
+
     async def get_index_user(self, user_id: str):
-        """EOS获取直播间用户信息"""
+        """EOS获取直播间用户信息（带TTL缓存，避免重复请求）"""
+        # 优先尝试读取缓存，命中则直接返回，避免重复网络请求
+        cached = self._get_cached_user_info(user_id)
+        if cached is not None:
+            logger.debug(f"get_index_user 命中缓存: user_id={user_id}")
+            return cached
         try:
             cookies = await self._get_cookies_for_user(user_id)
             headers = await self._get_headers_for_user(user_id)
-            logger.info(f"EOS发送请求：{self.get_user_url}")
+            logger.debug(f"EOS发送请求：{self.get_user_url} user_id={user_id}")
             async with aiohttp.ClientSession() as session:
                 async with session.get(
                     self.get_user_url, cookies=cookies, headers=headers
                 ) as resp:
                     resp.raise_for_status()
-                    return await resp.json()
+                    data = await resp.json()
+                    # 写入缓存，供后续复用
+                    if isinstance(data, dict):
+                        self._set_cached_user_info(user_id, data)
+                    return data
         except Exception as e:
             logger.error(f"EOS获取直播间用户信息失败: {e}")
             return {"code": -1, "msg": f"EOS获取直播间用户信息失败: {str(e)}"}
@@ -221,8 +310,8 @@ class EosClient:
                 "user_id": "1258293549605997",  # 固定值
             }
 
-            logger.info(
-                f"发送请求：{self.live_room_list_url} **** json_data={json_data}"
+            logger.debug(
+                f"发送请求：{self.live_room_list_url} user_id={user_id} 时间范围={begin_date}~{end_date}"
             )
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -231,7 +320,7 @@ class EosClient:
                     cookies=cookies,
                     headers=headers,
                 ) as resp:
-                    logger.info(f"resp={resp}")
+                    logger.debug(f"live_room_list 响应状态码: {resp.status}")
                     resp.raise_for_status()
                     return await resp.json()
         except Exception as e:
@@ -273,12 +362,15 @@ class EosClient:
             punish_list_url = (
                 "https://eos.douyin.com/life/api/live_screen/v4/replay/punish_list"
             )
-            logger.info(f"发送请求：{punish_list_url} **** json_data={json_data}")
+            logger.debug(
+                f"发送请求：{punish_list_url} user_id={user_id} 时间范围={begin_date}~{end_date}"
+            )
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     punish_list_url, json=json_data, cookies=cookies, headers=headers
                 ) as resp:
+                    logger.debug(f"replay_punish_list 响应状态码: {resp.status}")
                     resp.raise_for_status()
                     return await resp.json()
 
@@ -309,8 +401,9 @@ class EosClient:
                 "room_id": room_id,
             }
 
-            logger.info(f"发送请求：{self.live_key_index_url} room_id={room_id}")
-            logger.info(f"请求数据: {json_data}")
+            logger.debug(f"发送请求：{self.live_key_index_url} user_id={user_id} room_id={room_id}")
+            # 不打印敏感/冗长请求数据，仅在调试时查看
+            logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -319,13 +412,13 @@ class EosClient:
                     cookies=cookies,
                     headers=headers,
                 ) as resp:
-                    logger.info(f"响应状态码: {resp.status}")
+                    logger.debug(f"live_key_index 响应状态码: {resp.status}")
                     if resp.status != 200:
                         response_text = await resp.text()
                         logger.error(f"请求失败，响应内容: {response_text}")
                     resp.raise_for_status()
                     result = await resp.json()
-                    logger.info(
+                    logger.debug(
                         f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
                     )
                     return result
@@ -357,8 +450,8 @@ class EosClient:
                 "room_id": room_id,
             }
 
-            logger.info(f"发送请求：{self.conversion_funnel_url} room_id={room_id}")
-            logger.info(f"请求数据: {json_data}")
+            logger.debug(f"发送请求：{self.conversion_funnel_url} user_id={user_id} room_id={room_id}")
+            logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -367,13 +460,13 @@ class EosClient:
                     cookies=cookies,
                     headers=headers,
                 ) as resp:
-                    logger.info(f"响应状态码: {resp.status}")
+                    logger.debug(f"conversion_funnel 响应状态码: {resp.status}")
                     if resp.status != 200:
                         response_text = await resp.text()
                         logger.error(f"请求失败，响应内容: {response_text}")
                     resp.raise_for_status()
                     result = await resp.json()
-                    logger.info(
+                    logger.debug(
                         f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
                     )
                     return result
@@ -402,8 +495,8 @@ class EosClient:
             # 构造请求数据，参考live.py
             json_data = {"calculate": "all", "room_id": room_id, "type": "order"}
 
-            logger.info(f"发送请求：{self.live_portrait_url} room_id={room_id}")
-            logger.info(f"请求数据: {json_data}")
+            logger.debug(f"发送请求：{self.live_portrait_url} user_id={user_id} room_id={room_id}")
+            logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -412,13 +505,13 @@ class EosClient:
                     cookies=cookies,
                     headers=headers,
                 ) as resp:
-                    logger.info(f"响应状态码: {resp.status}")
+                    logger.debug(f"live_portrait 响应状态码: {resp.status}")
                     if resp.status != 200:
                         response_text = await resp.text()
                         logger.error(f"请求失败，响应内容: {response_text}")
                     resp.raise_for_status()
                     result = await resp.json()
-                    logger.info(
+                    logger.debug(
                         f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
                     )
                     return result
@@ -701,6 +794,18 @@ async def get_live_room_list_main(data) -> PublicResponse:
     # 串行执行每个用户的任务，避免并发请求触发风控
     for user_id in device_no_list:
         logger.info(f"开始处理用户 {user_id} 的直播复盘创建请求")
+
+        # 新增：逐用户登录校验，未登录则跳过后续网络请求并填充空数据占位
+        is_logged_in = await client.check_login(user_id)
+        if not is_logged_in:
+            logger.error(f"用户 {user_id} 未登录或会话失效，本次直播复盘跳过网络请求。")
+            empty_payload = format_data({"data": []}, user_name="", buyin_account_id="")
+            response_json_data.append(
+                {**empty_payload, "user_id": user_id, "message": "未登录或会话失效"}
+            )
+            await asyncio.sleep(0.5)
+            continue
+
         result = await process_user_history_live(client, user_id)
         logger.info(f"处理结果[{user_id}] ：", result)
         response_json_data.append(result)
@@ -732,10 +837,16 @@ async def get_live_key_index_main(data) -> PublicResponse:
     await BrowserOperator().attach_get_cookies(user_ids=[user_id], site_key="eos")
     logger.info("抓取cookies完成")
 
+    # 新增：登录校验，失败则早返回
+    client = EosClient()
+    is_logged_in = await client.check_login(user_id)
+    if not is_logged_in:
+        logger.error(f"用户 {user_id} 未登录或会话失效，停止获取直播间大屏明细。")
+        return PublicResponse.error(message="未登录或登录状态失效，请先在浏览器登录EOS")
+
     # 每个直播间处理完成后等待一段时间，降低API调用频率
     await asyncio.sleep(2)  # 设置2秒的间隔
 
-    client = EosClient()
     response_json_data = await client.get_live_key_index(user_id, room_id)
 
     logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
@@ -756,10 +867,16 @@ async def get_conversion_funnel_data_main(data) -> PublicResponse:
     await BrowserOperator().attach_get_cookies(user_ids=[user_id], site_key="eos")
     logger.info("抓取cookies完成")
 
+    # 新增：登录校验，失败则早返回
+    client = EosClient()
+    is_logged_in = await client.check_login(user_id)
+    if not is_logged_in:
+        logger.error(f"用户 {user_id} 未登录或会话失效，停止获取转化分析漏斗数据。")
+        return PublicResponse.error(message="未登录或登录状态失效，请先在浏览器登录EOS")
+
     # 每个直播间处理完成后等待一段时间，降低API调用频率
     await asyncio.sleep(2)  # 设置2秒的间隔
 
-    client = EosClient()
     response_json_data = await client.get_conversion_funnel(user_id, room_id)
 
     logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
@@ -780,10 +897,16 @@ async def get_live_portrait_data_main(data) -> PublicResponse:
     await BrowserOperator().attach_get_cookies(user_ids=[user_id], site_key="eos")
     logger.info("抓取cookies完成")
 
+    # 新增：登录校验，失败则早返回
+    client = EosClient()
+    is_logged_in = await client.check_login(user_id)
+    if not is_logged_in:
+        logger.error(f"用户 {user_id} 未登录或会话失效，停止获取用户画像数据。")
+        return PublicResponse.error(message="未登录或登录状态失效，请先在浏览器登录EOS")
+
     # 每个直播间处理完成后等待一段时间，降低API调用频率
     await asyncio.sleep(2)  # 设置2秒的间隔
 
-    client = EosClient()
     response_json_data = await client.get_live_portrait(user_id, room_id)
 
     logger.info(f"EOS直播间大屏明细结果: {response_json_data}")
@@ -792,39 +915,57 @@ async def get_live_portrait_data_main(data) -> PublicResponse:
 
 async def get_replay_punish_list_main(data) -> PublicResponse:
     """批量违规记录入口 (串行执行)"""
-    logger.info(f"批量违规记录入口: {data}")
-
     # 分割用户ID列表
     device_no_list = data.get("deviceNoList", "").split(",")
-    logger.info("准备抓取cookies")
     await BrowserOperator().attach_get_cookies(user_ids=device_no_list, site_key="eos")
-    logger.info("抓取cookies完成")
 
     client = EosClient()
     response_json_data = []
 
     # 串行执行每个用户的任务，避免并发请求触发风控
     for user_id in device_no_list:
-        logger.info(f"开始处理用户 {user_id} 的违规记录请求")
+        # 新增：逐用户登录校验，未登录则跳过后续网络请求并填充空数据占位
+        is_logged_in = await client.check_login(user_id)
+        if not is_logged_in:
+            logger.error(
+                f"用户 {user_id} 未登录或会话失效，本次违规记录抓取跳过网络请求。"
+            )
+            empty_payload = format_punish_data(
+                {"data": []}, user_name="", buyin_account_id=""
+            )
+            response_json_data.append(
+                {**empty_payload, "user_id": user_id, "message": "未登录或会话失效"}
+            )
+            await asyncio.sleep(0.5)
+            continue
+
         result = await process_user_punish_list(client, user_id)
-        logger.info(f"处理结果[{user_id}] ：", result)
         response_json_data.append(result)
         # 每个用户处理完成后等待一段时间，降低API调用频率
         await asyncio.sleep(1.5)  # 设置1.5秒的间隔，可根据实际情况调整
 
-    logger.info(f"批量违规记录结果: {response_json_data}")
     # 调用api接口传递给后端
     save_success = await save_punish_list_fn(response_json_data)
-    logger.info("保存结果：", save_success)
 
     return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
-async def process_user_history_live(client, user_id):
-    """处理单个用户的直播复盘创建流程"""
+async def process_user_history_live(
+    client, user_id, user_info: Optional[Dict[str, Any]] = None
+):
+    """处理单个用户的直播复盘创建流程
+    参数:
+        client: EosClient 实例
+        user_id: 用户ID
+        user_info: 可选，已获取的用户信息；提供则不再调用 get_index_user
+    """
 
-    # 获取商品列表
-    result = await client.get_index_user(user_id)
+    # 优先使用传入的用户信息，若无则查询（内部有缓存，不会重复网络请求）
+    result = (
+        user_info
+        if isinstance(user_info, dict)
+        else await client.get_index_user(user_id)
+    )
     code = int(result.get("status_code", -1))
 
     logger.info("获取直播间用户信息结果: ", result)
@@ -842,10 +983,21 @@ async def process_user_history_live(client, user_id):
     return {**format_data_result, "user_id": user_id}
 
 
-async def process_user_punish_list(client, user_id):
-    """处理单个用户的违规记录获取流程"""
-    # 获取用户信息
-    result = await client.get_index_user(user_id)
+async def process_user_punish_list(
+    client, user_id, user_info: Optional[Dict[str, Any]] = None
+):
+    """处理单个用户的违规记录获取流程
+    参数:
+        client: EosClient 实例
+        user_id: 用户ID
+        user_info: 可选，已获取的用户信息；提供则不再调用 get_index_user
+    """
+    # 获取用户信息（优先复用传入的数据）
+    result = (
+        user_info
+        if isinstance(user_info, dict)
+        else await client.get_index_user(user_id)
+    )
     code = int(result.get("status_code", -1))
 
     logger.info("获取直播间用户信息结果: ", result)
