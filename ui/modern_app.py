@@ -4,6 +4,10 @@ import subprocess
 import sys
 import webbrowser
 
+from utils.common_logger import get_logger
+
+logger = get_logger(__name__)
+
 # PyQt导入
 from PyQt6.QtCore import Qt, QTimer, QUrl
 # 安全导入 QtWebEngineWidgets

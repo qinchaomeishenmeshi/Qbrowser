@@ -10,6 +10,9 @@ import traceback
 from functools import wraps
 import fcntl
 import tempfile
+from utils.common_logger import get_logger
+
+logger = get_logger(__name__)
 
 # 预先导入 QtWebEngineWidgets 以避免导入顺序问题
 # 支持轻量版构建（不包含WebEngine）
@@ -55,36 +58,36 @@ _app_lock_file = None
 
 def check_single_instance():
     """检查是否已有应用程序实例在运行
-    
+
     Returns:
         bool: True表示可以启动（没有其他实例），False表示已有实例在运行
     """
     global _app_lock_file
-    
+
     try:
         # 创建锁文件路径
-        lock_file_path = os.path.join(tempfile.gettempdir(), 'qw_browser_app.lock')
-        
+        lock_file_path = os.path.join(tempfile.gettempdir(), "qw_browser_app.lock")
+
         # 打开锁文件
-        _app_lock_file = open(lock_file_path, 'w')
-        
+        _app_lock_file = open(lock_file_path, "w")
+
         # 尝试获取文件锁（非阻塞）
         fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        
+
         # 写入当前进程ID
         _app_lock_file.write(str(os.getpid()))
         _app_lock_file.flush()
-        
+
         logger.info(f"应用程序启动成功，进程ID: {os.getpid()}")
         return True
-        
+
     except (IOError, OSError) as e:
         if _app_lock_file:
             _app_lock_file.close()
             _app_lock_file = None
-        
+
         # 检查是否是因为文件已被锁定
-        if e.errno == 35 or 'Resource temporarily unavailable' in str(e):
+        if e.errno == 35 or "Resource temporarily unavailable" in str(e):
             logger.warning("检测到应用程序已在运行，无法启动新实例")
             return False
         else:
@@ -95,7 +98,7 @@ def check_single_instance():
 def release_single_instance():
     """释放应用程序实例锁"""
     global _app_lock_file
-    
+
     if _app_lock_file:
         try:
             fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_UN)
@@ -709,7 +712,7 @@ class App(QMainWindow):
                 self.log_signal.log_updated.emit("设置服务器已关闭")
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭设置服务器失败: {e}")
-        
+
         event.accept()
 
     async def _stop_scheduler(self):
@@ -724,18 +727,22 @@ class App(QMainWindow):
         """打开设置界面"""
         try:
             # 检查设置服务器是否已启动
-            if self.settings_server_process is None or self.settings_server_process.poll() is not None:
+            if (
+                self.settings_server_process is None
+                or self.settings_server_process.poll() is not None
+            ):
                 # 启动设置服务器
                 self._start_settings_server()
-            
+
             # 在浏览器中打开设置页面
             import webbrowser
+
             settings_url = "http://127.0.0.1:7010/chrome/config"
             webbrowser.open(settings_url)
-            
+
             self.log_signal.log_updated.emit("设置界面已在浏览器中打开")
             logger.info("设置界面已在浏览器中打开")
-            
+
         except Exception as e:
             error_msg = f"打开设置界面失败: {e}"
             self.log_signal.log_updated.emit(error_msg)
@@ -748,22 +755,25 @@ class App(QMainWindow):
             # 构建启动命令
             python_executable = sys.executable
             script_path = os.path.join(os.path.dirname(__file__), "start_api_server.py")
-            
+
             # 启动设置服务器进程
             self.settings_server_process = subprocess.Popen(
                 [python_executable, script_path, "--port", "7010", "--no-debug"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                creationflags=(
+                    subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+                ),
             )
-            
+
             # 等待服务器启动
             import time
+
             time.sleep(2)
-            
+
             self.log_signal.log_updated.emit("设置服务器已启动 (端口: 7010)")
             logger.info("设置服务器已启动 (端口: 7010)")
-            
+
         except Exception as e:
             error_msg = f"启动设置服务器失败: {e}"
             self.log_signal.log_updated.emit(error_msg)
@@ -784,7 +794,7 @@ def main():
         print("[ERROR] 应用程序已在运行，请勿重复启动！")
         print("[INFO] 如需重新启动，请先关闭现有实例")
         sys.exit(1)
-    
+
     # Windows 管理员权限提示
     if sys.platform == "win32" and not is_admin():
         print("警告: 程序未以管理员权限运行。在Windows上，浏览器自动化功能可能受限。")

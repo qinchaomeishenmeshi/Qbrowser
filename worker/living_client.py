@@ -19,7 +19,9 @@ MAX_RETRY_COUNT = 1
 RETRY_DELAY = 1  # 秒
 
 
-def format_data(data: Dict[str, Any], user_name: str = "", buyin_account_id: str = "") -> Dict[str, Any]:
+def format_data(
+    data: Dict[str, Any], user_name: str = "", buyin_account_id: str = ""
+) -> Dict[str, Any]:
     """格式化直播间明细数据，将前端字段转换为API所需格式
 
     参数:
@@ -50,7 +52,9 @@ class LivingClient:
     - 提供登录态校验方法，未登录时可早返回，减少无效请求
     """
 
-    def __init__(self,) -> None:
+    def __init__(
+        self,
+    ) -> None:
         self.get_user_url = "https://buyin.jinritemai.com/index/getUser"
         self.history_live_url = "https://buyin.jinritemai.com/compass_api/content_live/author/live_detail/history_live"
         self.core_data_url = "https://compass.jinritemai.com/compass_api/author/live/live_screen/core_data"
@@ -76,7 +80,9 @@ class LivingClient:
         self._user_info_cache[user_id] = {"ts": time.time(), "data": data}
 
     @staticmethod
-    async def _get_cookies_for_user(user_id: str, site_key: str = 'baiying') -> Dict[str, str]:
+    async def _get_cookies_for_user(
+        user_id: str, site_key: str = "baiying"
+    ) -> Dict[str, str]:
         """根据 user_id 从浏览器存储中提取指定站点的 cookies
 
         - 支持 list/dict 两种格式的容错
@@ -93,31 +99,23 @@ class LivingClient:
             cookies_dict = cookies_list
         elif isinstance(cookies_list, list):
             cookies_dict = {
-                c["name"]: c["value"] for c in cookies_list
+                c["name"]: c["value"]
+                for c in cookies_list
                 if isinstance(c, dict) and "name" in c and "value" in c
             }
         else:
-            logger.error(f"用户 {user_id} 的 cookies 格式不支持，类型: {type(cookies_list)}")
+            logger.error(
+                f"用户 {user_id} 的 cookies 格式不支持，类型: {type(cookies_list)}"
+            )
             return cookies_dict
 
-        # 关键 cookies 提示（与项目其他模块对齐，非强制）
-        required_cookies = [
-            'passport_csrf_token', 'passport_csrf_token_default', 'is_staff_user',
-            's_v_web_id', 'ttwid', 'uid_tt', 'uid_tt_ss', 'sid_tt', 'sessionid',
-            'sessionid_ss', 'odin_tt', 'BUYIN_SASID', 'ucas_c0_compass',
-            'ucas_c0_ss_compass', 'sid_guard', 'sid_ucp_v1', 'ssid_ucp_v1',
-            'LUOPAN_DT', 'COMPASS_LUOPAN_DT', 'Hm_lvt_b6520b076191ab4b36812da4c90f7a5e',
-            'Hm_lpvt_b6520b076191ab4b36812da4c90f7a5e', 'HMACCOUNT', 'csrf_session_id'
-        ]
-        missing_cookies = [cookie for cookie in required_cookies if cookie not in cookies_dict]
-        if missing_cookies:
-            logger.warning(f"用户 {user_id} 缺失关键 cookies: {missing_cookies}")
-            logger.info(f"当前可用 cookies: {list(cookies_dict.keys())}")
-
+        logger.debug(f"当前可用 cookies: {list(cookies_dict.keys())}")
         return cookies_dict
 
     @staticmethod
-    async def _get_headers_for_user(user_id: str, site_key: str = 'baiying') -> Dict[str, Any]:
+    async def _get_headers_for_user(
+        user_id: str, site_key: str = "baiying"
+    ) -> Dict[str, Any]:
         """获取 headers 配置，优先使用保存内容，不存在时使用默认值
 
         只保留默认头里定义的键，降低异常概率
@@ -145,7 +143,9 @@ class LivingClient:
             key: saved_headers.get(key, default_value)
             for key, default_value in default_headers.items()
         }
-        logger.info(f"用户 {user_id} headers 配置完成，User-Agent: {filtered_headers.get('user-agent', 'N/A')}")
+        logger.info(
+            f"用户 {user_id} headers 配置完成，User-Agent: {filtered_headers.get('user-agent', 'N/A')}"
+        )
         return filtered_headers
 
     async def get_index_user(self, user_id: str) -> Dict[str, Any]:
@@ -178,7 +178,9 @@ class LivingClient:
             return {"code": -1, "msg": f"获取直播间用户信息失败: {str(e)}"}
 
     @staticmethod
-    def _has_required_cookies(cookies: Dict[str, str], required: Optional[list] = None) -> bool:
+    def _has_required_cookies(
+        cookies: Dict[str, str], required: Optional[list] = None
+    ) -> bool:
         """校验 cookies 是否包含要求的关键字段"""
         required_set = set(required or [])
         return all(name in cookies and cookies.get(name) for name in required_set)
@@ -190,19 +192,29 @@ class LivingClient:
         - 再通过 get_index_user 进行轻量级探测（命中缓存不会重复请求）
         返回 (是否登录, 用户信息字典)
         """
-        cookies = await self._get_cookies_for_user(user_id, 'baiying')
+        cookies = await self._get_cookies_for_user(user_id, "baiying")
         required = [
-            'passport_csrf_token', 'sessionid', 'sessionid_ss', 'sid_tt', 'uid_tt', 'uid_tt_ss', 's_v_web_id'
+            "passport_csrf_token",
+            "sessionid",
+            "sessionid_ss",
+            "sid_tt",
+            "uid_tt",
+            "uid_tt_ss",
+            "s_v_web_id",
         ]
         if not cookies or not self._has_required_cookies(cookies, required):
-            logger.error(f"用户 {user_id} 未登录或关键cookies缺失（buyin站点），停止后续请求。现有keys={list(cookies.keys()) if cookies else []}")
+            logger.error(
+                f"用户 {user_id} 未登录或关键cookies缺失（buyin站点），停止后续请求。现有keys={list(cookies.keys()) if cookies else []}"
+            )
             return False, {}
         try:
             probe = await self.get_index_user(user_id)
-            code = int(probe.get('code', -1))
-            buyin_account_id = probe.get('data', {}).get('buyin_account_id', '')
+            code = int(probe.get("code", -1))
+            buyin_account_id = probe.get("data", {}).get("buyin_account_id", "")
             if code != 0 or not buyin_account_id:
-                logger.error(f"用户 {user_id} 登录校验失败：code={code}, buyin_account_id={buyin_account_id}")
+                logger.error(
+                    f"用户 {user_id} 登录校验失败：code={code}, buyin_account_id={buyin_account_id}"
+                )
                 return False, probe if isinstance(probe, dict) else {}
             return True, probe if isinstance(probe, dict) else {}
         except Exception as e:
@@ -211,10 +223,12 @@ class LivingClient:
 
     async def check_screen_login(self, user_id: str) -> bool:
         """大屏(screen)站点登录态校验：只做关键cookie存在性检查，缺失则早返回。"""
-        cookies = await self._get_cookies_for_user(user_id, 'screen')
-        critical = ['COMPASS_LUOPAN_DT', 'LUOPAN_DT']
+        cookies = await self._get_cookies_for_user(user_id, "screen")
+        critical = ["COMPASS_LUOPAN_DT", "LUOPAN_DT"]
         if not cookies or not self._has_required_cookies(cookies, critical):
-            logger.error(f"用户 {user_id} 缺失screen站点关键cookies: {critical}，请先在浏览器登录大屏站点")
+            logger.error(
+                f"用户 {user_id} 缺失screen站点关键cookies: {critical}，请先在浏览器登录大屏站点"
+            )
             return False
         return True
 
@@ -226,21 +240,24 @@ class LivingClient:
             # 获取近7天的日期范围
             # 21 - 7天 / 23 - 30天 / 24 - 90天 / 4 - 自然月
             result = get_date_range(days=7, include_today=True)
-            date_type = '21'
+            date_type = "21"
             params = {
                 "is_asc": "false",
-                "page_no": '1',
+                "page_no": "1",
                 "page_size": "10",
                 "date_type": date_type,
-                "begin_date": result['begin_date'],
-                "begin_date_format": result['begin_date_format'],
+                "begin_date": result["begin_date"],
+                "begin_date_format": result["begin_date_format"],
                 "index_selected": "",
             }
 
             logger.info(f"发送请求：{self.history_live_url} params={params}")
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    self.history_live_url, params=params, cookies=cookies, headers=headers
+                    self.history_live_url,
+                    params=params,
+                    cookies=cookies,
+                    headers=headers,
                 ) as resp:
                     resp.raise_for_status()
                     return await resp.json()
@@ -252,28 +269,34 @@ class LivingClient:
         """获取直播间详情数据（大屏screen接口）"""
         try:
             # 使用 screen 站点的 cookies（包含 LUOPAN_DT）
-            cookies = await self._get_cookies_for_user(user_id, 'screen')
-            headers = await self._get_headers_for_user(user_id, 'screen')
+            cookies = await self._get_cookies_for_user(user_id, "screen")
+            headers = await self._get_headers_for_user(user_id, "screen")
             a_bogus, ms_token = await get_douyin_tokens_async()
-            headers['referer'] = f'https://compass.jinritemai.com/screen/live/talent?live_room_id={room_id}'
+            headers["referer"] = (
+                f"https://compass.jinritemai.com/screen/live/talent?live_room_id={room_id}"
+            )
 
-            critical_cookies = ['COMPASS_LUOPAN_DT', 'LUOPAN_DT']
-            missing_critical = [cookie for cookie in critical_cookies if not cookies.get(cookie)]
+            critical_cookies = ["COMPASS_LUOPAN_DT", "LUOPAN_DT"]
+            missing_critical = [
+                cookie for cookie in critical_cookies if not cookies.get(cookie)
+            ]
             if missing_critical:
                 logger.error(f"用户 {user_id} 缺失关键认证 cookies: {missing_critical}")
                 logger.error(f"这可能导致请求失败，请检查浏览器登录状态")
 
             params = {
-                'room_id': room_id,
-                'index_selected': 'gpm,pay_ucnt,pay_combo_cnt,watch_pay_ucnt_ratio,product_click_pay_ucnt_ratio,online_user_cnt,live_show_watch_cnt_ratio,avg_watch_duration,watch_interact_ucnt_ratio,follow_anchor_ucnt',
-                'verifyFp': cookies.get('s_v_web_id', ''),
-                'fp': cookies.get('s_v_web_id', ''),
-                'msToken': ms_token,
-                'a_bogus': a_bogus,
+                "room_id": room_id,
+                "index_selected": "gpm,pay_ucnt,pay_combo_cnt,watch_pay_ucnt_ratio,product_click_pay_ucnt_ratio,online_user_cnt,live_show_watch_cnt_ratio,avg_watch_duration,watch_interact_ucnt_ratio,follow_anchor_ucnt",
+                "verifyFp": cookies.get("s_v_web_id", ""),
+                "fp": cookies.get("s_v_web_id", ""),
+                "msToken": ms_token,
+                "a_bogus": a_bogus,
             }
 
             logger.info(f"用户 {user_id} 请求 room_id: {room_id}")
-            logger.info(f"关键 cookies 状态: COMPASS_LUOPAN_DT={cookies.get('COMPASS_LUOPAN_DT')}, LUOPAN_DT={cookies.get('LUOPAN_DT')}")
+            logger.info(
+                f"关键 cookies 状态: COMPASS_LUOPAN_DT={cookies.get('COMPASS_LUOPAN_DT')}, LUOPAN_DT={cookies.get('LUOPAN_DT')}"
+            )
             logger.info(f"请求参数: {params}")
 
             async with aiohttp.ClientSession() as session:
@@ -286,7 +309,9 @@ class LivingClient:
                         logger.error(f"请求失败，响应内容: {response_text}")
                     resp.raise_for_status()
                     result = await resp.json()
-                    logger.info(f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}")
+                    logger.info(
+                        f"请求成功，响应数据结构: {type(result)} - {list(result.keys()) if isinstance(result, dict) else 'non-dict'}"
+                    )
                     return result
         except Exception as e:
             logger.error(f"获取直播间详情数据失败: {e}")
@@ -328,11 +353,12 @@ async def save_history_list_fn(data: list) -> bool:
 async def save_core_data_fn(live_id: str, core_data: dict, other_data: str) -> bool:
     """保存直播间大屏数据到后端系统"""
     from utils.api_client import default_api_client
+
     try:
         post_data = {
             "live_id": live_id,
             "core_data": core_data,
-            "other_data": other_data
+            "other_data": other_data,
         }
         logger.info(f"保存直播间大屏数据: live_id={live_id}")
         logger.debug(f"保存的数据内容: {post_data}")
@@ -367,19 +393,20 @@ async def get_core_data_for_live_rooms(response_json_data: list) -> None:
 
             try:
                 logger.info(f"获取用户 {user_id} 直播间 {room_id} 的大屏明细数据")
-                core_data_request = {
-                    "userId": user_id,
-                    "roomId": room_id
-                }
+                core_data_request = {"userId": user_id, "roomId": room_id}
                 core_data_response = await get_core_data_main(core_data_request)
                 logger.info(f"get_core_data_main 响应数据: {core_data_response}")
-                if core_data_response.get('status') == 'success':
-                    logger.info(f"成功获取用户 {user_id} 直播间 {room_id} 的大屏明细数据")
-                    response_data = core_data_response.get('data', {}).get('data', {})
+                if core_data_response.get("status") == "success":
+                    logger.info(
+                        f"成功获取用户 {user_id} 直播间 {room_id} 的大屏明细数据"
+                    )
+                    response_data = core_data_response.get("data", {}).get("data", {})
                     if response_data and isinstance(response_data, dict):
-                        core_data = response_data.get('core_data', {})
+                        core_data = response_data.get("core_data", {})
                         other_data = json.dumps(response_data, ensure_ascii=False)
-                        save_success = await save_core_data_fn(room_id, core_data, other_data)
+                        save_success = await save_core_data_fn(
+                            room_id, core_data, other_data
+                        )
                         if save_success:
                             logger.info(f"直播间 {room_id} 大屏数据保存成功")
                         else:
@@ -387,9 +414,14 @@ async def get_core_data_for_live_rooms(response_json_data: list) -> None:
                     else:
                         logger.warning(f"直播间 {room_id} 返回数据格式异常，无法保存")
                 else:
-                    logger.error(f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据失败: {core_data_response.message}")
+                    logger.error(
+                        f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据失败: {core_data_response.message}"
+                    )
             except Exception as e:
-                logger.error(f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据时发生异常: {e}", exc_info=True)
+                logger.error(
+                    f"获取用户 {user_id} 直播间 {room_id} 大屏明细数据时发生异常: {e}",
+                    exc_info=True,
+                )
                 continue
 
     logger.info("所有直播间大屏明细数据获取完成")
@@ -418,7 +450,9 @@ async def get_history_live_main(data: Dict[str, Any]) -> PublicResponse:
         if not is_logged_in:
             logger.error(f"用户 {user_id} 未登录或会话失效，本次明细抓取跳过网络请求。")
             empty_payload = format_data({}, user_name="", buyin_account_id="")
-            response_json_data.append({**empty_payload, "user_id": user_id, "message": "未登录或会话失效"})
+            response_json_data.append(
+                {**empty_payload, "user_id": user_id, "message": "未登录或会话失效"}
+            )
             await asyncio.sleep(0.5)
             continue
         result = await process_user_history_live(client, user_id, user_info=user_info)
@@ -435,7 +469,9 @@ async def get_history_live_main(data: Dict[str, Any]) -> PublicResponse:
     return PublicResponse.success(data=response_json_data, message="操作成功")
 
 
-async def process_user_history_live(client: LivingClient, user_id: str, user_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+async def process_user_history_live(
+    client: LivingClient, user_id: str, user_info: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
     """处理单个用户的直播间明细创建流程
 
     参数:
@@ -446,18 +482,26 @@ async def process_user_history_live(client: LivingClient, user_id: str, user_inf
         该用户的明细数据（包含 user_id）
     """
     # 优先复用传入的用户信息，若无则查询；内部带缓存
-    result = user_info if isinstance(user_info, dict) else await client.get_index_user(user_id)
+    result = (
+        user_info
+        if isinstance(user_info, dict)
+        else await client.get_index_user(user_id)
+    )
     code = int(result.get("code", -1))
 
     print("获取直播间用户信息结果: ", result)
     user_name = result.get("data", {}).get("user_name", "")
     buyin_account_id = result.get("data", {}).get("buyin_account_id", "")
     if code != 0 or buyin_account_id == "":
-        data_formatted = format_data(result.get("data", {}), user_name, buyin_account_id)
+        data_formatted = format_data(
+            result.get("data", {}), user_name, buyin_account_id
+        )
         return {**data_formatted, "user_id": user_id}
 
     history_live_result = await client.get_history_live_list(user_id)
-    format_data_result = format_data(history_live_result.get("data", {}), user_name, buyin_account_id)
+    format_data_result = format_data(
+        history_live_result.get("data", {}), user_name, buyin_account_id
+    )
     logger.info(f"处理后的直播间明细数据==format_data: {format_data_result}")
     return {**format_data_result, "user_id": user_id}
 
@@ -467,17 +511,23 @@ async def get_core_data_main(data: Dict[str, Any]) -> PublicResponse:
     logger.info(f"直播间大屏明细入口: {data}")
 
     print("准备抓取cookies")
-    await BrowserOperator().attach_get_cookies(user_ids=[data.get("userId")], site_key="screen")
+    await BrowserOperator().attach_get_cookies(
+        user_ids=[data.get("userId")], site_key="screen"
+    )
     print("抓取cookies完成")
 
     client = LivingClient()
     is_screen_ok = await client.check_screen_login(data.get("userId"))
     if not is_screen_ok:
-        return PublicResponse.error(message="未登录或缺失大屏站点关键Cookies，请先在浏览器登录")
+        return PublicResponse.error(
+            message="未登录或缺失大屏站点关键Cookies，请先在浏览器登录"
+        )
 
     await asyncio.sleep(2)  # 设置2秒的间隔
 
-    response_json_data = await client.get_core_data(data.get("userId"), data.get("roomId"))
+    response_json_data = await client.get_core_data(
+        data.get("userId"), data.get("roomId")
+    )
 
     logger.info(f"直播间大屏明细结果: {response_json_data}")
     return PublicResponse.success(data=response_json_data, message="操作成功")

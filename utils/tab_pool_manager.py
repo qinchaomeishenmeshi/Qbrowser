@@ -4,11 +4,12 @@ import hashlib
 from typing import Dict, List, Optional, Any, Tuple, Set, Callable
 from dataclasses import dataclass, field
 from collections import defaultdict, deque
-import logging
 from enum import Enum
 from urllib.parse import urlparse
 
-logger = logging.getLogger(__name__)
+from utils.common_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class TabState(Enum):

@@ -132,6 +132,7 @@ class BrowserOperator:
         api_paths: List[str],
         max_retries: int = 2,
         retry_delay: int = 1,
+        site_key: str = "baiying",
     ) -> Dict[str, Any]:
         """
         获取指定页面的cookies和headers，支持多个API路径监听和重试机制
@@ -151,10 +152,12 @@ class BrowserOperator:
 
         try:
             # 如果url中没有login，则继续
-            tabs = browser.get_tabs()
-            for tab in tabs:
-                if "eos.douyin.com/livesite/login" in tab.url:
-                    raise Exception("EOS未登录，操作失败")
+            # 只有eos站点增加检查
+            if site_key == "eos":
+                tabs = browser.get_tabs()
+                for tab in tabs:
+                    if "eos.douyin.com/livesite/login" in tab.url:
+                        raise Exception("EOS未登录，操作失败")
 
             tab = self.get_or_create_tab(browser, url)
             # 确保页面加载完成
@@ -278,7 +281,11 @@ class BrowserOperator:
 
             # 获取cookies和headers
             raw_data = self.fetch_cookies_and_headers(
-                manager.browser, user_id, config["target_url"], config["api_paths"]
+                manager.browser, 
+                user_id, 
+                config["target_url"], 
+                config["api_paths"],
+                site_key=site_key
             )
 
             # 获取全量数据
