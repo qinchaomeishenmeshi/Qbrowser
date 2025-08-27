@@ -42,7 +42,7 @@ SITE_CONFIGS = {
 
 class RequestListener:
     """请求监听器类
-    
+
     封装 DrissionPage 请求监听逻辑：
     - 启动监听特定的 api_uri
     - 执行页面加载并等待
@@ -51,7 +51,7 @@ class RequestListener:
 
     def __init__(self, tab: Any, api_uri: str, timeout: int = 5) -> None:
         """初始化请求监听器
-        
+
         Args:
             tab: 浏览器标签页对象
             api_uri: 要监听的API路径
@@ -64,7 +64,7 @@ class RequestListener:
 
     def listen_for(self) -> Optional[Any]:
         """开始监听并等待请求
-        
+
         Returns:
             捕获到的请求包，如果超时则返回None
         """
@@ -79,7 +79,7 @@ class RequestListener:
 
     def get_request_headers(self) -> Optional[Dict[str, str]]:
         """获取请求头信息
-        
+
         Returns:
             请求头字典，如果没有捕获到请求则返回None
         """
@@ -90,7 +90,7 @@ class RequestListener:
 
 class BrowserOperator:
     """浏览器操作类
-    
+
     负责浏览器操作和数据收集：
     - 负责浏览器操作
     - 管理cookies和headers
@@ -103,11 +103,11 @@ class BrowserOperator:
 
     def get_or_create_tab(self, browser: Any, url: str) -> Any:
         """获取现有标签页或创建新标签页
-        
+
         Args:
             browser: 浏览器实例
             url: 目标URL
-            
+
         Returns:
             浏览器标签页对象
         """
@@ -124,7 +124,7 @@ class BrowserOperator:
         print("创建新tab")
         return browser.new_tab()
 
-    def fetch_cookies_and_headers(
+    async def fetch_cookies_and_headers(
         self,
         browser,
         user_id: str,
@@ -132,7 +132,7 @@ class BrowserOperator:
         api_paths: List[str],
         max_retries: int = 2,
         retry_delay: int = 1,
-        site_key: str = "baiying",
+        site_key: str = "",
     ) -> Dict[str, Any]:
         """
         获取指定页面的cookies和headers，支持多个API路径监听和重试机制
@@ -151,13 +151,28 @@ class BrowserOperator:
         results = {"cookies": {}, "headers": {}, "api_results": {}}
 
         try:
-            # 如果url中没有login，则继续
-            # 只有eos站点增加检查
+            # 第一步先查对应的站点cookies和headers有没有，且是否过期，没有过期直接返回缓存文件的数据
+            cookies = await self.cookies_manager.get_cookies(user_id, site_key)
+            headers = await self.cookies_manager.get_headers(user_id, site_key)
+            if cookies and headers:
+                results["cookies"] = cookies
+                results["headers"] = headers
+                logger.debug(
+                    f"用户 {user_id} 从缓存获取 {site_key} 的 cookies 和 headers"
+                )
+                return results
+
             if site_key == "eos":
                 tabs = browser.get_tabs()
                 for tab in tabs:
                     if "eos.douyin.com/livesite/login" in tab.url:
                         raise Exception("EOS未登录，操作失败")
+
+            if site_key == "baiying":
+                tabs = browser.get_tabs()
+                for tab in tabs:
+                    if "/login?" in tab.url or "www.douyinec.com" in tab.url:
+                        raise Exception("百应未登录，操作失败")
 
             tab = self.get_or_create_tab(browser, url)
             # 确保页面加载完成
@@ -280,12 +295,12 @@ class BrowserOperator:
                 return False
 
             # 获取cookies和headers
-            raw_data = self.fetch_cookies_and_headers(
-                manager.browser, 
-                user_id, 
-                config["target_url"], 
+            raw_data = await self.fetch_cookies_and_headers(
+                manager.browser,
+                user_id,
+                config["target_url"],
                 config["api_paths"],
-                site_key=site_key
+                site_key=site_key,
             )
 
             # 获取全量数据
@@ -310,6 +325,7 @@ class BrowserOperator:
         """
         批量获取并保存用户的cookies信息（优化为并发处理）
         """
+
         async def process_user(user_id):
             try:
                 success = await self.collect_site_cookies(user_id, site_key)

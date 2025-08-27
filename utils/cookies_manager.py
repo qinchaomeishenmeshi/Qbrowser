@@ -57,7 +57,7 @@ class CookiesManager:
         user_id: str, 
         cookies: dict, 
         headers: Optional[dict] = None,
-        expires_in_days: int = 7,
+        expires_in_days: int = 3,
         site_key: str = None
     ) -> None:
         """
