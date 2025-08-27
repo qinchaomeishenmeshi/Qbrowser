@@ -365,13 +365,6 @@ class ModernApp(QMainWindow):
         # 添加伸缩项，将右侧按钮推到最右边
         topbar_layout.addStretch()
 
-        # 添加刷新按钮 - 使用Chrome风格按钮
-        from ui.pages.dashboard import ChromeButton
-        self.refresh_btn = ChromeButton("刷新", theme["info"])
-        self.refresh_btn.setFixedWidth(80)
-        self.refresh_btn.clicked.connect(self.refresh_current_page)
-        topbar_layout.addWidget(self.refresh_btn)
-
         # 添加topbar到内容容器
         self.content_container.layout().addWidget(self.topbar)
 

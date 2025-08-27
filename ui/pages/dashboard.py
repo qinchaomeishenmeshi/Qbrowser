@@ -1,10 +1,16 @@
 import asyncio
 
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPainter, QColor, QLinearGradient, QBrush
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, 
-    QPushButton, QFrame, QSizePolicy, QGraphicsDropShadowEffect
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QFrame,
+    QSizePolicy,
+    QGraphicsDropShadowEffect,
 )
 
 from ui.config import THEMES, CURRENT_THEME, FONTS, LAYOUT
@@ -33,18 +39,22 @@ class StatCard(QWidget):
         # 使用渐变背景，如果指定了gradient=True
         if self.gradient:
             # 渐变样式将在paintEvent中处理
-            self.setStyleSheet(f"""
+            self.setStyleSheet(
+                f"""
                 {base_style}
                 color: {theme['text_light']};
-            """)
+            """
+            )
         else:
             # 非渐变背景，使用普通卡片背景色
-            self.setStyleSheet(f"""
+            self.setStyleSheet(
+                f"""
                 {base_style}
                 background-color: {theme['card']};
                 color: {theme['text']};
                 border: 1px solid {theme['card_border']};
-            """)
+            """
+            )
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
@@ -62,11 +72,17 @@ class StatCard(QWidget):
 
         # 标题
         self.title_label = QLabel(self.title)
-        self.title_label.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold))
+        self.title_label.setFont(
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold)
+        )
         if self.gradient:
-            self.title_label.setStyleSheet(f"color: {theme['text_light']}; background: transparent;")
+            self.title_label.setStyleSheet(
+                f"color: {theme['text_light']}; background: transparent;"
+            )
         else:
-            self.title_label.setStyleSheet(f"color: {theme['text']}; background: transparent;")
+            self.title_label.setStyleSheet(
+                f"color: {theme['text']}; background: transparent;"
+            )
         title_layout.addWidget(self.title_label)
 
         # 添加标题容器
@@ -75,7 +91,9 @@ class StatCard(QWidget):
         # 内容容器
         content_container = QWidget()
         content_container.setStyleSheet("background: transparent;")
-        content_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        content_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         content_layout = QHBoxLayout(content_container)
         content_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -84,21 +102,25 @@ class StatCard(QWidget):
         self.content_label = QLabel(self.content)
         # 两种卡片类型使用相同大小的字体，确保视觉统一
         self.content_label.setFont(QFont(FONTS["title"][0], 24, QFont.Weight.Bold))
-        
+
         # 设置标签样式
         if self.gradient:
-            self.content_label.setStyleSheet(f"""
+            self.content_label.setStyleSheet(
+                f"""
                 color: {theme['text_light']};
                 background: transparent;
                 qproperty-alignment: AlignCenter;
-            """)
+            """
+            )
         else:
-            self.content_label.setStyleSheet(f"""
+            self.content_label.setStyleSheet(
+                f"""
                 color: {theme['primary']};
                 background: transparent;
                 qproperty-alignment: AlignCenter;
-            """)
-        
+            """
+            )
+
         content_layout.addWidget(self.content_label)
 
         # 添加内容容器
@@ -120,14 +142,20 @@ class StatCard(QWidget):
             theme = THEMES[CURRENT_THEME]
 
             # 使用主题色和强调色创建渐变
-            gradient.setColorAt(0, QColor(theme['primary']))
-            gradient.setColorAt(1, QColor(theme['accent']))
+            gradient.setColorAt(0, QColor(theme["primary"]))
+            gradient.setColorAt(1, QColor(theme["accent"]))
 
             # 绘制圆角矩形
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QBrush(gradient))
-            painter.drawRoundedRect(0, 0, self.width(), self.height(),
-                                    LAYOUT['border_radius'], LAYOUT['border_radius'])
+            painter.drawRoundedRect(
+                0,
+                0,
+                self.width(),
+                self.height(),
+                LAYOUT["border_radius"],
+                LAYOUT["border_radius"],
+            )
         else:
             super().paintEvent(event)
 
@@ -140,14 +168,14 @@ class ActionCard(QWidget):
         self.title = title
         self.actions = actions or []
         self.init_ui()
-        
+
         # 添加阴影效果
         self.shadow = QGraphicsDropShadowEffect(self)
         self.shadow.setBlurRadius(15)
         self.shadow.setColor(QColor(0, 0, 0, 30))
         self.shadow.setOffset(0, 2)
         self.setGraphicsEffect(self.shadow)
-        
+
         # 设置鼠标光标为手型
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -156,12 +184,14 @@ class ActionCard(QWidget):
 
         # 设置固定高度为128px
         self.setFixedHeight(128)
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             background-color: {theme['card']};
             color: {theme['text']};
             border-radius: {LAYOUT['border_radius']}px;
             border: 1px solid rgba(0, 0, 0, 0.06);
-        """)
+        """
+        )
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
@@ -177,15 +207,21 @@ class ActionCard(QWidget):
         title_layout = QHBoxLayout(title_container)
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(0)
-        title_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        title_layout.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
 
         # 标题 - Chrome风格标题
         self.title_label = QLabel(self.title)
-        self.title_label.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Medium))
-        self.title_label.setStyleSheet(f"""
+        self.title_label.setFont(
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Medium)
+        )
+        self.title_label.setStyleSheet(
+            f"""
             color: {theme['text']};
             padding-left: 2px;
-        """)
+        """
+        )
         title_layout.addWidget(self.title_label)
 
         # 添加标题容器
@@ -202,42 +238,44 @@ class ActionCard(QWidget):
         buttons_container = QWidget()
         buttons_container.setStyleSheet("background: transparent;")
         buttons_container.setFixedHeight(40)  # 按钮区域高度固定40px
-        
+
         # 使用流式布局
         buttons_layout = QHBoxLayout(buttons_container)
         buttons_layout.setContentsMargins(0, 0, 0, 0)
         buttons_layout.setSpacing(12)  # 按钮之间的间距
-        buttons_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        buttons_layout.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
 
         # 添加按钮 - Chrome风格按钮
         for action in self.actions:
             btn = ChromeButton(
-                text=action['text'],
-                color=action.get('color', theme['primary']),
-                hover_color=action.get('hover_color', None),
-                callback=action.get('callback', None)
+                text=action["text"],
+                color=action.get("color", theme["primary"]),
+                hover_color=action.get("hover_color", None),
+                callback=action.get("callback", None),
             )
             buttons_layout.addWidget(btn)
 
         # 添加弹性间隔，使按钮靠左对齐
         buttons_layout.addStretch()
-            
+
         # 添加按钮容器
         layout.addWidget(buttons_container)
-        
+
         # 添加底部间隔，保持总高度128px
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         spacer.setStyleSheet("background: transparent;")
         layout.addWidget(spacer)
-        
+
     def enterEvent(self, event):
         """鼠标进入事件 - 加深阴影效果"""
         self.shadow.setBlurRadius(20)
         self.shadow.setColor(QColor(0, 0, 0, 40))
         self.shadow.setOffset(0, 3)
         super().enterEvent(event)
-        
+
     def leaveEvent(self, event):
         """鼠标离开事件 - 恢复阴影效果"""
         self.shadow.setBlurRadius(15)
@@ -248,31 +286,32 @@ class ActionCard(QWidget):
 
 class ChromeButton(QPushButton):
     """Chrome风格按钮"""
-    
+
     def __init__(self, text, color, hover_color=None, callback=None, parent=None):
         super().__init__(text, parent)
         self.base_color = color
         self.hover_color = hover_color or QColor(color).lighter(110).name()
         self.pressed_color = QColor(color).darker(110).name()
-        
+
         # 设置按钮属性
         self.setFixedHeight(36)
         self.setMinimumWidth(100)
         self.setFont(QFont(FONTS["bold"][0], FONTS["bold"][1], QFont.Weight.Medium))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        
+
         # 应用Chrome风格
         self.apply_chrome_style()
-        
+
         # 连接回调
         if callback:
             self.clicked.connect(callback)
-            
+
     def apply_chrome_style(self):
         """应用Chrome风格样式"""
         theme = THEMES[CURRENT_THEME]
-        
-        self.setStyleSheet(f"""
+
+        self.setStyleSheet(
+            f"""
             QPushButton {{
                 background-color: {self.base_color};
                 color: white;
@@ -292,22 +331,23 @@ class ChromeButton(QPushButton):
                 background-color: {theme['inactive']};
                 color: rgba(255, 255, 255, 0.7);
             }}
-        """)
-        
+        """
+        )
+
         # 使用QGraphicsDropShadowEffect替代CSS的box-shadow
         self.shadow = QGraphicsDropShadowEffect(self)
         self.shadow.setBlurRadius(4)
         self.shadow.setColor(QColor(0, 0, 0, 30))
         self.shadow.setOffset(0, 1)
         self.setGraphicsEffect(self.shadow)
-        
+
     def enterEvent(self, event):
         """鼠标进入事件"""
         self.shadow.setBlurRadius(8)
         self.shadow.setColor(QColor(0, 0, 0, 50))
         self.shadow.setOffset(0, 2)
         super().enterEvent(event)
-        
+
     def leaveEvent(self, event):
         """鼠标离开事件"""
         self.shadow.setBlurRadius(4)
@@ -326,11 +366,13 @@ class DashboardPage(QWidget):
     def init_ui(self):
         theme = THEMES[CURRENT_THEME]
 
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             background-color: {theme['background']};
             color: {theme['text']};
             padding: 0px;
-        """)
+        """
+        )
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
@@ -341,36 +383,36 @@ class DashboardPage(QWidget):
         title_label.setFont(QFont(FONTS["title"][0], 20, QFont.Weight.Bold))
         title_label.setStyleSheet(f"color: {theme['text']};")
         main_layout.addWidget(title_label)
-        
+
         # 说明文字
         description = QLabel("使用下方按钮进行浏览器的批量管理")
         description.setFont(QFont(FONTS["regular"][0], 14))
         description.setStyleSheet(f"color: {theme['text_secondary']};")
         main_layout.addWidget(description)
-        
+
         # 添加一点间距
         main_layout.addSpacing(10)
 
         # 创建快捷操作面板 - 直接连接到类方法
         actions = [
             {
-                "text": "批量启动", 
+                "text": "批量启动",
                 "color": theme["success"],
                 "hover_color": QColor(theme["success"]).lighter(110).name(),
-                "callback": self._on_batch_start_clicked
+                "callback": self._on_batch_start_clicked,
             },
             {
-                "text": "一键关闭", 
+                "text": "一键关闭",
                 "color": theme["error"],
                 "hover_color": QColor(theme["error"]).lighter(110).name(),
-                "callback": self._on_batch_stop_clicked
-            }
+                "callback": self._on_batch_stop_clicked,
+            },
         ]
         self.action_panel = ActionCard("快捷操作面板", actions)
-        
+
         # 将操作面板直接添加到主布局
         main_layout.addWidget(self.action_panel)
-        
+
         # 添加伸缩项，使操作面板位于顶部
         main_layout.addStretch()
 
@@ -390,7 +432,7 @@ class DashboardPage(QWidget):
     # 实际执行批量启动的异步方法
     async def _do_batch_start(self):
         """执行批量启动操作"""
-        if hasattr(self.parent(), 'start_browsers'):
+        if hasattr(self.parent(), "start_browsers"):
             try:
                 await self.parent().start_browsers()
             except Exception as e:
@@ -399,7 +441,7 @@ class DashboardPage(QWidget):
     # 实际执行一键关闭的异步方法
     async def _do_batch_stop(self):
         """执行一键关闭操作"""
-        if hasattr(self.parent(), 'stop_browsers'):
+        if hasattr(self.parent(), "stop_browsers"):
             try:
                 await self.parent().stop_browsers()
             except Exception as e:
