@@ -439,7 +439,7 @@ class App(QMainWindow):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
                     if content and self.text_edit:  # 确保text_edit已初始化且有数据
-                        self.text_edit.setText(content)
+                        self.text_edit.set_text(content)
                         self.save_cache()  # 同步到缓存
                         ids = [
                             line.strip() for line in content.split("\n") if line.strip()
@@ -465,7 +465,7 @@ class App(QMainWindow):
         if path:
             try:
                 with open(path, encoding="utf-8") as f:
-                    self.text_edit.setText(f.read())
+                    self.text_edit.set_text(f.read())
                 self.save_cache()
                 self.log_signal.log_updated.emit(f"加载文件 {path} 成功")
             except Exception as e:
@@ -605,7 +605,7 @@ class App(QMainWindow):
     def load_cache(self):
         try:
             ids = self.browser_service.load_cache()
-            self.text_edit.setText("\n".join(ids))
+            self.text_edit.set_text("\n".join(ids))
             logger.info(f"加载用户缓存成功: {ids}")
         except Exception as e:
             logger.error(f"加载用户缓存失败: {e}")

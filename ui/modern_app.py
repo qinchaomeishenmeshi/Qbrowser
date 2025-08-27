@@ -10,10 +10,12 @@ logger = get_logger(__name__)
 
 # PyQt导入
 from PyQt6.QtCore import Qt, QTimer, QUrl
+
 # 安全导入 QtWebEngineWidgets
 # 检查是否为轻量版模式
 try:
     from PyQt6.QtWebEngineWidgets import QWebEngineView
+
     LITE_MODE = False
 except ImportError as e:
     print(f"[WARNING] QtWebEngineWidgets 导入失败: {e}")
@@ -22,10 +24,18 @@ except ImportError as e:
     LITE_MODE = True
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QStackedWidget,
-    QLabel, QPushButton, QTextEdit, QProgressBar, QButtonGroup,
-    QMessageBox, QSizePolicy, QFrame, QScrollArea,
-    QGraphicsDropShadowEffect
+    QMainWindow,
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QStackedWidget,
+    QLabel,
+    QButtonGroup,
+    QMessageBox,
+    QSizePolicy,
+    QFrame,
+    QScrollArea,
+    QGraphicsDropShadowEffect,
 )
 from qasync import asyncSlot
 
@@ -36,6 +46,18 @@ from browser.browser_operator import browser_operator
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from ui.config import THEMES, CURRENT_THEME, LAYOUT, FONTS
+
+# 导入UI组件
+from ui.components import (
+    StatCard,
+    ActionCard,
+    ChromeButton,
+    NavigationButton,
+    LogArea,
+    ProgressBar,
+    TextEdit,
+)
+
 # 导入定时任务相关模块
 from worker.scheduler_client import scheduler_client
 
@@ -66,17 +88,20 @@ class ModernApp(QMainWindow):
         self.init_ui()
 
         # 检查管理员权限，与原始代码相同
-        if sys.platform == 'win32' and not is_admin():
+        if sys.platform == "win32" and not is_admin():
             logger.warning("程序未以管理员权限运行，某些功能可能受限")
-            QMessageBox.warning(self, "权限提示",
-                                "程序没有以管理员权限运行。\n在Windows上，浏览器自动化和frpc服务可能需要管理员权限。\n请考虑以管理员身份重新运行程序。")
+            QMessageBox.warning(
+                self,
+                "权限提示",
+                "程序没有以管理员权限运行。\n在Windows上，浏览器自动化和frpc服务可能需要管理员权限。\n请考虑以管理员身份重新运行程序。",
+            )
 
         # 使用同步方法加载基本缓存
         self.load_cache()
 
         # 使用QTimer在Qt事件循环启动后执行异步初始化和配置加载
         QTimer.singleShot(0, self._schedule_async_init)
-        
+
         # 延迟加载user_ids.txt配置文件，确保UI完全初始化
         QTimer.singleShot(100, self.load_user_ids_on_startup)
 
@@ -85,6 +110,22 @@ class ModernApp(QMainWindow):
         # 可以在这里添加字体加载逻辑
         pass
 
+    def _hex_to_rgba(self, hex_color, opacity):
+        """将十六进制颜色转换为RGBA格式
+
+        Args:
+            hex_color (str): 十六进制颜色值
+            opacity (float): 透明度 (0-1)
+
+        Returns:
+            str: RGBA颜色值
+        """
+        hex_color = hex_color.lstrip("#")
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        return f"{r}, {g}, {b}, {opacity}"
+
     def init_ui(self):
         # 设置窗口属性
         theme = THEMES[CURRENT_THEME]
@@ -92,7 +133,8 @@ class ModernApp(QMainWindow):
         self.setGeometry(100, 100, 1280, 800)
 
         # 设置全局样式
-        self.setStyleSheet(f"""
+        self.setStyleSheet(
+            f"""
             QMainWindow {{
                 background-color: {theme['background']};
                 color: {theme['text']};
@@ -131,7 +173,8 @@ class ModernApp(QMainWindow):
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
-        """)
+        """
+        )
 
         # 创建主布局
         self.central_widget = QWidget()
@@ -156,55 +199,84 @@ class ModernApp(QMainWindow):
         # 创建一个容器来包含导航栏
         self.sidebar_container = QWidget()
         self.sidebar_container.setFixedWidth(LAYOUT["sidebar_width"])
-        self.sidebar_container.setStyleSheet(f"""
-            background-color: {theme['secondary']};
-            color: {theme['text_light']};
-            border: none;
-        """)
+
+        # 添加磨砂玻璃效果和优化样式
+        self.sidebar_container.setStyleSheet(
+            f"""
+            QWidget {{
+                background-color: rgba({self._hex_to_rgba(theme['secondary'], LAYOUT['glass_opacity'])});
+                color: {theme['text_light']};
+                border: none;
+            }}
+        """
+        )
 
         sidebar_container_layout = QVBoxLayout(self.sidebar_container)
         sidebar_container_layout.setSpacing(0)
         sidebar_container_layout.setContentsMargins(0, 0, 0, 0)
 
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(15)
+        shadow.setColor(QColor(0, 0, 0, 30))
+        shadow.setOffset(2, 0)
+        self.sidebar_container.setGraphicsEffect(shadow)
+
         # 创建导航栏滚动区域
         self.sidebar_scroll = QScrollArea()
         self.sidebar_scroll.setWidgetResizable(True)
-        self.sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.sidebar_scroll.setStyleSheet(f"""
+        self.sidebar_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.sidebar_scroll.setStyleSheet(
+            f"""
             QScrollArea {{
                 background-color: {theme['secondary']};
                 border: none;
             }}
-        """)
+        """
+        )
 
         # 创建实际的导航栏内容
         self.sidebar = QWidget()
-        self.sidebar.setStyleSheet(f"""
-            background-color: {theme['secondary']};
-            color: {theme['text_light']};
-        """)
+        self.sidebar.setStyleSheet(
+            f"""
+            QWidget {{
+                background-color: transparent;
+                color: {theme['text_light']};
+            }}
+        """
+        )
 
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(10, 20, 10, 20)
-        sidebar_layout.setSpacing(5)
+        sidebar_layout.setContentsMargins(
+            LAYOUT["sidebar_padding"],
+            LAYOUT["sidebar_padding"],
+            LAYOUT["sidebar_padding"],
+            LAYOUT["sidebar_padding"],
+        )
+        sidebar_layout.setSpacing(LAYOUT["nav_button_spacing"])
 
-        # 应用标题和logo区域
+        # 优化的应用标题区域
         title_container = QWidget()
         title_layout = QHBoxLayout(title_container)
-        title_layout.setContentsMargins(10, 10, 10, 20)
+        title_layout.setContentsMargins(0, 0, 0, LAYOUT["spacing"])
 
         # 应用标题
         title = QLabel("QW-Browser")
-        title.setFont(QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Bold))
-        title.setStyleSheet(f"""
-            color: {theme['text_light']};
-            font-weight: bold;
-        """)
+        title.setFont(QFont(FONTS["title"][0], 16, QFont.Weight.Bold))
+        title.setStyleSheet(
+            f"""
+            QLabel {{
+                color: {theme['text_light']};
+                font-weight: 700;
+                padding: 8px 0px;
+                margin-bottom: {LAYOUT['spacing']}px;
+            }}
+        """
+        )
         title_layout.addWidget(title)
         sidebar_layout.addWidget(title_container)
-
-        # 添加分隔线
-        self.add_sidebar_separator(sidebar_layout)
 
         # 创建导航按钮组
         self.nav_button_group = QButtonGroup(self)
@@ -231,14 +303,21 @@ class ModernApp(QMainWindow):
         # 添加伸缩项，使按钮靠上对齐
         sidebar_layout.addStretch()
 
-        # 添加底部版本信息
+        # 优化的底部版本信息
         version_label = QLabel("QW-Browser v2.0.0")
-        version_label.setStyleSheet(f"""
-            color: {theme['text_tertiary']};
-            font-size: 10px;
-            padding: 10px;
-            qproperty-alignment: AlignCenter;
-        """)
+        version_label.setStyleSheet(
+            f"""
+            QLabel {{
+                color: {theme['text_tertiary']};
+                font-size: 11px;
+                font-weight: 400;
+                padding: {LAYOUT['spacing']}px 0px;
+                margin-top: {LAYOUT['spacing']}px;
+                qproperty-alignment: AlignCenter;
+                background-color: transparent;
+            }}
+        """
+        )
         sidebar_layout.addWidget(version_label)
 
         # 设置滚动区域的widget
@@ -261,33 +340,11 @@ class ModernApp(QMainWindow):
         layout.addSpacing(10)  # 分隔线下方添加间距
 
     def create_nav_button(self, text, icon_name=None):
-        """创建导航按钮"""
-        theme = THEMES[CURRENT_THEME]
-        button = QPushButton(text)
-        button.setCheckable(True)
-        button.setFont(QFont(FONTS["regular"][0], FONTS["regular"][1]))
+        """创建Chrome风格导航按钮"""
+        # Chrome风格不使用图标，icon_name参数保持兼容性但不使用
 
-        # 设置固定高度并左对齐文本
-        button.setMinimumHeight(44)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: transparent;
-                color: {theme['text_light']};
-                border: none;
-                border-radius: {LAYOUT["border_radius"]}px;
-                padding: 10px 15px;
-                text-align: left;
-                font-size: 14px;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.1);
-            }}
-            QPushButton:checked {{
-                background-color: {theme['primary']};
-                color: white;
-                font-weight: bold;
-            }}
-        """)
+        button = NavigationButton(text)
+        button.setCheckable(True)
         return button
 
     def create_content_area(self):
@@ -296,9 +353,11 @@ class ModernApp(QMainWindow):
 
         # 创建内容区域容器
         self.content_container = QWidget()
-        self.content_container.setStyleSheet(f"""
+        self.content_container.setStyleSheet(
+            f"""
             background-color: {theme['background']};
-        """)
+        """
+        )
 
         content_container_layout = QVBoxLayout(self.content_container)
         content_container_layout.setContentsMargins(0, 0, 0, 0)
@@ -309,13 +368,17 @@ class ModernApp(QMainWindow):
 
         # 创建内容区域
         self.content_area = QWidget()
-        self.content_area.setStyleSheet(f"""
+        self.content_area.setStyleSheet(
+            f"""
             background-color: {theme['background']};
             color: {theme['text']};
-        """)
+        """
+        )
 
         content_layout = QVBoxLayout(self.content_area)
-        content_layout.setContentsMargins(LAYOUT["margin"], LAYOUT["margin"], LAYOUT["margin"], LAYOUT["margin"])
+        content_layout.setContentsMargins(
+            LAYOUT["margin"], LAYOUT["margin"], LAYOUT["margin"], LAYOUT["margin"]
+        )
 
         # 内容页面栈
         self.content_stack = QStackedWidget()
@@ -341,10 +404,12 @@ class ModernApp(QMainWindow):
         # 创建顶部工具栏
         self.topbar = QWidget()
         self.topbar.setFixedHeight(60)
-        self.topbar.setStyleSheet(f"""
+        self.topbar.setStyleSheet(
+            f"""
             background-color: {theme['card']};
             border-bottom: 1px solid {theme['divider']};
-        """)
+        """
+        )
 
         # 添加阴影效果
         topbar_shadow = QGraphicsDropShadowEffect(self.topbar)
@@ -358,7 +423,9 @@ class ModernApp(QMainWindow):
 
         # 页面标题
         self.page_title = QLabel("浏览器控制中心")
-        self.page_title.setFont(QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Bold))
+        self.page_title.setFont(
+            QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Bold)
+        )
         self.page_title.setStyleSheet(f"color: {theme['text']};")
         topbar_layout.addWidget(self.page_title)
 
@@ -386,6 +453,7 @@ class ModernApp(QMainWindow):
         """初始化仪表盘页面"""
         # 确保DashboardPage已正确导入
         from ui.pages.dashboard import DashboardPage
+
         self.dashboard_page = DashboardPage(self)
         self.content_stack.addWidget(self.dashboard_page)
 
@@ -396,20 +464,27 @@ class ModernApp(QMainWindow):
 
     def show_scheduler(self):
         """显示定时任务页面"""
+        # 更新按钮激活状态
+        self.scheduler_btn.setChecked(True)
+
         if LITE_MODE or QWebEngineView is None:
             # 轻量版模式：使用外部浏览器打开
             import webbrowser
+
             try:
                 webbrowser.open("http://127.0.0.1:6001/")
-                QMessageBox.information(self, "定时任务管理", 
-                    "已在外部浏览器中打开定时任务页面\n\n" +
-                    "URL: http://127.0.0.1:6001/\n\n" +
-                    "注意：请确保后台服务正在运行")
+                QMessageBox.information(
+                    self,
+                    "定时任务管理",
+                    "已在外部浏览器中打开定时任务页面\n\n"
+                    + "URL: http://127.0.0.1:6001/\n\n"
+                    + "注意：请确保后台服务正在运行",
+                )
             except Exception as e:
                 QMessageBox.warning(self, "打开失败", f"无法打开外部浏览器：{e}")
             return
-            
-        if hasattr(self, 'scheduler_page'):
+
+        if hasattr(self, "scheduler_page"):
             index = self.content_stack.indexOf(self.scheduler_page)
             if index != -1:
                 self.content_stack.setCurrentIndex(index)
@@ -420,7 +495,7 @@ class ModernApp(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        
+
         if QWebEngineView is not None:
             # 使用WebEngine视图
             web_view = QWebEngineView()
@@ -430,7 +505,8 @@ class ModernApp(QMainWindow):
             # WebEngine不可用时的备用方案
             fallback_label = QLabel("定时任务管理功能需要QtWebEngine支持")
             fallback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            fallback_label.setStyleSheet("""
+            fallback_label.setStyleSheet(
+                """
                 QLabel {
                     font-size: 16px;
                     color: #666;
@@ -438,20 +514,24 @@ class ModernApp(QMainWindow):
                     background-color: #f5f5f5;
                     border-radius: 8px;
                 }
-            """)
+            """
+            )
             layout.addWidget(fallback_label)
-            
+
             # 添加打开浏览器按钮
-            open_browser_btn = QPushButton("在浏览器中打开")
+            open_browser_btn = ChromeButton(
+                "在浏览器中打开", variant="primary", size="medium"
+            )
             open_browser_btn.clicked.connect(lambda: self.open_scheduler_in_browser())
             layout.addWidget(open_browser_btn)
-        
+
         self.scheduler_page = page
         self.content_stack.addWidget(self.scheduler_page)
-    
+
     def open_scheduler_in_browser(self):
         """在外部浏览器中打开定时任务管理页面"""
         import webbrowser
+
         try:
             webbrowser.open("http://127.0.0.1:6001/")
         except Exception as e:
@@ -463,10 +543,12 @@ class ModernApp(QMainWindow):
 
         # 创建与原始App相同功能的实例管理页面，但使用Chrome风格设计
         page = QWidget()
-        page.setStyleSheet(f"""
+        page.setStyleSheet(
+            f"""
             background-color: {theme['background']};
             color: {theme['text']};
-        """)
+        """
+        )
 
         layout = QVBoxLayout(page)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -474,12 +556,14 @@ class ModernApp(QMainWindow):
 
         # 创建用户ID输入卡片 - Chrome风格卡片
         input_card = QWidget()
-        input_card.setStyleSheet(f"""
+        input_card.setStyleSheet(
+            f"""
             background-color: {theme['card']};
             color: {theme['text']};
             border-radius: {LAYOUT["border_radius"]}px;
             border: 1px solid rgba(0, 0, 0, 0.06);
-        """)
+        """
+        )
 
         # 添加卡片阴影
         card_shadow = QGraphicsDropShadowEffect(input_card)
@@ -494,7 +578,9 @@ class ModernApp(QMainWindow):
 
         # 添加卡片标题
         card_title = QLabel("用户ID配置")
-        card_title.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold))
+        card_title.setFont(
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold)
+        )
         card_title.setStyleSheet(f"color: {theme['text']};")
         input_layout.addWidget(card_title)
 
@@ -512,7 +598,7 @@ class ModernApp(QMainWindow):
         input_layout.addWidget(input_hint)
 
         # 文本输入区
-        self.text_edit = self._create_text_edit()
+        self.text_edit = TextEdit()
         self.text_edit.setMinimumHeight(100)  # 增加文本编辑区高度
         input_layout.addWidget(self.text_edit)
 
@@ -521,12 +607,14 @@ class ModernApp(QMainWindow):
 
         # 创建操作按钮卡片 - Chrome风格卡片
         action_card = QWidget()
-        action_card.setStyleSheet(f"""
+        action_card.setStyleSheet(
+            f"""
             background-color: {theme['card']};
             color: {theme['text']};
             border-radius: {LAYOUT["border_radius"]}px;
             border: 1px solid rgba(0, 0, 0, 0.06);
-        """)
+        """
+        )
 
         # 添加卡片阴影
         action_shadow = QGraphicsDropShadowEffect(action_card)
@@ -541,7 +629,9 @@ class ModernApp(QMainWindow):
 
         # 添加卡片标题
         action_title = QLabel("操作控制")
-        action_title.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold))
+        action_title.setFont(
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold)
+        )
         action_title.setStyleSheet(f"color: {theme['text']};")
         action_layout.setContentsMargins(20, 15, 20, 15)
         action_layout.addWidget(action_title)
@@ -560,12 +650,10 @@ class ModernApp(QMainWindow):
         button_layout.setSpacing(15)
 
         # 创建Chrome风格按钮
-        from ui.pages.dashboard import ChromeButton
-
-        self.start_btn = ChromeButton("启动浏览器", theme["success"])
-        self.stop_btn = ChromeButton("一键关闭", theme["error"])
-        self.load_btn = ChromeButton("加载配置", theme["primary"])
-        self.clear_btn = ChromeButton("清除缓存", theme["warning"])
+        self.start_btn = ChromeButton("启动浏览器", variant="success", size="medium")
+        self.stop_btn = ChromeButton("一键关闭", variant="error", size="medium")
+        self.load_btn = ChromeButton("加载配置", variant="primary", size="medium")
+        self.clear_btn = ChromeButton("清除缓存", variant="warning", size="medium")
 
         button_layout.addWidget(self.start_btn)
         button_layout.addWidget(self.stop_btn)
@@ -580,13 +668,17 @@ class ModernApp(QMainWindow):
 
         # 创建进度与日志卡片 - Chrome风格卡片
         log_card = QWidget()
-        log_card.setStyleSheet(f"""
+        log_card.setStyleSheet(
+            f"""
             background-color: {theme['card']};
             color: {theme['text']};
             border-radius: {LAYOUT["border_radius"]}px;
             border: 1px solid rgba(0, 0, 0, 0.06);
-        """)
-        log_card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+        """
+        )
+        log_card.setSizePolicy(
+            QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding
+        )
 
         # 添加卡片阴影
         log_shadow = QGraphicsDropShadowEffect(log_card)
@@ -601,7 +693,9 @@ class ModernApp(QMainWindow):
 
         # 添加卡片标题
         log_title = QLabel("进度与日志")
-        log_title.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold))
+        log_title.setFont(
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold)
+        )
         log_title.setStyleSheet(f"color: {theme['text']};")
         log_layout.addWidget(log_title)
 
@@ -614,20 +708,24 @@ class ModernApp(QMainWindow):
 
         # 进度条标题和进度条
         progress_title = QLabel("操作进度")
-        progress_title.setFont(QFont(FONTS["regular"][0], FONTS["regular"][1], QFont.Weight.Bold))
+        progress_title.setFont(
+            QFont(FONTS["regular"][0], FONTS["regular"][1], QFont.Weight.Bold)
+        )
         progress_title.setStyleSheet(f"color: {theme['text']};")
         log_layout.addWidget(progress_title)
 
-        self.progress = self._create_progressbar()
+        self.progress = ProgressBar()
         log_layout.addWidget(self.progress)
 
         # 日志标题和日志区域
         log_area_title = QLabel("操作日志")
-        log_area_title.setFont(QFont(FONTS["regular"][0], FONTS["regular"][1], QFont.Weight.Bold))
+        log_area_title.setFont(
+            QFont(FONTS["regular"][0], FONTS["regular"][1], QFont.Weight.Bold)
+        )
         log_area_title.setStyleSheet(f"color: {theme['text']};")
         log_layout.addWidget(log_area_title)
 
-        self.log_area = self._create_log_area()
+        self.log_area = LogArea()
         log_layout.addWidget(self.log_area)
 
         # 添加日志卡片到主布局
@@ -665,16 +763,13 @@ class ModernApp(QMainWindow):
     def update_log(self, msg: str):
         # 确保 self.log_area 存在
         if self.log_area:
-            self.log_area.append(msg)
-            self.log_area.verticalScrollBar().setValue(
-                self.log_area.verticalScrollBar().maximum()
-            )
+            self.log_area.add_log(msg)
 
     def load_cache(self):
         try:
             ids = self.browser_service.load_cache()
             if self.text_edit:
-                self.text_edit.setText("\n".join(ids))
+                self.text_edit.set_text("\n".join(ids))
             logger.info(f"加载用户缓存成功: {ids}")
         except Exception as e:
             logger.error(f"加载用户缓存失败: {e}")
@@ -698,9 +793,17 @@ class ModernApp(QMainWindow):
             try:
                 await self.scheduler_client.start()
                 task_count = len(self.scheduler_client.task_configs)
-                enabled_count = sum(1 for config in self.scheduler_client.task_configs.values() if config.enabled)
-                logger.info(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
-                self.log_signal.log_updated.emit(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+                enabled_count = sum(
+                    1
+                    for config in self.scheduler_client.task_configs.values()
+                    if config.enabled
+                )
+                logger.info(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
+                self.log_signal.log_updated.emit(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
             except Exception as e:
                 logger.error(f"定时任务调度器启动失败: {e}")
                 self.log_signal.log_updated.emit(f"定时任务调度器启动失败: {e}")
@@ -727,66 +830,6 @@ class ModernApp(QMainWindow):
         except Exception as e:
             logger.error(f"初始化失败: {e}")
             self.log_signal.log_updated.emit(f"初始化失败: {e}")
-
-    def _create_text_edit(self):
-        """创建文本编辑区 - Chrome风格"""
-        theme = THEMES[CURRENT_THEME]
-
-        text_edit = QTextEdit()
-        text_edit.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {theme['background']};
-                color: {theme['text']};
-                border: 1px solid {theme['card_border']};
-                border-radius: {LAYOUT["border_radius"]}px;
-                padding: 10px;
-            }}
-            QTextEdit:focus {{
-                border: 1px solid {theme['primary']};
-            }}
-        """)
-        text_edit.setFont(QFont(FONTS["regular"][0], FONTS["regular"][1]))
-        return text_edit
-
-    def _create_progressbar(self):
-        """创建进度条 - Chrome风格"""
-        theme = THEMES[CURRENT_THEME]
-
-        progress = QProgressBar()
-        progress.setFixedHeight(6)  # 更薄的进度条，更符合Chrome风格
-        progress.setStyleSheet(f"""
-            QProgressBar {{
-                border: none;
-                background-color: {theme['background']};
-                text-align: center;
-                color: transparent;  /* 隐藏文本 */
-                border-radius: 3px;
-            }}
-            QProgressBar::chunk {{
-                background-color: {theme['success']};
-                border-radius: 3px;
-            }}
-        """)
-        return progress
-
-    def _create_log_area(self):
-        """创建日志区域 - Chrome风格"""
-        theme = THEMES[CURRENT_THEME]
-
-        log_area = QTextEdit()
-        log_area.setReadOnly(True)
-        log_area.setStyleSheet(f"""
-            QTextEdit {{
-                background-color: {theme['background']};
-                color: {theme['text']};
-                border: 1px solid {theme['card_border']};
-                border-radius: {LAYOUT["border_radius"]}px;
-                padding: 10px;
-                font-family: {FONTS["mono"][0]};
-                font-size: {FONTS["mono"][1]}px;
-            }}
-        """)
-        return log_area
 
     # 页面切换函数
     def show_dashboard(self):
@@ -826,8 +869,7 @@ class ModernApp(QMainWindow):
 
             # 更新仪表盘
             self.dashboard_page.update_stats(
-                instance_stats=instance_stats,
-                resource_stats=resource_stats
+                instance_stats=instance_stats, resource_stats=resource_stats
             )
 
         except Exception as e:
@@ -860,21 +902,31 @@ class ModernApp(QMainWindow):
             try:
                 await self.scheduler_client.start()
                 task_count = len(self.scheduler_client.task_configs)
-                enabled_count = sum(1 for config in self.scheduler_client.task_configs.values() if config.enabled)
-                logger.info(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
-                self.log_signal.log_updated.emit(f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用")
+                enabled_count = sum(
+                    1
+                    for config in self.scheduler_client.task_configs.values()
+                    if config.enabled
+                )
+                logger.info(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
+                self.log_signal.log_updated.emit(
+                    f"定时任务调度器启动成功，已加载 {task_count} 个任务配置，其中 {enabled_count} 个已启用"
+                )
             except Exception as e:
                 logger.error(f"定时任务调度器启动失败: {e}")
                 self.log_signal.log_updated.emit(f"定时任务调度器启动失败: {e}")
 
             # 仅在Windows系统上尝试启动frpc服务
-            if sys.platform == 'win32':
+            if sys.platform == "win32":
                 try:
                     self.frpc_process = self._start_frpc()
                     if self.frpc_process:
                         self.log_signal.log_updated.emit("frpc服务已启动")
                     else:
-                        self.log_signal.log_updated.emit("frpc服务启动失败，请确保以管理员权限运行程序")
+                        self.log_signal.log_updated.emit(
+                            "frpc服务启动失败，请确保以管理员权限运行程序"
+                        )
                 except Exception as e:
                     logger.error(f"frpc服务启动错误: {e}")
                     self.log_signal.log_updated.emit(f"frpc服务启动错误: {e}")
@@ -944,38 +996,11 @@ class ModernApp(QMainWindow):
         """应用启动时自动加载用户ID配置文件"""
         try:
             from conf import writable_path
+
             # 优先从可写目录加载，如果不存在则从资源目录加载
             writable_file_path = writable_path("user_ids.txt")
             resource_file_path = resource_path("user_ids.txt")
-            
-            file_path = None
-            if os.path.exists(writable_file_path):
-                file_path = writable_file_path
-            elif os.path.exists(resource_file_path):
-                file_path = resource_file_path
-            
-            if file_path:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    ids = [line.strip() for line in f.readlines() if line.strip()]
-                    if ids and self.text_edit:  # 确保text_edit已初始化且有数据
-                        self.text_edit.setText("\n".join(ids))
-                        self.save_cache()  # 同步到缓存
-                        logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
-                    elif not ids:
-                        logger.info("user_ids.txt文件为空")
-            else:
-                logger.info("未找到user_ids.txt文件，将使用空配置")
-        except Exception as e:
-            logger.error(f"启动时加载user_ids.txt失败: {e}")
-    
-    def load_user_ids(self):
-        """手动加载用户ID配置文件 - 基于App类但改进UI交互"""
-        try:
-            from conf import writable_path
-            # 优先从可写目录加载，如果不存在则从资源目录加载
-            writable_file_path = writable_path("user_ids.txt")
-            resource_file_path = resource_path("user_ids.txt")
-            
+
             file_path = None
             if os.path.exists(writable_file_path):
                 file_path = writable_file_path
@@ -985,7 +1010,36 @@ class ModernApp(QMainWindow):
             if file_path:
                 with open(file_path, "r", encoding="utf-8") as f:
                     ids = [line.strip() for line in f.readlines() if line.strip()]
-                    self.text_edit.setText("\n".join(ids))
+                    if ids and self.text_edit:  # 确保text_edit已初始化且有数据
+                        self.text_edit.set_text("\n".join(ids))
+                        self.save_cache()  # 同步到缓存
+                        logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
+                    elif not ids:
+                        logger.info("user_ids.txt文件为空")
+            else:
+                logger.info("未找到user_ids.txt文件，将使用空配置")
+        except Exception as e:
+            logger.error(f"启动时加载user_ids.txt失败: {e}")
+
+    def load_user_ids(self):
+        """手动加载用户ID配置文件 - 基于App类但改进UI交互"""
+        try:
+            from conf import writable_path
+
+            # 优先从可写目录加载，如果不存在则从资源目录加载
+            writable_file_path = writable_path("user_ids.txt")
+            resource_file_path = resource_path("user_ids.txt")
+
+            file_path = None
+            if os.path.exists(writable_file_path):
+                file_path = writable_file_path
+            elif os.path.exists(resource_file_path):
+                file_path = resource_file_path
+
+            if file_path:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    ids = [line.strip() for line in f.readlines() if line.strip()]
+                    self.text_edit.set_text("\n".join(ids))
                     self.log_signal.log_updated.emit(f"已加载 {len(ids)} 个用户ID配置")
                     self.save_cache()
             else:
@@ -993,33 +1047,38 @@ class ModernApp(QMainWindow):
         except Exception as e:
             self.log_signal.log_updated.emit(f"加载配置失败: {e}")
             logger.error(f"加载user_ids.txt失败: {e}")
-            
+
     def save_user_ids_to_file(self):
         """保存当前用户ID到user_ids.txt配置文件"""
         try:
             from conf import writable_path
+
             # 获取当前文本编辑器中的用户ID
-            current_text = self.text_edit.toPlainText().strip()
+            current_text = self.text_edit.get_text().strip()
             if not current_text:
                 self.log_signal.log_updated.emit("没有用户ID需要保存")
                 return
-                
+
             # 处理用户ID列表，去除空行和重复项
-            user_ids = [line.strip() for line in current_text.split('\n') if line.strip()]
+            user_ids = [
+                line.strip() for line in current_text.split("\n") if line.strip()
+            ]
             user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
-            
+
             # 保存到可写目录的user_ids.txt文件
             file_path = writable_path("user_ids.txt")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(user_ids))
-                
-            self.log_signal.log_updated.emit(f"已保存 {len(user_ids)} 个用户ID到配置文件")
+
+            self.log_signal.log_updated.emit(
+                f"已保存 {len(user_ids)} 个用户ID到配置文件"
+            )
             logger.info(f"成功保存用户ID到 {file_path}，共 {len(user_ids)} 个")
-            
+
         except Exception as e:
             self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
             logger.error(f"保存user_ids.txt失败: {e}")
-            
+
     def closeEvent(self, event):
         """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""
         # 保存当前用户ID到配置文件
@@ -1027,7 +1086,7 @@ class ModernApp(QMainWindow):
             self.save_user_ids_to_file()
         except Exception as e:
             logger.error(f"关闭时保存用户ID失败: {e}")
-            
+
         # 停止定时任务服务
         try:
             loop = asyncio.get_event_loop()
@@ -1041,7 +1100,7 @@ class ModernApp(QMainWindow):
         except Exception as e:
             logger.error(f"停止定时任务调度器失败: {e}")
             self.log_signal.log_updated.emit(f"停止定时任务调度器失败: {e}")
-        
+
         # 停止 frpc 服务
         if self.frpc_process is not None:
             try:
@@ -1050,7 +1109,7 @@ class ModernApp(QMainWindow):
                 self.log_signal.log_updated.emit("frpc 服务已关闭")
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭 frpc 失败: {e}")
-        
+
         # 停止设置服务器进程
         if self.settings_server_process is not None:
             try:
@@ -1059,7 +1118,7 @@ class ModernApp(QMainWindow):
                 self.log_signal.log_updated.emit("设置服务器已关闭")
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭设置服务器失败: {e}")
-        
+
         event.accept()
 
     async def _stop_scheduler(self):
@@ -1069,37 +1128,39 @@ class ModernApp(QMainWindow):
             logger.info("定时任务调度器已停止")
         except Exception as e:
             logger.error(f"停止定时任务调度器失败: {e}")
-    
+
     def show_settings(self):
         """显示设置页面 - 启动Chrome配置服务并在浏览器中打开"""
         try:
             # 检查设置服务器是否已经运行
-            if self.settings_server_process is None or self.settings_server_process.poll() is not None:
+            if (
+                self.settings_server_process is None
+                or self.settings_server_process.poll() is not None
+            ):
                 self._start_settings_server()
-            
+
             # 在浏览器中打开Chrome配置页面
-            webbrowser.open('http://127.0.0.1:7010/chrome/config')
+            webbrowser.open("http://127.0.0.1:7010/chrome/config")
             self.log_signal.log_updated.emit("已打开Chrome配置页面")
-            
+
         except Exception as e:
             self.log_signal.log_updated.emit(f"打开设置页面失败: {e}")
             logger.error(f"打开设置页面失败: {e}")
-    
+
     def _start_settings_server(self):
         """启动设置服务器"""
         try:
             # 启动API服务器，指定端口7010并禁用调试模式
-            self.settings_server_process = subprocess.Popen([
-                sys.executable, "start_api_server.py", 
-                "--port", "7010", "--no-debug"
-            ])
-            
+            self.settings_server_process = subprocess.Popen(
+                [sys.executable, "start_api_server.py", "--port", "7010", "--no-debug"]
+            )
+
             # 等待服务器启动
             time.sleep(2)
-            
+
             self.log_signal.log_updated.emit("设置服务器已启动 (端口: 7010)")
             logger.info("设置服务器已启动")
-            
+
         except Exception as e:
-             self.log_signal.log_updated.emit(f"启动设置服务器失败: {e}")
-             logger.error(f"启动设置服务器失败: {e}")
+            self.log_signal.log_updated.emit(f"启动设置服务器失败: {e}")
+            logger.error(f"启动设置服务器失败: {e}")
