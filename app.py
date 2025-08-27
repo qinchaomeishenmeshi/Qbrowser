@@ -47,10 +47,8 @@ from api.api_server import run_server
 from browser.browser_operator import browser_operator
 from conf import resource_path
 from service.browser_service import browser_service
-from utils.common_logger import get_logger
 from worker.scheduler_client import scheduler_client
 
-logger = get_logger(__name__)
 
 # 全局变量：应用程序锁文件句柄
 _app_lock_file = None

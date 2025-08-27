@@ -36,14 +36,8 @@ from browser.browser_operator import browser_operator
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from ui.config import THEMES, CURRENT_THEME, LAYOUT, FONTS
-# UI模块导入
-from ui.pages import DashboardPage
-from utils.common_logger import get_logger
 # 导入定时任务相关模块
 from worker.scheduler_client import scheduler_client
-
-# 日志
-logger = get_logger(__name__)
 
 
 class ModernApp(QMainWindow):
