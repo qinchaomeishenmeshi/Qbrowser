@@ -2,6 +2,7 @@ import asyncio
 import os
 import subprocess
 import sys
+import time
 import webbrowser
 
 from utils.common_logger import get_logger
@@ -127,31 +128,34 @@ class ModernApp(QMainWindow):
         return f"{r}, {g}, {b}, {opacity}"
 
     def init_ui(self):
-        # 设置窗口属性
+        # Chrome风格窗口设置
         theme = THEMES[CURRENT_THEME]
-        self.setWindowTitle("QW-Browser 浏览器管理工具")
-        self.setGeometry(100, 100, 1280, 800)
+        self.setWindowTitle("QW-Browser")
+        self.setGeometry(100, 100, 1200, 800)  # Chrome典型尺寸
 
-        # 设置全局样式
+        # Chrome风格全局样式
         self.setStyleSheet(
             f"""
             QMainWindow {{
                 background-color: {theme['background']};
                 color: {theme['text']};
+                border: none;
             }}
+            /* Chrome风格滚动条 */
             QScrollBar:vertical {{
                 border: none;
                 background: {theme['background']};
-                width: 8px;
+                width: 12px;
                 margin: 0px;
             }}
             QScrollBar::handle:vertical {{
                 background: {theme['inactive']};
-                border-radius: 4px;
+                border-radius: 6px;
                 min-height: 20px;
+                margin: 2px;
             }}
             QScrollBar::handle:vertical:hover {{
-                background: {theme['primary']};
+                background: {theme['text_secondary']};
             }}
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
@@ -159,16 +163,17 @@ class ModernApp(QMainWindow):
             QScrollBar:horizontal {{
                 border: none;
                 background: {theme['background']};
-                height: 8px;
+                height: 12px;
                 margin: 0px;
             }}
             QScrollBar::handle:horizontal {{
                 background: {theme['inactive']};
-                border-radius: 4px;
+                border-radius: 6px;
                 min-width: 20px;
+                margin: 2px;
             }}
             QScrollBar::handle:horizontal:hover {{
-                background: {theme['primary']};
+                background: {theme['text_secondary']};
             }}
             QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 width: 0px;
@@ -183,30 +188,30 @@ class ModernApp(QMainWindow):
         self.main_layout.setSpacing(0)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 创建左侧导航栏
+        # 创建Chrome风格侧边栏
         self.create_sidebar()
 
-        # 创建右侧内容区
+        # 创建Chrome风格内容区
         self.create_content_area()
 
         # 默认显示浏览器实例页面
         self.show_instances()
 
     def create_sidebar(self):
-        # 创建左侧导航栏
+        """创建Chrome风格侧边栏"""
         theme = THEMES[CURRENT_THEME]
 
-        # 创建一个容器来包含导航栏
+        # Chrome风格侧边栏容器
         self.sidebar_container = QWidget()
         self.sidebar_container.setFixedWidth(LAYOUT["sidebar_width"])
 
-        # 添加磨砂玻璃效果和优化样式
+        # Chrome风格侧边栏样式 - 简洁的背景色和边框
         self.sidebar_container.setStyleSheet(
             f"""
             QWidget {{
-                background-color: rgba({self._hex_to_rgba(theme['secondary'], LAYOUT['glass_opacity'])});
-                color: {theme['text_light']};
+                background-color: {theme['surface']};
                 border: none;
+                border-right: 1px solid {theme['divider']};
             }}
         """
         )
@@ -215,12 +220,36 @@ class ModernApp(QMainWindow):
         sidebar_container_layout.setSpacing(0)
         sidebar_container_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(15)
-        shadow.setColor(QColor(0, 0, 0, 30))
-        shadow.setOffset(2, 0)
-        self.sidebar_container.setGraphicsEffect(shadow)
+        # Chrome风格标题栏
+        title_bar = QWidget()
+        title_bar.setFixedHeight(LAYOUT["toolbar_height"])
+        title_bar.setStyleSheet(f"""
+            QWidget {{
+                background-color: {theme['surface']};
+                border: none;
+            }}
+        """)
+        
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(16, 0, 16, 0)
+        
+        # 应用标题 - Chrome风格
+        title = QLabel("QW-Browser")
+        title.setFont(QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Medium))
+        title.setStyleSheet(f"""
+            QLabel {{
+                color: {theme['text']};
+                font-weight: 500;
+                padding: 4px 0;
+                margin: 0;
+                border: none;
+                background: transparent;
+            }}
+        """)
+        title_layout.addWidget(title)
+        title_layout.addStretch()
+        
+        sidebar_container_layout.addWidget(title_bar)
 
         # 创建导航栏滚动区域
         self.sidebar_scroll = QScrollArea()
@@ -231,7 +260,7 @@ class ModernApp(QMainWindow):
         self.sidebar_scroll.setStyleSheet(
             f"""
             QScrollArea {{
-                background-color: {theme['secondary']};
+                background-color: {theme['surface']};
                 border: none;
             }}
         """
@@ -243,7 +272,7 @@ class ModernApp(QMainWindow):
             f"""
             QWidget {{
                 background-color: transparent;
-                color: {theme['text_light']};
+                color: {theme['text']};
             }}
         """
         )
@@ -257,33 +286,12 @@ class ModernApp(QMainWindow):
         )
         sidebar_layout.setSpacing(LAYOUT["nav_button_spacing"])
 
-        # 优化的应用标题区域
-        title_container = QWidget()
-        title_layout = QHBoxLayout(title_container)
-        title_layout.setContentsMargins(0, 0, 0, LAYOUT["spacing"])
-
-        # 应用标题
-        title = QLabel("QW-Browser")
-        title.setFont(QFont(FONTS["title"][0], 16, QFont.Weight.Bold))
-        title.setStyleSheet(
-            f"""
-            QLabel {{
-                color: {theme['text_light']};
-                font-weight: 700;
-                padding: 8px 0px;
-                margin-bottom: {LAYOUT['spacing']}px;
-            }}
-        """
-        )
-        title_layout.addWidget(title)
-        sidebar_layout.addWidget(title_container)
-
         # 创建导航按钮组
         self.nav_button_group = QButtonGroup(self)
         self.nav_button_group.setExclusive(True)  # 确保只有一个按钮被选中
 
-        # 仅保留浏览器实例按钮
-        self.instances_btn = self.create_nav_button("浏览器", "browser")
+        # 保留浏览器实例按钮
+        self.instances_btn = self.create_nav_button("浏览器管理", "browser")
         self.instances_btn.clicked.connect(self.show_instances)
         self.instances_btn.setChecked(True)  # 默认选中
         self.nav_button_group.addButton(self.instances_btn)
@@ -303,22 +311,38 @@ class ModernApp(QMainWindow):
         # 添加伸缩项，使按钮靠上对齐
         sidebar_layout.addStretch()
 
-        # 优化的底部版本信息
+        # Chrome风格底部区域
+        bottom_container = QWidget()
+        bottom_container.setStyleSheet(f"""
+            QWidget {{
+                background-color: {theme['surface']};
+                border: none;
+                border-top: 1px solid {theme['divider']};
+                padding: 12px 16px;
+            }}
+        """)
+        
+        bottom_layout = QVBoxLayout(bottom_container)
+        bottom_layout.setContentsMargins(0, 8, 0, 8)
+        
+        # 版本信息
         version_label = QLabel("QW-Browser v2.0.0")
         version_label.setStyleSheet(
             f"""
             QLabel {{
                 color: {theme['text_tertiary']};
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 400;
-                padding: {LAYOUT['spacing']}px 0px;
-                margin-top: {LAYOUT['spacing']}px;
-                qproperty-alignment: AlignCenter;
-                background-color: transparent;
+                padding: 2px 0;
+                margin: 0;
+                border: none;
+                background: transparent;
             }}
         """
         )
-        sidebar_layout.addWidget(version_label)
+        bottom_layout.addWidget(version_label)
+        
+        sidebar_layout.addWidget(bottom_container)
 
         # 设置滚动区域的widget
         self.sidebar_scroll.setWidget(self.sidebar)
@@ -406,27 +430,38 @@ class ModernApp(QMainWindow):
         self.topbar.setFixedHeight(60)
         self.topbar.setStyleSheet(
             f"""
-            background-color: {theme['card']};
-            border-bottom: 1px solid {theme['divider']};
-        """
-        )
+            QWidget {{
+                background-color: {theme['background']};
+                border: none;
+                border-bottom: 1px solid {theme['divider']};
+            }}
+        """)
 
         # 添加阴影效果
         topbar_shadow = QGraphicsDropShadowEffect(self.topbar)
-        topbar_shadow.setBlurRadius(10)
-        topbar_shadow.setColor(QColor(0, 0, 0, 15))
-        topbar_shadow.setOffset(0, 2)
+        topbar_shadow.setBlurRadius(8)
+        topbar_shadow.setColor(QColor(0, 0, 0, 8))
+        topbar_shadow.setOffset(0, 1)
         self.topbar.setGraphicsEffect(topbar_shadow)
 
         topbar_layout = QHBoxLayout(self.topbar)
-        topbar_layout.setContentsMargins(20, 0, 20, 0)
+        topbar_layout.setContentsMargins(24, 0, 24, 0)
 
         # 页面标题
         self.page_title = QLabel("浏览器控制中心")
         self.page_title.setFont(
-            QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Bold)
+            QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Medium)
         )
-        self.page_title.setStyleSheet(f"color: {theme['text']};")
+        self.page_title.setStyleSheet(f"""
+            QLabel {{
+                color: {theme['text']};
+                font-weight: 500;
+                padding: 0;
+                margin: 0;
+                border: none;
+                background: transparent;
+            }}
+        """)
         topbar_layout.addWidget(self.page_title)
 
         # 添加伸缩项，将右侧按钮推到最右边
