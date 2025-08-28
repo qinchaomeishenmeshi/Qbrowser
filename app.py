@@ -7,9 +7,12 @@ import subprocess
 import sys
 import threading
 import traceback
-import tempfile
-from filelock import FileLock, Timeout
 from utils.common_logger import get_logger
+from utils.singleton_manager import (
+    check_single_instance, 
+    release_single_instance, 
+    setup_activate_on_second_instance
+)
 
 logger = get_logger(__name__)
 
@@ -49,165 +52,9 @@ from service.browser_service import browser_service
 from worker.scheduler_client import scheduler_client
 
 
-# 全局变量：应用程序文件锁对象
-_app_lock = None
+# 全局变量：应用程序实例（用于处理第二个实例的激活）
+_app_instance = None
 
-
-def check_single_instance():
-    """检查是否已有应用程序实例在运行
-    
-    Windows兼容性改进：
-    - 使用多个候选目录存放锁文件
-    - 改进权限错误处理
-    - 提供自动恢复机制
-
-    Returns:
-        bool: True表示可以启动（没有其他实例），False表示已有实例在运行
-    """
-    global _app_lock
-
-    # 候选锁文件目录列表（按优先级排序）
-    candidate_dirs = [
-        tempfile.gettempdir(),  # 系统临时目录
-        os.path.expanduser("~"),  # 用户家目录
-        os.getcwd(),  # 当前工作目录
-        "."  # 项目根目录
-    ]
-    
-    last_error = None
-    lock_file_path = None  # 初始化变量避免未绑定错误
-    
-    for lock_dir in candidate_dirs:
-        try:
-            # 确保目录存在且可写
-            if not os.path.exists(lock_dir):
-                continue
-                
-            # 创建锁文件路径
-            lock_file_path = os.path.join(lock_dir, "qw_browser_app.lock")
-            
-            # 测试目录写权限
-            test_file = os.path.join(lock_dir, "test_write_permission.tmp")
-            try:
-                with open(test_file, "w") as f:
-                    f.write("test")
-                os.remove(test_file)
-            except (OSError, IOError, PermissionError):
-                logger.debug(f"目录 {lock_dir} 没有写权限，尝试下一个")
-                continue
-
-            # 创建FileLock对象
-            _app_lock = FileLock(lock_file_path)
-
-            # 尝试获取文件锁（非阻塞）
-            _app_lock.acquire(timeout=0)
-
-            # 写入当前进程ID到锁文件
-            try:
-                with open(lock_file_path, "w") as f:
-                    f.write(str(os.getpid()))
-                    f.flush()
-            except (OSError, IOError, PermissionError) as write_error:
-                # 如果写入失败，释放锁并继续尝试下一个目录
-                logger.debug(f"写入锁文件失败: {write_error}")
-                _app_lock.release()
-                _app_lock = None
-                continue
-
-            logger.info(f"应用程序启动成功，进程ID: {os.getpid()}，锁文件: {lock_file_path}")
-            return True
-
-        except Timeout:
-            # 文件锁获取超时，说明已有实例在运行
-            if 'lock_file_path' in locals():
-                logger.warning(f"检测到应用程序已在运行（锁文件: {lock_file_path}）")
-            else:
-                logger.warning("检测到应用程序已在运行")
-            return False
-        except Exception as e:
-            last_error = e
-            logger.debug(f"在目录 {lock_dir} 创建锁文件失败: {e}")
-            continue
-    
-    # 所有目录都失败
-    error_msg = f"无法在任何目录创建锁文件，最后错误: {last_error}"
-    logger.error(error_msg)
-    
-    # Windows系统提供额外的解决建议
-    if sys.platform == "win32":
-        logger.info("Windows系统解决建议:")
-        logger.info("1. 以管理员身份运行程序")
-        logger.info("2. 检查杀毒软件是否阻止文件操作")
-        logger.info("3. 手动清理可能的残留锁文件")
-    
-    return False
-
-
-def release_single_instance():
-    """释放应用程序实例锁"""
-    global _app_lock
-
-    if _app_lock:
-        try:
-            _app_lock.release()
-            logger.info("应用程序锁已释放")
-        except Exception as e:
-            logger.error(f"释放应用程序锁时发生错误: {e}")
-        finally:
-            _app_lock = None
-
-
-def cleanup_lock_files():
-    """清理可能残留的锁文件
-    
-    Windows系统专用：用于清理因权限问题或异常退出导致的残留锁文件
-    """
-    candidate_dirs = [
-        tempfile.gettempdir(),
-        os.path.expanduser("~"),
-        os.getcwd(),
-        "."
-    ]
-    
-    cleaned_files = []
-    
-    for lock_dir in candidate_dirs:
-        if not os.path.exists(lock_dir):
-            continue
-            
-        lock_file_path = os.path.join(lock_dir, "qw_browser_app.lock")
-        
-        if os.path.exists(lock_file_path):
-            try:
-                # 尝试读取文件内容检查进程是否还在运行
-                with open(lock_file_path, "r") as f:
-                    pid_str = f.read().strip()
-                
-                if pid_str.isdigit():
-                    pid = int(pid_str)
-                    # 检查进程是否还在运行
-                    try:
-                        os.kill(pid, 0)  # 发送信号0不会杀死进程，只是检查是否存在
-                        logger.info(f"进程 {pid} 仍在运行，不清理锁文件: {lock_file_path}")
-                        continue
-                    except (OSError, ProcessLookupError):
-                        # 进程不存在，可以安全清理
-                        pass
-                
-                # 尝试删除锁文件
-                os.remove(lock_file_path)
-                cleaned_files.append(lock_file_path)
-                logger.info(f"已清理残留锁文件: {lock_file_path}")
-                
-            except Exception as e:
-                logger.debug(f"清理锁文件 {lock_file_path} 时出错: {e}")
-    
-    if cleaned_files:
-        logger.info(f"总共清理了 {len(cleaned_files)} 个残留锁文件")
-    else:
-        logger.info("没有发现需要清理的残留锁文件")
-    
-    return cleaned_files
 
 
 def is_admin():
@@ -218,6 +65,28 @@ def is_admin():
         )
     except Exception:
         return False
+
+
+def handle_second_instance_activation():
+    """处理第二个实例尝试启动时的激活操作"""
+    global _app_instance
+    
+    logger.info("检测到第二个实例尝试启动，激活当前窗口")
+    
+    if _app_instance:
+        try:
+            # 显示窗口
+            _app_instance.show()
+            _app_instance.raise_()
+            _app_instance.activateWindow()
+            
+            # 如果窗口被最小化，恢复它
+            if _app_instance.isMinimized():
+                _app_instance.showNormal()
+                
+            logger.info("已激活并显示当前窗口")
+        except Exception as e:
+            logger.error(f"激活窗口时发生错误: {e}")
 
 
 class LogSignal(QObject):
@@ -919,28 +788,29 @@ def main():
     - 安装未捕获异常处理器，保证错误能被记录到控制台
     - 绑定 SIGINT/SIGTERM 与 atexit 钩子，确保优雅关闭事件循环
     """
-    # Windows系统先尝试清理可能的残留锁文件
-    if sys.platform == "win32":
-        try:
-            cleanup_lock_files()
-        except Exception as e:
-            logger.debug(f"清理锁文件时出错: {e}")
+    global _app_instance
     
     # 检查是否已有实例在运行
     if not check_single_instance():
         print("[ERROR] 应用程序无法启动！")
         print("[INFO] 可能原因:")
         print("  1. 已有实例在运行")
-        print("  2. 没有文件写入权限")
-        print("  3. 杀毒软件阻止文件操作")
+        print("  2. QLocalServer 创建失败")
         print("[INFO] 解决方案:")
         if sys.platform == "win32":
+            print("  === 立即解决方案 ===")
+            print("  在PowerShell中运行以下命令:")
+            print("    $env:QW_BROWSER_SKIP_SINGLETON_CHECK = '1'")
+            print("    python app.py")
+            print("  或者双击运行: start_windows_skip_singleton.bat")
+            print("")
+            print("  === 其他解决方案 ===")
             print("  1. 以管理员身份运行程序")
-            print("  2. 关闭杀毒软件实时防护")
-            print("  3. 手动清理锁文件: del %TEMP%\\qw_browser_app.lock")
+            print("  2. 检查防火墙设置")
+            print("  3. 在不同目录运行程序")
         else:
             print("  1. 检查是否有其他实例运行")
-            print("  2. 手动清理锁文件: rm /tmp/qw_browser_app.lock")
+            print("  2. 设置环境变量: export QW_BROWSER_SKIP_SINGLETON_CHECK=1")
         sys.exit(1)
 
     # Windows 管理员权限提示
@@ -969,6 +839,9 @@ def main():
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
+    # 设置第二个实例激活处理
+    setup_activate_on_second_instance(handle_second_instance_activation)
+
     # 支持 Ctrl+C 与系统终止信号优雅退出
     def _graceful_shutdown(signame: str):
         print(f"\n[INFO] 收到信号 {signame}，正在尝试优雅退出...")
@@ -978,7 +851,7 @@ def main():
         except Exception as e:
             print(f"[WARNING] 停止事件循环时发生异常: {e}")
         finally:
-            # 释放应用程序单例锁
+            # 释放应用程序单例资源
             release_single_instance()
 
     if sys.platform != "win32":
@@ -988,7 +861,7 @@ def main():
         except Exception as e:
             print(f"[WARNING] 绑定信号处理失败: {e}")
 
-    # 进程退出清理，确保 loop 关闭和释放单例锁
+    # 进程退出清理，确保 loop 关闭和释放单例资源
     @atexit.register
     def _cleanup_on_exit():
         try:
@@ -999,14 +872,14 @@ def main():
         except Exception as e:
             print(f"[WARNING] 清理事件循环失败: {e}")
         finally:
-            # 释放应用程序单例锁
+            # 释放应用程序单例资源
             release_single_instance()
 
     # 延迟导入 UI，避免初始化开销影响日志输出
     from ui.modern_app import ModernApp
 
-    w = ModernApp()
-    w.show()
+    _app_instance = ModernApp()
+    _app_instance.show()
 
     # 进入事件循环
     with loop:
@@ -1018,7 +891,7 @@ def main():
             # 确保事件循环被关闭
             if not loop.is_closed():
                 loop.close()
-            # 释放应用程序单例锁
+            # 释放应用程序单例资源
             release_single_instance()
 
 
