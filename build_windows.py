@@ -37,7 +37,15 @@ def check_environment():
     missing_packages = []
     for display_name, import_name in required_packages:
         try:
-            __import__(import_name.replace('-', '_').lower())
+            # 特殊处理一些包名
+            if import_name == 'PyInstaller':
+                import PyInstaller
+            elif import_name == 'DrissionPage':
+                import DrissionPage
+            elif import_name == 'PyQt6':
+                import PyQt6
+            else:
+                __import__(import_name.replace('-', '_').lower())
             print(f"✅ {display_name} - 已安装")
         except ImportError:
             missing_packages.append(display_name)
