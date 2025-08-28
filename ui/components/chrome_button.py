@@ -69,6 +69,7 @@ class ChromeButton(QPushButton):
         colors = self._get_variant_colors()
         
         # Chrome风格样式表
+        hover_text_color = colors.get('text_hover', colors['text'])
         self.setStyleSheet(f"""
             ChromeButton {{
                 background-color: {colors['bg']};
@@ -81,6 +82,7 @@ class ChromeButton(QPushButton):
             }}
             ChromeButton:hover {{
                 background-color: {colors['bg_hover']};
+                color: {hover_text_color};
                 border: {colors['border_hover']};
             }}
             ChromeButton:pressed {{
@@ -126,6 +128,7 @@ class ChromeButton(QPushButton):
                 'bg_hover': self._overlay_color(self.theme['primary'], self.theme['primary'], 0.04),
                 'bg_pressed': self._overlay_color(self.theme['primary'], self.theme['primary'], 0.08),
                 'text': self.theme['primary'],
+                'text_hover': self.theme['text'],  # hover状态使用主文本颜色确保可读性
                 'border': f'1px solid {self.theme["card_border"]}',
                 'border_hover': f'1px solid {self.theme["primary"]}',
                 'border_pressed': f'1px solid {self.theme["primary"]}'

@@ -195,7 +195,7 @@ class ModernApp(QMainWindow):
         self.create_content_area()
 
         # 默认显示浏览器实例页面
-        self.show_instances()
+        QTimer.singleShot(0, self.show_instances)
 
     def create_sidebar(self):
         """创建Chrome风格侧边栏"""
@@ -466,6 +466,12 @@ class ModernApp(QMainWindow):
 
         # 添加伸缩项，将右侧按钮推到最右边
         topbar_layout.addStretch()
+        
+        # 在外部浏览器中打开按钮（只在定时任务页面显示）
+        self.external_browser_btn = ChromeButton("在外部浏览器中打开", variant="secondary", size="small")
+        self.external_browser_btn.clicked.connect(self.open_scheduler_in_browser)
+        self.external_browser_btn.setVisible(False)  # 默认隐藏
+        topbar_layout.addWidget(self.external_browser_btn)
 
         # 添加topbar到内容容器
         self.content_container.layout().addWidget(self.topbar)
@@ -494,50 +500,76 @@ class ModernApp(QMainWindow):
 
     def show_instances(self):
         """显示实例管理页面"""
+        # 更新按钮激活状态
+        self.instances_btn.setChecked(True)
+        # 切换到实例管理页面 (索引 1)
         self.content_stack.setCurrentIndex(1)
         self.update_page_title("浏览器实例管理")
+        
+        # 隐藏顶部工具栏的外部浏览器按钮
+        if hasattr(self, 'external_browser_btn'):
+            self.external_browser_btn.setVisible(False)
 
     def show_scheduler(self):
         """显示定时任务页面"""
         # 更新按钮激活状态
         self.scheduler_btn.setChecked(True)
+        
+        # 先切换到定时任务页面 (索引 2)
+        self.content_stack.setCurrentIndex(2)
+        self.update_page_title("定时任务管理")
+        
+        # 显示顶部工具栏的外部浏览器按钮
+        if hasattr(self, 'external_browser_btn'):
+            self.external_browser_btn.setVisible(True)
+        
+        # 如果有WebEngine视图，确保加载正确的URL
+        if hasattr(self, 'scheduler_web_view') and self.scheduler_web_view is not None:
+            # 使用延迟加载，确保页面切换完成后再加载URL
+            QTimer.singleShot(100, self._load_scheduler_url)
 
         if LITE_MODE or QWebEngineView is None:
-            # 轻量版模式：使用外部浏览器打开
+            # 轻量版模式：页面已经切换，但同时在外部浏览器中打开
             import webbrowser
 
             try:
                 webbrowser.open("http://127.0.0.1:6001/")
-                QMessageBox.information(
-                    self,
-                    "定时任务管理",
-                    "已在外部浏览器中打开定时任务页面\n\n"
-                    + "URL: http://127.0.0.1:6001/\n\n"
-                    + "注意：请确保后台服务正在运行",
-                )
+                # 不显示对话框，让用户可以在内部页面和外部浏览器之间选择
             except Exception as e:
                 QMessageBox.warning(self, "打开失败", f"无法打开外部浏览器：{e}")
-            return
-
-        if hasattr(self, "scheduler_page"):
-            index = self.content_stack.indexOf(self.scheduler_page)
-            if index != -1:
-                self.content_stack.setCurrentIndex(index)
-                self.update_page_title("定时任务管理")
+    
+    def _load_scheduler_url(self):
+        """延迟加载定时任务URL"""
+        if hasattr(self, 'scheduler_web_view') and self.scheduler_web_view is not None:
+            target_url = "http://127.0.0.1:6001/"
+            current_url = self.scheduler_web_view.url().toString()
+            
+            if not current_url or current_url == "about:blank" or current_url != target_url:
+                # 如果没有URL或URL不正确，设置新URL
+                self.scheduler_web_view.setUrl(QUrl(target_url))
+            else:
+                # 如果URL正确，刷新页面
+                self.scheduler_web_view.reload()
 
     def init_scheduler_page(self):
         """初始化定时任务管理页面"""
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         if QWebEngineView is not None:
-            # 使用WebEngine视图
-            web_view = QWebEngineView()
-            web_view.setUrl(QUrl("http://127.0.0.1:6001/"))
-            layout.addWidget(web_view)
+            # 使用WebEngine视图，去掉控制栏，让WebEngine占据全部空间
+            self.scheduler_web_view = QWebEngineView()
+            # 先不设置URL，等待页面切换时再加载
+            layout.addWidget(self.scheduler_web_view)
         else:
             # WebEngine不可用时的备用方案
+            fallback_container = QWidget()
+            fallback_layout = QVBoxLayout(fallback_container)
+            fallback_layout.setContentsMargins(40, 40, 40, 40)
+            fallback_layout.setSpacing(20)
+            
             fallback_label = QLabel("定时任务管理功能需要QtWebEngine支持")
             fallback_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             fallback_label.setStyleSheet(
@@ -551,14 +583,17 @@ class ModernApp(QMainWindow):
                 }
             """
             )
-            layout.addWidget(fallback_label)
+            fallback_layout.addWidget(fallback_label)
 
             # 添加打开浏览器按钮
             open_browser_btn = ChromeButton(
                 "在浏览器中打开", variant="primary", size="medium"
             )
             open_browser_btn.clicked.connect(lambda: self.open_scheduler_in_browser())
-            layout.addWidget(open_browser_btn)
+            fallback_layout.addWidget(open_browser_btn, 0, Qt.AlignmentFlag.AlignCenter)
+            
+            fallback_layout.addStretch()
+            layout.addWidget(fallback_container)
 
         self.scheduler_page = page
         self.content_stack.addWidget(self.scheduler_page)
@@ -571,6 +606,7 @@ class ModernApp(QMainWindow):
             webbrowser.open("http://127.0.0.1:6001/")
         except Exception as e:
             QMessageBox.warning(self, "错误", f"无法打开浏览器: {e}")
+
 
     def init_instance_page(self):
         """初始化实例管理页面 - Chrome风格"""
@@ -866,30 +902,7 @@ class ModernApp(QMainWindow):
             logger.error(f"初始化失败: {e}")
             self.log_signal.log_updated.emit(f"初始化失败: {e}")
 
-    # 页面切换函数
-    def show_dashboard(self):
-        self.dashboard_btn.setChecked(True)
-        self.content_stack.setCurrentIndex(0)
-        self.update_page_title("仪表盘")
 
-        # 直接使用事件循环创建任务
-        loop = asyncio.get_event_loop()
-        loop.create_task(self.update_dashboard_stats())
-
-    def show_instances(self):
-        self.instances_btn.setChecked(True)
-        self.content_stack.setCurrentIndex(1)
-        self.update_page_title("浏览器控制中心")
-
-    def show_data_management(self):
-        self.data_btn.setChecked(True)
-        self.content_stack.setCurrentIndex(2)
-        self.update_page_title("数据管理")
-
-    def show_settings(self):
-        self.settings_btn.setChecked(True)
-        self.content_stack.setCurrentIndex(3)
-        self.update_page_title("系统设置")
 
     async def update_dashboard_stats(self):
         """更新仪表盘统计数据"""

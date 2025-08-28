@@ -7,8 +7,8 @@ import subprocess
 import sys
 import threading
 import traceback
-import fcntl
 import tempfile
+from filelock import FileLock, Timeout
 from utils.common_logger import get_logger
 
 logger = get_logger(__name__)
@@ -49,8 +49,8 @@ from service.browser_service import browser_service
 from worker.scheduler_client import scheduler_client
 
 
-# 全局变量：应用程序锁文件句柄
-_app_lock_file = None
+# 全局变量：应用程序文件锁对象
+_app_lock = None
 
 
 def check_single_instance():
@@ -59,52 +59,47 @@ def check_single_instance():
     Returns:
         bool: True表示可以启动（没有其他实例），False表示已有实例在运行
     """
-    global _app_lock_file
+    global _app_lock
 
     try:
         # 创建锁文件路径
         lock_file_path = os.path.join(tempfile.gettempdir(), "qw_browser_app.lock")
 
-        # 打开锁文件
-        _app_lock_file = open(lock_file_path, "w")
+        # 创建FileLock对象
+        _app_lock = FileLock(lock_file_path)
 
         # 尝试获取文件锁（非阻塞）
-        fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _app_lock.acquire(timeout=0)
 
-        # 写入当前进程ID
-        _app_lock_file.write(str(os.getpid()))
-        _app_lock_file.flush()
+        # 写入当前进程ID到锁文件
+        with open(lock_file_path, "w") as f:
+            f.write(str(os.getpid()))
+            f.flush()
 
         logger.info(f"应用程序启动成功，进程ID: {os.getpid()}")
         return True
 
-    except (IOError, OSError) as e:
-        if _app_lock_file:
-            _app_lock_file.close()
-            _app_lock_file = None
-
-        # 检查是否是因为文件已被锁定
-        if e.errno == 35 or "Resource temporarily unavailable" in str(e):
-            logger.warning("检测到应用程序已在运行，无法启动新实例")
-            return False
-        else:
-            logger.error(f"检查单例时发生错误: {e}")
-            return False
+    except Timeout:
+        # 文件锁获取超时，说明已有实例在运行
+        logger.warning("检测到应用程序已在运行，无法启动新实例")
+        return False
+    except Exception as e:
+        logger.error(f"检查单例时发生错误: {e}")
+        return False
 
 
 def release_single_instance():
     """释放应用程序实例锁"""
-    global _app_lock_file
+    global _app_lock
 
-    if _app_lock_file:
+    if _app_lock:
         try:
-            fcntl.flock(_app_lock_file.fileno(), fcntl.LOCK_UN)
-            _app_lock_file.close()
+            _app_lock.release()
             logger.info("应用程序锁已释放")
         except Exception as e:
             logger.error(f"释放应用程序锁时发生错误: {e}")
         finally:
-            _app_lock_file = None
+            _app_lock = None
 
 
 def is_admin():
