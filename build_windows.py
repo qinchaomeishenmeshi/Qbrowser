@@ -25,28 +25,45 @@ def check_environment():
     
     # 检查必要依赖
     required_packages = [
-        'PyQt6',
-        'PyQt6-Qt6', 
-        'qasync',
-        'loguru',
-        'fastapi',
-        'uvicorn',
-        'DrissionPage',
-        'PyInstaller'
+        ('PyQt6', 'PyQt6'),
+        ('qasync', 'qasync'),
+        ('loguru', 'loguru'),
+        ('fastapi', 'fastapi'),
+        ('uvicorn', 'uvicorn'),
+        ('DrissionPage', 'DrissionPage'),
+        ('PyInstaller', 'PyInstaller')
     ]
     
     missing_packages = []
-    for package in required_packages:
+    for display_name, import_name in required_packages:
         try:
-            __import__(package.replace('-', '_').lower())
-            print(f"✅ {package} - 已安装")
+            __import__(import_name.replace('-', '_').lower())
+            print(f"✅ {display_name} - 已安装")
         except ImportError:
-            missing_packages.append(package)
-            print(f"❌ {package} - 未安装")
+            missing_packages.append(display_name)
+            print(f"❌ {display_name} - 未安装")
+    
+    # 特别检查PyQt6-Qt6（通过检查PyQt6.QtCore是否包含Qt库）
+    try:
+        from PyQt6 import QtCore
+        print(f"✅ PyQt6-Qt6 - 已安装 (Qt版本: {QtCore.qVersion()})")
+    except ImportError:
+        missing_packages.append('PyQt6-Qt6')
+        print(f"❌ PyQt6-Qt6 - 未安装")
     
     if missing_packages:
         print(f"\n缺少以下依赖包: {missing_packages}")
-        print("请运行: pip install " + " ".join(missing_packages))
+        
+        # 提供精确的安装命令
+        install_packages = []
+        for pkg in missing_packages:
+            if pkg == 'PyQt6-Qt6':  # 这个会随 PyQt6 自动安装
+                continue
+            install_packages.append(pkg)
+        
+        if install_packages:
+            print("\n请运行以下命令安装缺少的依赖:")
+            print(f"pip install {' '.join(install_packages)}")
         return False
     
     return True
