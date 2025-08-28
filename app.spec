@@ -20,11 +20,63 @@ datas = [
     ('templates', 'templates'),
     ('data', 'data'),
     ('logs', 'logs'),
+    # 新增：工具模块和文档
+    ('utils', 'utils'),  # 包含所有工具模块
+    ('docs', 'docs'),    # 文档目录
+    ('tests', 'tests'),  # 测试目录
+    # 新增：批处理文件
+    ('start_windows_skip_singleton.bat', '.'),
+    # 新增：测试脚本
+    ('test_singleton_manager.py', '.'),
 ]
 
 # 添加 PyQt6 相关模块
 hiddenimports = [
-    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'DrissionPage'
+    'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 
+    'PyQt6.QtNetwork',  # 新增：QLocalServer/QLocalSocket 需要
+    'DrissionPage',
+    'qasync',  # 异步事件循环
+    'asyncio',  # 异步支持
+    'loguru',  # 日志系统
+    'filelock',  # 保持兼容性
+    # 工具模块
+    'utils.singleton_manager',  # 新增：单例管理器
+    'utils.common_logger', 
+    'utils.qt_compatibility',
+    'utils.api_client',
+    'utils.async_file_manager',
+    'utils.common_response',
+    'utils.cookies',
+    'utils.cookies_manager',
+    'utils.get_ab',
+    'utils.head_requester',
+    'utils.port_manager',
+    'utils.smart_cache_strategy',
+    'utils.tab_pool_manager',
+    'utils.util',
+    # API模块
+    'api.api_business',
+    'api.api_server', 
+    'api.chrome_config_api',
+    'api.scheduler_api',
+    # 浏览器模块
+    'browser.browser_manager',
+    'browser.browser_operator', 
+    'browser.browser_store',
+    # 服务模块
+    'service.browser_service',
+    # 工作线程模块
+    'worker.core_data',
+    'worker.coupon_client',
+    'worker.eos_client', 
+    'worker.living_client',
+    'worker.scheduler_client',
+    # UI模块
+    'ui.modern_app',
+    'ui.config',
+    'ui.components',
+    'ui.pages',
+    'ui.styles',
 ]
 
 # 打包选项
@@ -37,7 +89,19 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        # 排除不必要的模块以减小打包大小
+        'tkinter',
+        'matplotlib', 
+        'scipy',
+        'numpy',
+        'pandas',
+        'jupyter',
+        'IPython',
+        'notebook',
+        'pytest',
+        'unittest',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=None,
