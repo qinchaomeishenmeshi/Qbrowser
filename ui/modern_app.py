@@ -943,43 +943,95 @@ class ModernApp(QMainWindow):
     @asyncSlot()
     async def start_browsers(self):
         try:
-            # 禁用UI，防止多次点击
+            # 在Windows上检查权限
+            if sys.platform == "win32" and not is_admin():
+                from PyQt6.QtWidgets import QMessageBox
+                result = QMessageBox.warning(
+                    self,
+                    "权限不足",
+                    "程序没有以管理员权限运行，浏览器可能无法正常启动。\n是否继续尝试？",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if result == QMessageBox.StandardButton.No:
+                    self.log_signal.log_updated.emit("操作已取消")
+                    return
+
+            if not self.text_edit:
+                self.log_signal.log_updated.emit("错误：文本输入框未初始化")
+                return
+                
+            # 获取用户ID列表
+            if hasattr(self.text_edit, 'toPlainText'):
+                text = self.text_edit.toPlainText()
+            else:
+                text = ""
+                
+            ids = [
+                l.strip()
+                for l in text.splitlines()
+                if l.strip()
+            ]
+            if not ids:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "错误", "请输入至少一个 user_id。")
+                return
+            if len(ids) != len(set(ids)):
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "错误", "不允许重复的 user_id。")
+                return
+
+            self.browser_service.save_cache(ids)
             if self.start_btn:
                 self.start_btn.setEnabled(False)
             if self.stop_btn:
                 self.stop_btn.setEnabled(False)
-            
-            # 这里需要实现启动浏览器的逻辑
-            # 暂时保持空实现，避免类型不匹配错误
-            self.log_signal.log_updated.emit("启动浏览器功能待实现")
-            
+            if self.progress:
+                self.progress.setMaximum(len(ids))
+                self.progress.setValue(0)
+
+            results = await self.browser_service.start_browsers(ids)
+            success_count = 0
+            for idx, result in enumerate(results, 1):
+                status = result["status"]
+                if status == "started" or status == "already_running":
+                    success_count += 1
+
+                self.log_signal.log_updated.emit(
+                    f"[{idx}/{len(results)}] {result['user_id']} {result['status']} (端口: {result.get('port', 'N/A')})"
+                )
+                if self.progress:
+                    self.progress.setValue(idx)
+                await asyncio.sleep(0.01)
+
         except Exception as e:
-            logger.error(f"启动浏览器失败: {e}")
+            self.log_signal.log_updated.emit(f"启动浏览器时发生错误: {e}")
+            logger.error(f"启动浏览器失败: {e}", exc_info=True)
         finally:
-            # 恢复UI
             if self.start_btn:
                 self.start_btn.setEnabled(True)
             if self.stop_btn:
                 self.stop_btn.setEnabled(True)
+            self.log_signal.log_updated.emit("启动浏览器操作已完成")
+            await self.scheduler_client.update_all_task_configs()
 
     # 覆盖原始应用的stop_browsers方法，添加更新仪表盘的调用
     @asyncSlot()
     async def stop_browsers(self):
         try:
-            # 禁用UI，防止多次点击
             if self.start_btn:
                 self.start_btn.setEnabled(False)
             if self.stop_btn:
                 self.stop_btn.setEnabled(False)
-            
-            # 这里需要实现停止浏览器的逻辑
-            # 暂时保持空实现，避免类型不匹配错误
-            self.log_signal.log_updated.emit("停止浏览器功能待实现")
-            
+            self.log_signal.log_updated.emit("正在关闭所有浏览器...")
+            await self.browser_service.stop_all_browsers()
+            if self.progress:
+                self.progress.setValue(0)
+            self.log_signal.log_updated.emit("所有浏览器已关闭")
         except Exception as e:
-            logger.error(f"停止浏览器失败: {e}")
+            self.log_signal.log_updated.emit(f"关闭浏览器时发生错误: {e}")
+            logger.error(f"关闭浏览器失败: {e}", exc_info=True)
         finally:
-            # 恢复UI
             if self.start_btn:
                 self.start_btn.setEnabled(True)
             if self.stop_btn:
