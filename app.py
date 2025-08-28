@@ -27,7 +27,7 @@ except ImportError as e:
     LITE_MODE = True
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal, Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QCloseEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -55,37 +55,92 @@ _app_lock = None
 
 def check_single_instance():
     """检查是否已有应用程序实例在运行
+    
+    Windows兼容性改进：
+    - 使用多个候选目录存放锁文件
+    - 改进权限错误处理
+    - 提供自动恢复机制
 
     Returns:
         bool: True表示可以启动（没有其他实例），False表示已有实例在运行
     """
     global _app_lock
 
-    try:
-        # 创建锁文件路径
-        lock_file_path = os.path.join(tempfile.gettempdir(), "qw_browser_app.lock")
+    # 候选锁文件目录列表（按优先级排序）
+    candidate_dirs = [
+        tempfile.gettempdir(),  # 系统临时目录
+        os.path.expanduser("~"),  # 用户家目录
+        os.getcwd(),  # 当前工作目录
+        "."  # 项目根目录
+    ]
+    
+    last_error = None
+    lock_file_path = None  # 初始化变量避免未绑定错误
+    
+    for lock_dir in candidate_dirs:
+        try:
+            # 确保目录存在且可写
+            if not os.path.exists(lock_dir):
+                continue
+                
+            # 创建锁文件路径
+            lock_file_path = os.path.join(lock_dir, "qw_browser_app.lock")
+            
+            # 测试目录写权限
+            test_file = os.path.join(lock_dir, "test_write_permission.tmp")
+            try:
+                with open(test_file, "w") as f:
+                    f.write("test")
+                os.remove(test_file)
+            except (OSError, IOError, PermissionError):
+                logger.debug(f"目录 {lock_dir} 没有写权限，尝试下一个")
+                continue
 
-        # 创建FileLock对象
-        _app_lock = FileLock(lock_file_path)
+            # 创建FileLock对象
+            _app_lock = FileLock(lock_file_path)
 
-        # 尝试获取文件锁（非阻塞）
-        _app_lock.acquire(timeout=0)
+            # 尝试获取文件锁（非阻塞）
+            _app_lock.acquire(timeout=0)
 
-        # 写入当前进程ID到锁文件
-        with open(lock_file_path, "w") as f:
-            f.write(str(os.getpid()))
-            f.flush()
+            # 写入当前进程ID到锁文件
+            try:
+                with open(lock_file_path, "w") as f:
+                    f.write(str(os.getpid()))
+                    f.flush()
+            except (OSError, IOError, PermissionError) as write_error:
+                # 如果写入失败，释放锁并继续尝试下一个目录
+                logger.debug(f"写入锁文件失败: {write_error}")
+                _app_lock.release()
+                _app_lock = None
+                continue
 
-        logger.info(f"应用程序启动成功，进程ID: {os.getpid()}")
-        return True
+            logger.info(f"应用程序启动成功，进程ID: {os.getpid()}，锁文件: {lock_file_path}")
+            return True
 
-    except Timeout:
-        # 文件锁获取超时，说明已有实例在运行
-        logger.warning("检测到应用程序已在运行，无法启动新实例")
-        return False
-    except Exception as e:
-        logger.error(f"检查单例时发生错误: {e}")
-        return False
+        except Timeout:
+            # 文件锁获取超时，说明已有实例在运行
+            if 'lock_file_path' in locals():
+                logger.warning(f"检测到应用程序已在运行（锁文件: {lock_file_path}）")
+            else:
+                logger.warning("检测到应用程序已在运行")
+            return False
+        except Exception as e:
+            last_error = e
+            logger.debug(f"在目录 {lock_dir} 创建锁文件失败: {e}")
+            continue
+    
+    # 所有目录都失败
+    error_msg = f"无法在任何目录创建锁文件，最后错误: {last_error}"
+    logger.error(error_msg)
+    
+    # Windows系统提供额外的解决建议
+    if sys.platform == "win32":
+        logger.info("Windows系统解决建议:")
+        logger.info("1. 以管理员身份运行程序")
+        logger.info("2. 检查杀毒软件是否阻止文件操作")
+        logger.info("3. 手动清理可能的残留锁文件")
+    
+    return False
 
 
 def release_single_instance():
@@ -100,6 +155,59 @@ def release_single_instance():
             logger.error(f"释放应用程序锁时发生错误: {e}")
         finally:
             _app_lock = None
+
+
+def cleanup_lock_files():
+    """清理可能残留的锁文件
+    
+    Windows系统专用：用于清理因权限问题或异常退出导致的残留锁文件
+    """
+    candidate_dirs = [
+        tempfile.gettempdir(),
+        os.path.expanduser("~"),
+        os.getcwd(),
+        "."
+    ]
+    
+    cleaned_files = []
+    
+    for lock_dir in candidate_dirs:
+        if not os.path.exists(lock_dir):
+            continue
+            
+        lock_file_path = os.path.join(lock_dir, "qw_browser_app.lock")
+        
+        if os.path.exists(lock_file_path):
+            try:
+                # 尝试读取文件内容检查进程是否还在运行
+                with open(lock_file_path, "r") as f:
+                    pid_str = f.read().strip()
+                
+                if pid_str.isdigit():
+                    pid = int(pid_str)
+                    # 检查进程是否还在运行
+                    try:
+                        os.kill(pid, 0)  # 发送信号0不会杀死进程，只是检查是否存在
+                        logger.info(f"进程 {pid} 仍在运行，不清理锁文件: {lock_file_path}")
+                        continue
+                    except (OSError, ProcessLookupError):
+                        # 进程不存在，可以安全清理
+                        pass
+                
+                # 尝试删除锁文件
+                os.remove(lock_file_path)
+                cleaned_files.append(lock_file_path)
+                logger.info(f"已清理残留锁文件: {lock_file_path}")
+                
+            except Exception as e:
+                logger.debug(f"清理锁文件 {lock_file_path} 时出错: {e}")
+    
+    if cleaned_files:
+        logger.info(f"总共清理了 {len(cleaned_files)} 个残留锁文件")
+    else:
+        logger.info("没有发现需要清理的残留锁文件")
+    
+    return cleaned_files
 
 
 def is_admin():
@@ -119,13 +227,16 @@ class LogSignal(QObject):
 class App(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.log_area = None
-        self.progress = None
-        self.clear_btn = None
-        self.load_btn = None
-        self.stop_btn = None
-        self.start_btn = None
-        self.text_edit = None
+        # 初始化UI组件属性为None，在init_ui中创建实际对象
+        self.log_area: QTextEdit | None = None
+        self.progress: QProgressBar | None = None
+        self.clear_btn: QPushButton | None = None
+        self.load_btn: QPushButton | None = None
+        self.stop_btn: QPushButton | None = None
+        self.start_btn: QPushButton | None = None
+        self.text_edit: QTextEdit | None = None
+        
+        # 其他属性
         self.browser_managers = []
         self.log_signal = LogSignal()
         self.log_signal.log_updated.connect(self.update_log)
@@ -410,10 +521,11 @@ class App(QMainWindow):
         self.clear_btn.clicked.connect(self.clear_cache)
 
     def update_log(self, msg: str):
-        self.log_area.append(msg)
-        self.log_area.verticalScrollBar().setValue(
-            self.log_area.verticalScrollBar().maximum()
-        )
+        if self.log_area:
+            self.log_area.append(msg)
+            scroll_bar = self.log_area.verticalScrollBar()
+            if scroll_bar:
+                scroll_bar.setValue(scroll_bar.maximum())
 
     def load_user_ids_on_startup(self):
         """应用启动时自动加载用户ID配置文件"""
@@ -434,7 +546,7 @@ class App(QMainWindow):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read().strip()
                     if content and self.text_edit:  # 确保text_edit已初始化且有数据
-                        self.text_edit.set_text(content)
+                        self.text_edit.setPlainText(content)
                         self.save_cache()  # 同步到缓存
                         ids = [
                             line.strip() for line in content.split("\n") if line.strip()
@@ -460,7 +572,8 @@ class App(QMainWindow):
         if path:
             try:
                 with open(path, encoding="utf-8") as f:
-                    self.text_edit.set_text(f.read())
+                    if self.text_edit:
+                        self.text_edit.setPlainText(f.read())
                 self.save_cache()
                 self.log_signal.log_updated.emit(f"加载文件 {path} 成功")
             except Exception as e:
@@ -482,6 +595,10 @@ class App(QMainWindow):
                     self.log_signal.log_updated.emit("操作已取消")
                     return
 
+            if not self.text_edit:
+                self.log_signal.log_updated.emit("错误：文本输入框未初始化")
+                return
+                
             ids = [
                 l.strip()
                 for l in self.text_edit.toPlainText().splitlines()
@@ -495,10 +612,13 @@ class App(QMainWindow):
                 return
 
             self.browser_service.save_cache(ids)
-            self.start_btn.setEnabled(False)
-            self.stop_btn.setEnabled(False)
-            self.progress.setMaximum(len(ids))
-            self.progress.setValue(0)
+            if self.start_btn:
+                self.start_btn.setEnabled(False)
+            if self.stop_btn:
+                self.stop_btn.setEnabled(False)
+            if self.progress:
+                self.progress.setMaximum(len(ids))
+                self.progress.setValue(0)
 
             results = await self.browser_service.start_browsers(ids)
             success_count = 0
@@ -510,33 +630,41 @@ class App(QMainWindow):
                 self.log_signal.log_updated.emit(
                     f"[{idx}/{len(results)}] {result['user_id']} {result['status']} (端口: {result.get('port', 'N/A')})"
                 )
-                self.progress.setValue(idx)
+                if self.progress:
+                    self.progress.setValue(idx)
                 await asyncio.sleep(0.01)
 
         except Exception as e:
             self.log_signal.log_updated.emit(f"启动浏览器时发生错误: {e}")
             logger.error(f"启动浏览器失败: {e}", exc_info=True)
         finally:
-            self.start_btn.setEnabled(True)
-            self.stop_btn.setEnabled(True)
+            if self.start_btn:
+                self.start_btn.setEnabled(True)
+            if self.stop_btn:
+                self.stop_btn.setEnabled(True)
             self.log_signal.log_updated.emit("启动浏览器操作已完成")
             await self.scheduler_client.update_all_task_configs()
 
     @asyncSlot()
     async def stop_browsers(self):
         try:
-            self.start_btn.setEnabled(False)
-            self.stop_btn.setEnabled(False)
+            if self.start_btn:
+                self.start_btn.setEnabled(False)
+            if self.stop_btn:
+                self.stop_btn.setEnabled(False)
             self.log_signal.log_updated.emit("正在关闭所有浏览器...")
             await self.browser_service.stop_all_browsers()
-            self.progress.setValue(0)
+            if self.progress:
+                self.progress.setValue(0)
             self.log_signal.log_updated.emit("所有浏览器已关闭")
         except Exception as e:
             self.log_signal.log_updated.emit(f"关闭浏览器时发生错误: {e}")
             logger.error(f"关闭浏览器失败: {e}", exc_info=True)
         finally:
-            self.start_btn.setEnabled(True)
-            self.stop_btn.setEnabled(True)
+            if self.start_btn:
+                self.start_btn.setEnabled(True)
+            if self.stop_btn:
+                self.stop_btn.setEnabled(True)
 
     def _start_frpc(self):
         """
@@ -591,16 +719,18 @@ class App(QMainWindow):
 
     def save_cache(self):
         try:
-            ids = [l for l in self.text_edit.toPlainText().splitlines() if l.strip()]
-            self.browser_service.save_cache(ids)
-            logger.info(f"保存用户缓存成功: {ids}")
+            if self.text_edit:
+                ids = [l for l in self.text_edit.toPlainText().splitlines() if l.strip()]
+                self.browser_service.save_cache(ids)
+                logger.info(f"保存用户缓存成功: {ids}")
         except Exception as e:
             logger.error(f"保存用户缓存失败: {e}")
 
     def load_cache(self):
         try:
             ids = self.browser_service.load_cache()
-            self.text_edit.set_text("\n".join(ids))
+            if self.text_edit:
+                self.text_edit.setPlainText("\n".join(ids))
             logger.info(f"加载用户缓存成功: {ids}")
         except Exception as e:
             logger.error(f"加载用户缓存失败: {e}")
@@ -611,7 +741,8 @@ class App(QMainWindow):
         try:
             self.browser_service.clear_cache()
             await self.browser_operator.clear_all_data()
-            self.text_edit.clear()
+            if self.text_edit:
+                self.text_edit.clear()
             self.log_signal.log_updated.emit("缓存已清除")
             logger.info("缓存清除成功")
         except Exception as e:
@@ -639,6 +770,10 @@ class App(QMainWindow):
         try:
             from conf import writable_path
 
+            if not self.text_edit:
+                self.log_signal.log_updated.emit("错误：文本输入框未初始化")
+                return
+
             # 获取当前文本编辑器中的用户ID
             current_text = self.text_edit.toPlainText().strip()
             if not current_text:
@@ -665,8 +800,11 @@ class App(QMainWindow):
             self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
             logger.error(f"保存user_ids.txt失败: {e}")
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0: QCloseEvent | None):
         """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""
+        if not a0:
+            return
+            
         # 保存当前用户ID到配置文件
         try:
             self.save_user_ids_to_file()
@@ -705,7 +843,7 @@ class App(QMainWindow):
             except Exception as e:
                 self.log_signal.log_updated.emit(f"关闭设置服务器失败: {e}")
 
-        event.accept()
+        a0.accept()
 
     async def _stop_scheduler(self):
         """异步停止定时任务调度器"""
@@ -781,10 +919,28 @@ def main():
     - 安装未捕获异常处理器，保证错误能被记录到控制台
     - 绑定 SIGINT/SIGTERM 与 atexit 钩子，确保优雅关闭事件循环
     """
+    # Windows系统先尝试清理可能的残留锁文件
+    if sys.platform == "win32":
+        try:
+            cleanup_lock_files()
+        except Exception as e:
+            logger.debug(f"清理锁文件时出错: {e}")
+    
     # 检查是否已有实例在运行
     if not check_single_instance():
-        print("[ERROR] 应用程序已在运行，请勿重复启动！")
-        print("[INFO] 如需重新启动，请先关闭现有实例")
+        print("[ERROR] 应用程序无法启动！")
+        print("[INFO] 可能原因:")
+        print("  1. 已有实例在运行")
+        print("  2. 没有文件写入权限")
+        print("  3. 杀毒软件阻止文件操作")
+        print("[INFO] 解决方案:")
+        if sys.platform == "win32":
+            print("  1. 以管理员身份运行程序")
+            print("  2. 关闭杀毒软件实时防护")
+            print("  3. 手动清理锁文件: del %TEMP%\\qw_browser_app.lock")
+        else:
+            print("  1. 检查是否有其他实例运行")
+            print("  2. 手动清理锁文件: rm /tmp/qw_browser_app.lock")
         sys.exit(1)
 
     # Windows 管理员权限提示

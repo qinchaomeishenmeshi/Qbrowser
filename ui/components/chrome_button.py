@@ -206,20 +206,20 @@ class ChromeButton(QPushButton):
         self._is_hovered = True
         super().enterEvent(event)
     
-    def leaveEvent(self, event):
+    def leaveEvent(self, a0):
         """鼠标离开事件"""
         self._is_hovered = False
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
     
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, e):
         """鼠标按下事件"""
         self._is_pressed = True
-        super().mousePressEvent(event)
+        super().mousePressEvent(e)
     
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, e):
         """鼠标释放事件"""
         self._is_pressed = False
-        super().mouseReleaseEvent(event)
+        super().mouseReleaseEvent(e)
 
     def set_variant(self, variant):
         """动态设置按钮变体"""
