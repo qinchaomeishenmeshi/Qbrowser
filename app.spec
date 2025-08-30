@@ -6,29 +6,55 @@ from pathlib import Path
 # 脚本路径
 script_path = 'app.py'  # 主脚本文件 app.py
 
+# 条件包含文件的函数
+def add_data_if_exists(file_path, dest_path='.'):
+    """如果文件存在则添加到数据列表中"""
+    if Path(file_path).exists():
+        return [(file_path, dest_path)]
+    else:
+        print(f"Warning: {file_path} not found, skipping...")
+        return []
+
+def add_dir_if_exists(dir_path, dest_path=None):
+    """如果目录存在则添加到数据列表中"""
+    if dest_path is None:
+        dest_path = dir_path
+    if Path(dir_path).exists() and any(Path(dir_path).iterdir()):
+        return [(dir_path, dest_path)]
+    else:
+        print(f"Warning: {dir_path} not found or empty, skipping...")
+        return []
+
 # 插件路径（源路径 -> 打包后路径）
-datas = [
-    ('extensions/live_room', 'extensions/live_room'),
-    ('extensions/block_videos', 'extensions/block_videos'),
-    ('frp_client/frpc.exe', 'frp_client'),
-    ('frp_client/frpc.toml', 'frp_client'),
-    ('conf', 'conf'),
-    ('user_ids_cache.json', '.'),
-    ('user_ports_cache.json', '.'),
-    ('user_ids.txt', '.'),  # 添加用户ID配置文件
-    ('static', 'static'),
-    ('templates', 'templates'),
-    ('data', 'data'),
-    ('logs', 'logs'),
-    # 新增：工具模块和文档
-    ('utils', 'utils'),  # 包含所有工具模块
-    ('docs', 'docs'),    # 文档目录
-    ('tests', 'tests'),  # 测试目录
-    # 新增：批处理文件
-    ('start_windows_skip_singleton.bat', '.'),
-    # 新增：测试脚本
-    ('test_singleton_manager.py', '.'),
-]
+datas = []
+
+# 必需的扩展目录
+datas.extend(add_dir_if_exists('extensions/live_room', 'extensions/live_room'))
+datas.extend(add_dir_if_exists('extensions/block_videos', 'extensions/block_videos'))
+
+# frp客户端文件
+datas.extend(add_data_if_exists('frp_client/frpc.exe', 'frp_client'))
+datas.extend(add_data_if_exists('frp_client/frpc.toml', 'frp_client'))
+
+# 配置和模板目录
+datas.extend(add_dir_if_exists('conf', 'conf'))
+datas.extend(add_dir_if_exists('templates', 'templates'))
+
+# 工具模块和文档
+datas.extend(add_dir_if_exists('utils', 'utils'))
+datas.extend(add_dir_if_exists('docs', 'docs'))
+
+# 可选的文件和目录
+datas.extend(add_dir_if_exists('static', 'static'))
+datas.extend(add_dir_if_exists('data', 'data'))
+datas.extend(add_dir_if_exists('logs', 'logs'))
+
+# 配置文件
+datas.extend(add_data_if_exists('start_windows_skip_singleton.bat', '.'))
+datas.extend(add_data_if_exists('logo.ico', '.'))
+datas.extend(add_data_if_exists('app.manifest', '.'))
+
+print(f"Included {len(datas)} data files/directories for packaging")
 
 # 添加 PyQt6 相关模块
 hiddenimports = [
@@ -108,7 +134,7 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # 或者使用 AES 加密：cipher=AES
+pyz = PYZ(a.pure, a.zipped_data, cipher=AES)  # 或者使用 AES 加密：cipher=AES
 
 # 设置为不显示控制台窗口
 exe = EXE(
