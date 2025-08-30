@@ -824,9 +824,10 @@ class ModernApp(QMainWindow):
         self.content_stack.addWidget(self.data_page)
 
     def init_settings_page(self):
-        """初始化设置页面"""
+        """初始化设置页面 - 简化版本，因为直接在外部浏览器打开"""
         theme = THEMES[CURRENT_THEME]
         
+        # 创建一个空白页面，因为设置功能直接在外部浏览器打开
         page = QWidget()
         page.setStyleSheet(f"""
             background-color: {theme['background']};
@@ -834,109 +835,22 @@ class ModernApp(QMainWindow):
         """)
         
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(20)
+        layout.setContentsMargins(50, 50, 50, 50)
         
-        # 标题区域
-        title_layout = QHBoxLayout()
-        title_label = QLabel("系统设置")
-        title_label.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Bold))
-        title_label.setStyleSheet(f"color: {theme['text']}; margin-bottom: 10px;")
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
-        layout.addLayout(title_layout)
+        # 显示提示信息
+        info_label = QLabel("设置页面已在外部浏览器打开")
+        info_label.setFont(QFont(FONTS["heading"][0], FONTS["heading"][1], QFont.Weight.Normal))
+        info_label.setStyleSheet(f"color: {theme['text_secondary']}; text-align: center;")
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # 配置选项卡片
-        config_card = QWidget()
-        config_card.setStyleSheet(f"""
-            background-color: {theme['card']};
-            border-radius: {LAYOUT['border_radius']}px;
-            border: 1px solid {theme['card_border']};
-            padding: 20px;
-        """)
-        
-        # 添加卡片阴影
-        config_shadow = QGraphicsDropShadowEffect(config_card)
-        config_shadow.setBlurRadius(15)
-        config_shadow.setColor(QColor(0, 0, 0, 20))
-        config_shadow.setOffset(0, 2)
-        config_card.setGraphicsEffect(config_shadow)
-        
-        config_layout = QVBoxLayout(config_card)
-        config_layout.setSpacing(15)
-        
-        # Chrome浏览器配置区域
-        chrome_section = QLabel("Chrome浏览器配置")
-        chrome_section.setFont(QFont(FONTS["title"][0], FONTS["title"][1], QFont.Weight.Medium))
-        chrome_section.setStyleSheet(f"color: {theme['text']}; margin-bottom: 10px;")
-        config_layout.addWidget(chrome_section)
-        
-        # 按钮区域
-        button_layout = QHBoxLayout()
-        
-        # 在当前页面打开按钮（如果支持WebEngine）
-        if QWebEngineView is not None:
-            self.open_config_internal_btn = ChromeButton(
-                "内置配置页面", 
-                variant="primary", 
-                size="medium"
-            )
-            self.open_config_internal_btn.clicked.connect(self.toggle_internal_config)
-            button_layout.addWidget(self.open_config_internal_btn)
-        
-        # 在外部浏览器打开按钮
-        self.open_config_external_btn = ChromeButton(
-            "在外部浏览器打开", 
-            variant="outlined", 
-            size="medium"
-        )
-        self.open_config_external_btn.clicked.connect(self.open_chrome_config_in_browser)
-        button_layout.addWidget(self.open_config_external_btn)
-        
-        button_layout.addStretch()
-        config_layout.addLayout(button_layout)
-        
-        # WebEngine配置视图（可切换显示）
-        if QWebEngineView is not None:
-            self.config_web_view = QWebEngineView()
-            self.config_web_view.setVisible(False)  # 默认隐藏
-            config_layout.addWidget(self.config_web_view)
-        
-        layout.addWidget(config_card)
-        
-        # 其他设置选项可以在这里添加
-        # ...
-        
+        layout.addStretch()
+        layout.addWidget(info_label)
         layout.addStretch()
         
         self.settings_page = page
         self.content_stack.addWidget(self.settings_page)
         
-    def toggle_internal_config(self):
-        """切换内置配置页面的显示/隐藏"""
-        if hasattr(self, 'config_web_view'):
-            if self.config_web_view.isVisible():
-                # 隐藏 WebEngine 视图
-                self.config_web_view.setVisible(False)
-                self.open_config_internal_btn.setText("内置配置页面")
-                self.log_signal.log_updated.emit("已隐藏内置配置页面")
-            else:
-                # 显示 WebEngine 视图并加载配置页面
-                try:
-                    # 检查设置服务器是否已经运行
-                    if (
-                        self.settings_server_process is None
-                        or self.settings_server_process.poll() is not None
-                    ):
-                        self._start_settings_server()
-                    
-                    self.config_web_view.setUrl(QUrl("http://127.0.0.1:7010/chrome/config"))
-                    self.config_web_view.setVisible(True)
-                    self.open_config_internal_btn.setText("隐藏配置页面")
-                    self.log_signal.log_updated.emit("已加载内置配置页面")
-                except Exception as e:
-                    self.log_signal.log_updated.emit(f"加载内置配置页面失败: {e}")
-                    logger.error(f"加载内置配置页面失败: {e}")
+
 
     def update_log(self, msg: str):
         # 确保 self.log_area 存在
@@ -1349,18 +1263,15 @@ class ModernApp(QMainWindow):
             logger.error(f"停止定时任务调度器失败: {e}")
 
     def show_settings(self):
-        """显示设置页面"""
+        """显示设置页面 - 直接在外部浏览器打开"""
         # 更新按钮激活状态
         self.settings_btn.setChecked(True)
-        # 切换到设置页面 (索引 4)
-        self.content_stack.setCurrentIndex(4)
-        self.update_page_title("系统设置")
         
-        # 隐藏顶部工具栏的外部浏览器按钮
-        if hasattr(self, 'external_browser_btn'):
-            self.external_browser_btn.setVisible(False)
-            
-        self.log_signal.log_updated.emit("已切换到设置页面")
+        # 直接在外部浏览器打开Chrome配置页面
+        self.open_chrome_config_in_browser()
+        
+        # 重置按钮状态，因为没有实际切换到设置页面
+        self.settings_btn.setChecked(False)
     
     def open_chrome_config_in_browser(self):
         """在外部浏览器中打开Chrome配置页面"""
