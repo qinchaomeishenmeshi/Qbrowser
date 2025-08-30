@@ -1198,17 +1198,23 @@ class ModernApp(QMainWindow):
             self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
             logger.error(f"保存user_ids.txt失败: {e}")
     
-    def save_user_ids_auto(self):
-        """自动保存用户ID（用于实时保存功能）"""
+    def save_user_ids_auto(self, current_text=None):
+        """自动保存用户ID（用于实时保存功能）
+        
+        Args:
+            current_text (str, optional): 当前文本内容，如果为None则从text_edit获取
+        """
         try:
-            if not self.text_edit:
-                return
-                
-            # 获取当前文本编辑器中的用户ID
-            if hasattr(self.text_edit, 'toPlainText'):
-                current_text = self.text_edit.toPlainText().strip()
+            # 如果没有传入文本内容，从text_edit获取
+            if current_text is None:
+                if not self.text_edit:
+                    return
+                if hasattr(self.text_edit, 'toPlainText'):
+                    current_text = self.text_edit.toPlainText().strip()
+                else:
+                    current_text = ""
             else:
-                current_text = ""
+                current_text = current_text.strip()
             
             if not current_text:
                 # 如果文本为空，保存空列表
