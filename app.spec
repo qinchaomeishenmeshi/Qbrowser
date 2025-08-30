@@ -134,7 +134,7 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=AES)  # 或者使用 AES 加密：cipher=AES
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # 或者使用 AES 加密：cipher=AES
 
 # 设置为不显示控制台窗口
 exe = EXE(
