@@ -18,10 +18,10 @@ def check_environment():
     print(f"Python 版本: {python_version.major}.{python_version.minor}.{python_version.micro}")
     
     if python_version < (3, 8):
-        print("❌ Python 版本过低，需要 3.8 或更高版本")
+        print("[错误] Python 版本过低，需要 3.8 或更高版本")
         return False
     else:
-        print("✅ Python 版本符合要求")
+        print("[成功] Python 版本符合要求")
     
     # 检查必要依赖
     required_packages = [
@@ -46,18 +46,18 @@ def check_environment():
                 import PyQt6
             else:
                 __import__(import_name.replace('-', '_').lower())
-            print(f"✅ {display_name} - 已安装")
+            print(f"[成功] {display_name} - 已安装")
         except ImportError:
             missing_packages.append(display_name)
-            print(f"❌ {display_name} - 未安装")
+            print(f"[错误] {display_name} - 未安装")
     
     # 特别检查PyQt6-Qt6（通过检查PyQt6.QtCore是否包含Qt库）
     try:
         from PyQt6 import QtCore
-        print(f"✅ PyQt6-Qt6 - 已安装 (Qt版本: {QtCore.qVersion()})")
+        print(f"[成功] PyQt6-Qt6 - 已安装 (Qt版本: {QtCore.qVersion()})")
     except ImportError:
         missing_packages.append('PyQt6-Qt6')
-        print(f"❌ PyQt6-Qt6 - 未安装")
+        print(f"[错误] PyQt6-Qt6 - 未安装")
     
     if missing_packages:
         print(f"\n缺少以下依赖包: {missing_packages}")
@@ -90,17 +90,17 @@ def check_pyqt6_modules():
     for module in pyqt6_modules:
         try:
             __import__(module)
-            print(f"✅ {module} - 可用")
+            print(f"[成功] {module} - 可用")
         except ImportError as e:
-            print(f"❌ {module} - 不可用: {e}")
+            print(f"[错误] {module} - 不可用: {e}")
             return False
     
     # 特别检查 QLocalServer
     try:
         from PyQt6.QtNetwork import QLocalServer, QLocalSocket
-        print("✅ QLocalServer/QLocalSocket - 可用")
+        print("[成功] QLocalServer/QLocalSocket - 可用")
     except ImportError as e:
-        print(f"❌ QLocalServer/QLocalSocket 导入失败: {e}")
+        print(f"[错误] QLocalServer/QLocalSocket 导入失败: {e}")
         return False
     
     return True
@@ -121,10 +121,10 @@ def check_project_files():
     missing_files = []
     for file_path in required_files:
         if os.path.exists(file_path):
-            print(f"✅ {file_path} - 存在")
+            print(f"[成功] {file_path} - 存在")
         else:
             missing_files.append(file_path)
-            print(f"❌ {file_path} - 缺失")
+            print(f"[错误] {file_path} - 缺失")
     
     if missing_files:
         print(f"\n缺少以下关键文件: {missing_files}")
@@ -134,9 +134,9 @@ def check_project_files():
     extension_dirs = ['extensions/live_room', 'extensions/block_videos']
     for ext_dir in extension_dirs:
         if os.path.exists(ext_dir):
-            print(f"✅ {ext_dir} - 存在")
+            print(f"[成功] {ext_dir} - 存在")
         else:
-            print(f"⚠️  {ext_dir} - 不存在（可选）")
+            print(f"[警告] {ext_dir} - 不存在（可选）")
     
     return True
 
@@ -150,11 +150,11 @@ def clean_build_dirs():
         if os.path.exists(dir_name):
             try:
                 shutil.rmtree(dir_name)
-                print(f"✅ 已清理 {dir_name}")
+                print(f"[成功] 已清理 {dir_name}")
             except Exception as e:
-                print(f"❌ 清理 {dir_name} 失败: {e}")
+                print(f"[错误] 清理 {dir_name} 失败: {e}")
         else:
-            print(f"ℹ️  {dir_name} 不存在")
+            print(f"[信息] {dir_name} 不存在")
 
 def test_imports():
     """测试关键模块导入"""
@@ -171,9 +171,9 @@ def test_imports():
         try:
             module = __import__(module_name, fromlist=[class_or_func])
             getattr(module, class_or_func)
-            print(f"✅ {module_name}.{class_or_func} - 导入成功")
+            print(f"[成功] {module_name}.{class_or_func} - 导入成功")
         except Exception as e:
-            print(f"❌ {module_name}.{class_or_func} - 导入失败: {e}")
+            print(f"[错误] {module_name}.{class_or_func} - 导入失败: {e}")
             return False
     
     return True
@@ -195,12 +195,12 @@ def build_executable():
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
         
         if result.returncode == 0:
-            print("✅ 打包成功")
+            print("[成功] 打包成功")
             print("\n打包输出:")
             print(result.stdout)
             return True
         else:
-            print("❌ 打包失败")
+            print("[错误] 打包失败")
             print("\n错误信息:")
             print(result.stderr)
             print("\n输出信息:")
@@ -208,7 +208,7 @@ def build_executable():
             return False
             
     except Exception as e:
-        print(f"❌ 打包过程中发生异常: {e}")
+        print(f"[错误] 打包过程中发生异常: {e}")
         return False
 
 def test_executable():
@@ -218,10 +218,10 @@ def test_executable():
     exe_path = Path("dist/全网直播浏览器/全网直播浏览器.exe")
     
     if not exe_path.exists():
-        print(f"❌ 可执行文件不存在: {exe_path}")
+        print(f"[错误] 可执行文件不存在: {exe_path}")
         return False
     
-    print(f"✅ 可执行文件存在: {exe_path}")
+    print(f"[成功] 可执行文件存在: {exe_path}")
     print(f"文件大小: {exe_path.stat().st_size / 1024 / 1024:.1f} MB")
     
     # 可选：尝试运行（仅做快速测试）
@@ -233,11 +233,11 @@ def test_executable():
             text=True, 
             timeout=10
         )
-        print("✅ 可执行文件可以启动")
+        print("[成功] 可执行文件可以启动")
     except subprocess.TimeoutExpired:
-        print("⚠️  启动测试超时（这通常是正常的）")
+        print("[警告] 启动测试超时（这通常是正常的）")
     except Exception as e:
-        print(f"⚠️  启动测试失败: {e}")
+        print(f"[警告] 启动测试失败: {e}")
     
     return True
 
@@ -248,27 +248,27 @@ def main():
     
     # 检查系统
     if sys.platform != "win32":
-        print("❌ 此工具仅适用于 Windows 系统")
+        print("[错误] 此工具仅适用于 Windows 系统")
         return False
     
     # 步骤1: 环境检查
     if not check_environment():
-        print("\n❌ 环境检查失败，请解决上述问题后重试")
+        print("\n[错误] 环境检查失败，请解决上述问题后重试")
         return False
     
     # 步骤2: PyQt6 模块检查
     if not check_pyqt6_modules():
-        print("\n❌ PyQt6 模块检查失败，请重新安装 PyQt6")
+        print("\n[错误] PyQt6 模块检查失败，请重新安装 PyQt6")
         return False
     
     # 步骤3: 项目文件检查
     if not check_project_files():
-        print("\n❌ 项目文件检查失败，请确保项目完整")
+        print("\n[错误] 项目文件检查失败，请确保项目完整")
         return False
     
     # 步骤4: 模块导入测试
     if not test_imports():
-        print("\n❌ 模块导入测试失败，请检查代码")
+        print("\n[错误] 模块导入测试失败，请检查代码")
         return False
     
     # 步骤5: 清理旧构建
@@ -276,16 +276,16 @@ def main():
     
     # 步骤6: 执行打包
     if not build_executable():
-        print("\n❌ 打包失败")
+        print("\n[错误] 打包失败")
         return False
     
     # 步骤7: 测试可执行文件
     if not test_executable():
-        print("\n❌ 可执行文件测试失败")
+        print("\n[错误] 可执行文件测试失败")
         return False
     
     print("\n" + "=" * 50)
-    print("🎉 打包成功完成！")
+    print("[完成] 打包成功完成！")
     print("可执行文件位置: dist/全网直播浏览器/全网直播浏览器.exe")
     print("\n建议测试:")
     print("1. 双击运行可执行文件")
