@@ -69,3 +69,10 @@ static/
 data/
 user_ports_cache.json
 user_ids_cache.json
+
+# 用户数据文件（独立于版本控制）
+user_ids.txt
+user_data/
+chrome_config.json
+chrome_user_data/
+chrome_user_data_persistent/
