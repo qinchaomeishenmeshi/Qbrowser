@@ -44,7 +44,7 @@
         "content.js"
       ],
       "run_at": "document_start",
-      "word": "MAIN"
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [

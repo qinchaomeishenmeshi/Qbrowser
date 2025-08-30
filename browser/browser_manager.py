@@ -168,14 +168,27 @@ class BrowserManager:
             co.set_local_port(self.port)
             co.set_user_data_path(str(self.user_data_dir))
             co.set_argument("--window-size", "1910,1070")
+            
+            # 启用扩展相关参数
             co.set_argument("--enable-extensions")
+            co.set_argument("--no-default-browser-check")
+            # 注意：不要使用 --disable-extensions-except，它会导致扩展加载失败
+            # co.set_argument("--disable-extensions-except")
+            # co.set_argument("--allowlisted-extension-id=*")
             
+            # 开发者模式和扩展安全相关参数
+            co.set_argument("--disable-web-security")
+            co.set_argument("--disable-features=VizDisplayCompositor")
+            # 移除可能导致扩展加载问题的参数
+            # co.set_argument("--enable-automation")
+            # co.set_argument("--disable-blink-features=AutomationControlled")
             
-           # 使用--load-extension参数加载插件（更可靠的方式）
+            # 使用--load-extension参数加载插件（更可靠的方式）
             if valid_extensions:
                 extension_paths = ",".join(valid_extensions)
                 co.set_argument(f"--load-extension={extension_paths}")
                 logger.info(f"[OK] 使用--load-extension加载插件: {len(valid_extensions)}个")
+                logger.info(f"[OK] 扩展路径: {extension_paths}")
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
             
