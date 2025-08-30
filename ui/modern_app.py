@@ -47,6 +47,7 @@ from browser.browser_operator import browser_operator
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from ui.config import THEMES, CURRENT_THEME, LAYOUT, FONTS
+from utils.user_data_manager import get_user_data_manager
 
 # 导入UI组件
 from ui.components import (
@@ -83,6 +84,9 @@ class ModernApp(QMainWindow):
         self.frpc_process = None
         self.scheduler_client = scheduler_client
         self.settings_server_process = None
+        
+        # 初始化用户数据管理器
+        self.user_data_manager = get_user_data_manager()
 
         # 初始化UI
         self.setup_fonts()
@@ -673,6 +677,8 @@ class ModernApp(QMainWindow):
         # 文本输入区
         self.text_edit = TextEdit()
         self.text_edit.setMinimumHeight(100)  # 增加文本编辑区高度
+        # 设置自动保存回调
+        self.text_edit.set_auto_save_callback(self.save_user_ids_auto)
         input_layout.addWidget(self.text_edit)
 
         # 添加输入卡片到主布局
@@ -1113,32 +1119,17 @@ class ModernApp(QMainWindow):
     def load_user_ids_on_startup(self):
         """应用启动时自动加载用户ID配置文件"""
         try:
-            from conf import writable_path
-
-            # 优先从可写目录加载，如果不存在则从资源目录加载
-            writable_file_path = writable_path("user_ids.txt")
-            resource_file_path = resource_path("user_ids.txt")
-
-            file_path = None
-            if os.path.exists(writable_file_path):
-                file_path = writable_file_path
-            elif os.path.exists(resource_file_path):
-                file_path = resource_file_path
-
-            if file_path:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    ids = [line.strip() for line in f.readlines() if line.strip()]
-                    if ids and self.text_edit:  # 确保text_edit已初始化且有数据
-                        if hasattr(self.text_edit, 'setPlainText'):
-                            self.text_edit.setPlainText("\n".join(ids))
-                        elif hasattr(self.text_edit, 'set_text'):
-                            self.text_edit.set_text("\n".join(ids))
-                        # self.save_cache()  # 同步到缓存
-                        logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
-                    elif not ids:
-                        logger.info("user_ids.txt文件为空")
-            else:
-                logger.info("未找到user_ids.txt文件，将使用空配置")
+            # 使用新的用户数据管理器加载用户ID
+            ids = self.user_data_manager.load_user_ids()
+            
+            if ids and self.text_edit:  # 确保text_edit已初始化且有数据
+                if hasattr(self.text_edit, 'setPlainText'):
+                    self.text_edit.setPlainText("\n".join(ids))
+                elif hasattr(self.text_edit, 'set_text'):
+                    self.text_edit.set_text("\n".join(ids))
+                logger.info(f"启动时自动加载了 {len(ids)} 个用户ID配置")
+            elif not ids:
+                logger.info("user_ids.txt文件为空")
         except Exception as e:
             logger.error(f"启动时加载user_ids.txt失败: {e}")
 
@@ -1176,8 +1167,6 @@ class ModernApp(QMainWindow):
     def save_user_ids_to_file(self):
         """保存当前用户ID到user_ids.txt配置文件"""
         try:
-            from conf import writable_path
-
             if not self.text_edit:
                 self.log_signal.log_updated.emit("错误：文本输入框未初始化")
                 return
@@ -1197,19 +1186,47 @@ class ModernApp(QMainWindow):
             ]
             user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
 
-            # 保存到可写目录的user_ids.txt文件
-            file_path = writable_path("user_ids.txt")
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write("\n".join(user_ids))
+            # 使用新的用户数据管理器保存用户ID
+            self.user_data_manager.save_user_ids(user_ids)
 
             self.log_signal.log_updated.emit(
                 f"已保存 {len(user_ids)} 个用户ID到配置文件"
             )
-            logger.info(f"成功保存用户ID到 {file_path}，共 {len(user_ids)} 个")
+            logger.info(f"成功保存用户ID，共 {len(user_ids)} 个")
 
         except Exception as e:
             self.log_signal.log_updated.emit(f"保存用户ID配置失败: {e}")
             logger.error(f"保存user_ids.txt失败: {e}")
+    
+    def save_user_ids_auto(self):
+        """自动保存用户ID（用于实时保存功能）"""
+        try:
+            if not self.text_edit:
+                return
+                
+            # 获取当前文本编辑器中的用户ID
+            if hasattr(self.text_edit, 'toPlainText'):
+                current_text = self.text_edit.toPlainText().strip()
+            else:
+                current_text = ""
+            
+            if not current_text:
+                # 如果文本为空，保存空列表
+                self.user_data_manager.save_user_ids([])
+                return
+
+            # 处理用户ID列表，去除空行和重复项
+            user_ids = [
+                line.strip() for line in current_text.split("\n") if line.strip()
+            ]
+            user_ids = list(dict.fromkeys(user_ids))  # 去重但保持顺序
+
+            # 使用新的用户数据管理器保存用户ID
+            self.user_data_manager.save_user_ids(user_ids)
+            logger.debug(f"自动保存用户ID，共 {len(user_ids)} 个")
+
+        except Exception as e:
+            logger.error(f"自动保存user_ids.txt失败: {e}")
 
     def closeEvent(self, a0):
         """窗口关闭时自动关闭 frpc 服务和定时任务服务，并保存用户ID配置"""

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollBar
-from PyQt6.QtCore import Qt, pyqtSignal, QRect, QSize
+from PyQt6.QtCore import Qt, pyqtSignal, QRect, QSize, QTimer
 from PyQt6.QtGui import (
     QFont, QPainter, QColor, QTextCursor, QTextCharFormat, 
     QSyntaxHighlighter, QTextDocument, QPalette, QFontMetrics
@@ -112,18 +112,27 @@ class TextEdit(QWidget):
     # 光标位置变化信号
     cursorPositionChanged = pyqtSignal(int, int)  # line, column
     
-    def __init__(self, parent=None, show_line_numbers=False, syntax_highlighting=True):
+    def __init__(self, parent=None, show_line_numbers=False, syntax_highlighting=True, auto_save_callback=None, auto_save_delay=2000):
         """初始化文本编辑器
         
         Args:
             parent: 父组件
             show_line_numbers (bool): 是否显示行号
             syntax_highlighting (bool): 是否启用语法高亮
+            auto_save_callback: 自动保存回调函数
+            auto_save_delay (int): 自动保存延迟时间（毫秒）
         """
         super().__init__(parent)
         self.theme = THEMES[CURRENT_THEME]
         self.show_line_numbers = show_line_numbers
         self.syntax_highlighting = syntax_highlighting
+        self.auto_save_callback = auto_save_callback
+        self.auto_save_delay = auto_save_delay
+        
+        # 自动保存定时器
+        self.auto_save_timer = QTimer()
+        self.auto_save_timer.setSingleShot(True)
+        self.auto_save_timer.timeout.connect(self._perform_auto_save)
         
         self._setup_ui()
         self._apply_styles()
@@ -242,6 +251,10 @@ class TextEdit(QWidget):
         self.text_edit.textChanged.connect(self.textChanged.emit)
         self.text_edit.cursorPositionChanged.connect(self._on_cursor_position_changed)
         
+        # 连接自动保存信号
+        if self.auto_save_callback:
+            self.text_edit.textChanged.connect(self._on_text_changed_for_auto_save)
+        
         if self.show_line_numbers:
             self.text_edit.document().blockCountChanged.connect(self.updateLineNumberAreaWidth)
             self.text_edit.verticalScrollBar().valueChanged.connect(self._on_scroll_changed)
@@ -263,6 +276,45 @@ class TextEdit(QWidget):
         """文本变化处理"""
         if self.show_line_numbers:
             self.line_number_area.update()
+    
+    def _on_text_changed_for_auto_save(self):
+        """文本变化时的自动保存处理"""
+        if self.auto_save_callback:
+            # 重启定时器
+            self.auto_save_timer.stop()
+            self.auto_save_timer.start(self.auto_save_delay)
+    
+    def _perform_auto_save(self):
+        """执行自动保存"""
+        if self.auto_save_callback:
+            try:
+                current_text = self.text_edit.toPlainText()
+                self.auto_save_callback(current_text)
+            except Exception as e:
+                print(f"自动保存失败: {e}")
+    
+    def set_auto_save_callback(self, callback, delay=2000):
+        """设置自动保存回调函数
+        
+        Args:
+            callback: 自动保存回调函数，接收当前文本内容作为参数
+            delay: 自动保存延迟时间（毫秒），默认2秒
+        """
+        # 断开旧的连接
+        if self.auto_save_callback:
+            self.text_edit.textChanged.disconnect(self._on_text_changed_for_auto_save)
+        
+        self.auto_save_callback = callback
+        self.auto_save_delay = delay
+        
+        # 连接新的回调
+        if callback:
+            self.text_edit.textChanged.connect(self._on_text_changed_for_auto_save)
+    
+    def force_save(self):
+        """强制立即保存"""
+        self.auto_save_timer.stop()
+        self._perform_auto_save()
     
     def lineNumberAreaWidth(self):
         """计算行号区域宽度
@@ -359,7 +411,15 @@ class TextEdit(QWidget):
         Args:
             text (str): 文本内容
         """
+        # 临时断开自动保存信号连接，避免触发自动保存
+        if self.auto_save_callback:
+            self.text_edit.textChanged.disconnect(self._on_text_changed_for_auto_save)
+        
         self.text_edit.setPlainText(text)
+        
+        # 重新连接信号
+        if self.auto_save_callback:
+            self.text_edit.textChanged.connect(self._on_text_changed_for_auto_save)
     
     def toPlainText(self):
         """获取纯文本
@@ -413,7 +473,15 @@ class TextEdit(QWidget):
         Args:
             text (str): 文本内容
         """
+        # 临时断开自动保存信号连接，避免触发自动保存
+        if self.auto_save_callback:
+            self.text_edit.textChanged.disconnect(self._on_text_changed_for_auto_save)
+        
         self.text_edit.setPlainText(text)
+        
+        # 重新连接信号
+        if self.auto_save_callback:
+            self.text_edit.textChanged.connect(self._on_text_changed_for_auto_save)
     
     def font(self):
         """获取字体
