@@ -574,7 +574,7 @@ wheels = [
 
 [[package]]
 name = "drissionpage"
-version = "4.1.0.18"
+version = "4.1.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -587,9 +587,9 @@ dependencies = [
     { name = "tldextract" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3f/54/9e99d96c7a5909a7f2ecc7bdc2978702ca5df20b45ea7f331b306c7e9b57/drissionpage-4.1.0.18.tar.gz", hash = "sha256:ea3193c628bed6f6f11b401d1e07161355ed3060d9c9ce12163df381bd09bf32", size = 206670, upload-time = "2025-03-24T15:39:23.039Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/12/b3/26bb358f3c7019bba0a2e27a636382a4226780628c30ab315537524809fb/drissionpage-4.1.1.2.tar.gz", hash = "sha256:e4375d3536519a1d24430270e2871de3015836b301cbdfb96583234e6d6ef4c1", size = 208034, upload-time = "2025-07-31T07:00:36.24Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/83/7ed71f4e0c8d60c9aefb24f0bb95f8a8b14e090718cf3fff8a0083d33164/DrissionPage-4.1.0.18-py3-none-any.whl", hash = "sha256:5492189161e6bde036737aab0874dec7723c38153cb22815f24dba88a2fdfa57", size = 256899, upload-time = "2025-03-24T15:39:21.261Z" },
+    { url = "https://files.pythonhosted.org/packages/78/31/05834b38c12a222012f998d5c2f104f228cf8aaa37747f989c9b29e81d5d/DrissionPage-4.1.1.2-py3-none-any.whl", hash = "sha256:c8b58a8d495550142c10499ce7128655b2baf8f38f46604ba0ce951a148d88e8", size = 257497, upload-time = "2025-07-31T07:00:34.531Z" },
 ]
 
 [[package]]

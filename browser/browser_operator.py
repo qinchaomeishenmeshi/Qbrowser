@@ -2,11 +2,14 @@ import asyncio
 import time
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Union
+from DrissionPage import ChromiumPage
+from loguru import logger
 
 from conf import BASE_DIR, resource_path
 from service.browser_service import browser_service
 from utils.common_logger import get_logger
 from utils.cookies_manager import CookiesManager
+from utils.page_redirect_manager import redirect_manager
 
 logger = get_logger(__name__)
 
@@ -377,6 +380,142 @@ class BrowserOperator:
             return await self.collect_site_cookies(user_id, site_key)
 
         return True
+
+    def redirect_user_page(self, user_id: str, target_url: str, wait_time: float = 1.0) -> bool:
+        """重定向用户页面到指定URL
+        
+        Args:
+            user_id: 用户ID
+            target_url: 目标URL
+            wait_time: 等待时间（秒）
+            
+        Returns:
+            bool: 重定向是否成功
+        """
+        try:
+            # 获取用户的浏览器管理器
+            manager = browser_service.get_manager(user_id)
+            if not manager or not manager.browser:
+                logger.error(f"用户 {user_id} 的浏览器不存在")
+                return False
+            
+            # 获取当前标签页
+            tab = self.get_or_create_tab(manager.browser, target_url)
+            if not tab:
+                logger.error(f"无法获取用户 {user_id} 的标签页")
+                return False
+            
+            # 执行重定向
+            success = redirect_manager.redirect_page(tab, target_url, wait_time)
+            
+            if success:
+                logger.info(f"用户 {user_id} 页面重定向成功: {target_url}")
+            else:
+                logger.error(f"用户 {user_id} 页面重定向失败: {target_url}")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"重定向用户 {user_id} 页面失败: {str(e)}")
+            return False
+    
+    def batch_redirect_users(self, user_redirects: List[Dict[str, str]], wait_time: float = 1.0) -> Dict[str, bool]:
+        """批量重定向多个用户的页面
+        
+        Args:
+            user_redirects: 用户重定向列表 [{"user_id": "xxx", "target_url": "xxx"}, ...]
+            wait_time: 等待时间（秒）
+            
+        Returns:
+            Dict[str, bool]: 每个用户的重定向结果
+        """
+        results = {}
+        
+        for redirect_item in user_redirects:
+            user_id = redirect_item.get("user_id")
+            target_url = redirect_item.get("target_url")
+            
+            if not user_id or not target_url:
+                logger.warning(f"跳过无效的重定向项: {redirect_item}")
+                continue
+            
+            try:
+                success = self.redirect_user_page(user_id, target_url, wait_time)
+                results[user_id] = success
+                
+                # 批量操作间隔
+                time.sleep(0.5)
+                
+            except Exception as e:
+                logger.error(f"批量重定向用户 {user_id} 失败: {str(e)}")
+                results[user_id] = False
+        
+        success_count = sum(1 for success in results.values() if success)
+        logger.info(f"批量重定向完成，成功: {success_count}/{len(results)}")
+        
+        return results
+    
+    def redirect_to_site(self, user_id: str, site_key: str, wait_time: float = 1.0) -> bool:
+        """重定向用户到指定站点
+        
+        Args:
+            user_id: 用户ID
+            site_key: 站点键名（如 'baiying', 'eos', 'screen'）
+            wait_time: 等待时间（秒）
+            
+        Returns:
+            bool: 重定向是否成功
+        """
+        if site_key not in SITE_CONFIGS:
+            logger.error(f"不支持的站点: {site_key}")
+            return False
+        
+        config = SITE_CONFIGS[site_key]
+        target_url = config["target_url"]
+        
+        logger.info(f"重定向用户 {user_id} 到 {config['name']} 站点: {target_url}")
+        
+        return self.redirect_user_page(user_id, target_url, wait_time)
+    
+    def apply_redirect_rule_to_user(self, user_id: str, rule_name: str, wait_time: float = 1.0) -> bool:
+        """对用户应用重定向规则
+        
+        Args:
+            user_id: 用户ID
+            rule_name: 规则名称
+            wait_time: 等待时间（秒）
+            
+        Returns:
+            bool: 应用是否成功
+        """
+        try:
+            # 获取用户的浏览器管理器
+            manager = browser_service.get_manager(user_id)
+            if not manager or not manager.browser:
+                logger.error(f"用户 {user_id} 的浏览器不存在")
+                return False
+            
+            # 获取当前标签页
+            tabs = manager.browser.get_tabs()
+            if not tabs:
+                logger.error(f"用户 {user_id} 没有可用的标签页")
+                return False
+            
+            tab = tabs[0]  # 使用第一个标签页
+            
+            # 应用重定向规则
+            success = redirect_manager.apply_rule(tab, rule_name, wait_time)
+            
+            if success:
+                logger.info(f"用户 {user_id} 重定向规则 {rule_name} 应用成功")
+            else:
+                logger.warning(f"用户 {user_id} 重定向规则 {rule_name} 应用失败或不匹配")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"对用户 {user_id} 应用重定向规则失败: {str(e)}")
+            return False
 
 
 browser_operator = BrowserOperator()

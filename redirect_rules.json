@@ -1,0 +1,16 @@
+{
+  "google_to_baidu": {
+    "source_pattern": "google",
+    "target_url": "https://www.baidu.com",
+    "condition": null,
+    "enabled": true,
+    "created_at": 1756780427.665053
+  },
+  "douyinec_to_login": {
+    "source_pattern": "https://www.douyinec.com",
+    "target_url": "https://buyin.jinritemai.com/mpa/account/login",
+    "condition": "regex",
+    "enabled": true,
+    "created_at": 1756780819.732577
+  }
+}

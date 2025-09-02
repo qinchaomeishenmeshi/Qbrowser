@@ -72,6 +72,100 @@ class BrowserManager:
             self.last_urls_file.touch()
         self.browser: Optional[Chromium] = None
 
+    def inject_user_tag_to_tab(self, tab) -> bool:
+        """为指定标签页注入用户标签
+        
+        Args:
+            tab: 要注入用户标签的标签页对象
+            
+        Returns:
+            注入成功返回True，失败返回False
+        """
+        try:
+            tab.run_js(
+                 f"""
+                 (function() {{
+                     function injectUserTag() {{
+                         // 检查是否已经存在用户标签，避免重复注入
+                         const existingTag = document.querySelector('[data-user-tag="{self.user_id}"]');
+                         if (existingTag) {{
+                             return;
+                         }}
+                         
+                         const d = document.createElement('div');
+                         d.innerText = 'Browser ID: {self.user_id}';
+                         d.setAttribute('data-user-tag', '{self.user_id}');
+                         Object.assign(d.style, {{
+                             position: 'fixed',
+                             top: '10px',
+                             left: '10px',
+                             background: 'rgba(0,0,0,0.6)',
+                             color: 'white',
+                             padding: '5px 10px',
+                             zIndex: 999999,
+                             borderRadius: '8px',
+                             fontSize: '14px'
+                         }});
+                         
+                         // 使用更可靠的方法添加元素
+                         function appendElement() {{
+                             if (document.body) {{
+                                 document.body.appendChild(d);
+                             }} else if (document.documentElement) {{
+                                 document.documentElement.appendChild(d);
+                             }} else {{
+                                 // 最后的备选方案，延迟执行
+                                 setTimeout(appendElement, 100);
+                             }}
+                         }}
+                         
+                         // 立即尝试添加，如果失败则延迟重试
+                         try {{
+                             appendElement();
+                         }} catch (e) {{
+                             setTimeout(appendElement, 500);
+                         }}
+                     }}
+                     
+                     // 如果页面还在加载，等待加载完成后注入
+                     if (document.readyState === 'loading') {{
+                         document.addEventListener('DOMContentLoaded', function() {{
+                             setTimeout(injectUserTag, 100);
+                         }});
+                     }} else {{
+                         // 页面已加载完成，延迟执行注入函数
+                         setTimeout(injectUserTag, 100);
+                     }}
+                 }})();
+                 """
+            )
+            return True
+        except Exception as js_error:
+            logger.warning(f"注入用户标签失败: {js_error}")
+            return False
+    
+    def create_tab_with_user_tag(self, url: str = None):
+        """创建新标签页并自动注入用户标签
+        
+        Args:
+            url: 要打开的URL，如果为None则打开空白页
+            
+        Returns:
+            创建的标签页对象
+        """
+        if not self.browser:
+            raise RuntimeError("浏览器实例不存在")
+            
+        tab = self.browser.new_tab(url=url)
+        
+        # 等待页面开始加载
+        time.sleep(0.5)
+        
+        # 注入用户标签
+        self.inject_user_tag_to_tab(tab)
+        
+        return tab
+
     def get_user_blank_html_path(self) -> str:
         """为每个用户生成专属的本地空白页
         
@@ -176,9 +270,6 @@ class BrowserManager:
             # co.set_argument("--disable-extensions-except")
             # co.set_argument("--allowlisted-extension-id=*")
             
-            # 开发者模式和扩展安全相关参数
-            co.set_argument("--disable-web-security")
-            co.set_argument("--disable-features=VizDisplayCompositor")
             # 移除可能导致扩展加载问题的参数
             # co.set_argument("--enable-automation")
             # co.set_argument("--disable-blink-features=AutomationControlled")
@@ -192,7 +283,55 @@ class BrowserManager:
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
             
-            self.browser = Chromium(co)
+            # DrissionPage 4.1.x 兼容性改进
+
+            
+            try:
+
+            
+                self.browser = Chromium(co)
+
+            
+                # 等待浏览器完全启动
+
+            
+                time.sleep(1)
+
+            
+                # 验证浏览器是否正常运行
+
+            
+                if not self.browser or not hasattr(self.browser, 'tabs_count'):
+
+            
+                    raise Exception("浏览器启动失败或状态异常")
+
+            
+                logger.info(f"浏览器启动成功，当前标签页数量: {self.browser.tabs_count}")
+
+            
+            except Exception as e:
+
+            
+                logger.error(f"浏览器启动失败: {e}")
+
+            
+                if hasattr(self, 'browser') and self.browser:
+
+            
+                    try:
+
+            
+                        self.browser.quit()
+
+            
+                    except:
+
+            
+                        pass
+
+            
+                raise
             logger.info(f"Browser started for user: {self.user_id}")
 
             urls = json.loads(self.last_urls_file.read_text() or "[]")
@@ -203,25 +342,42 @@ class BrowserManager:
                 # 判断url是否已经被打开
                 if url in [tab.url for tab in tabs]:
                     continue
-                tab = self.browser.new_tab(url=url)
-                # 注入用户标签
-                tab.run_js(
-                    f"""
-                                                                                    const d = document.createElement('div');
-                                                                                    d.innerText = 'Browser ID: {self.user_id}';
-                                                                                    Object.assign(d.style, {{
-                                                                                      position:'fixed',top:'10px',left:'10px',
-                                                                                      background:'rgba(0,0,0,0.6)',color:'white',
-                                                                                      padding:'5px 10px',zIndex:999999,
-                                                                                      borderRadius:'8px',fontSize:'14px'
-                                                                                    }});
-                                                                                    document.body.appendChild(d);
-                                                                                """
-                )
+                try:
+                    tab = self.browser.new_tab(url=url)
+                    # 等待页面完全加载
+                    time.sleep(2)
+                    # 检查页面连接状态
+                    if hasattr(tab, 'url') and tab.url:
+                        # 使用新的注入方法
+                        self.inject_user_tag_to_tab(tab)
+                    else:
+                        logger.warning(f"页面连接异常，跳过标签注入: {url}")
+                except Exception as e:
+                    logger.warning(f"打开页面失败: {url}, 错误: {e}")
+                    continue
 
             # 打开自定义本地空白页
-            blank_url = self.get_user_blank_html_path()
-            self.browser.new_tab(url=blank_url)
+            try:
+                blank_url = self.get_user_blank_html_path()
+                blank_tab = self.browser.new_tab(url=blank_url)
+                time.sleep(1)  # 等待空白页加载
+                logger.info(f"成功打开自定义空白页: {blank_url}")
+            except Exception as e:
+                logger.warning(f"打开自定义空白页失败: {e}")
+            
+            # 设置自动重定向
+            try:
+                # 导入自动重定向模块
+                from browser.auto_redirect import auto_redirect
+                
+                # 为浏览器设置自动重定向
+                if auto_redirect.setup_browser(self.browser):
+                    logger.info(f"✅ 成功为用户 {self.user_id} 设置自动重定向")
+                else:
+                    logger.warning(f"⚠️ 为用户 {self.user_id} 设置自动重定向失败")
+            except Exception as e:
+                logger.error(f"❌ 设置自动重定向时出错: {e}")
+            
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}", exc_info=True)
@@ -260,6 +416,8 @@ class BrowserManager:
                     )
                     logger.info(f"[OK] Saved {len(urls)} unique URLs.")
                 else:
+                    # 重写last_urls_file为空
+                    self.last_urls_file.write_text("[]")
                     logger.info("[INFO] No URLs to save.")
 
                 self.browser.quit()

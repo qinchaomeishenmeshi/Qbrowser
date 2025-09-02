@@ -15,8 +15,14 @@ QW-Browser 是一个强大的多浏览器实例管理工具，提供图形化界
 - 🔒 单例启动机制，防止重复运行
 - ⏰ 定时任务调度系统
 - 🎨 现代化UI设计（支持主题切换）
-- 🔄 远程更新功能
 - 🧩 模块化组件架构（NavigationButton、TextEdit等）
+- 🔄 远程更新功能
+- 🔄 页面重定向功能（支持规则管理、条件重定向、批量操作）
+  - 基于规则的URL重定向
+  - 条件判断重定向
+  - 批量页面重定向
+  - 规则持久化存储
+- 🏷️ 用户标签注入功能（自动在浏览器标签页显示用户标识）
 
 ## 📚 项目架构
 
@@ -96,6 +102,81 @@ python run_app.py
 ### 单例启动机制
 - 应用程序采用单例启动机制，防止重复运行
 - 如果检测到已有实例在运行，新启动的实例会自动退出
+
+## 页面重定向功能
+
+### 功能介绍
+页面重定向功能允许您根据预设规则自动将浏览器从一个URL重定向到另一个URL。这在以下场景特别有用：
+- 将国外网站重定向到对应的国内镜像站点
+- 自动跳转到特定页面
+- 批量处理多个标签页的URL重定向
+- 基于URL模式的条件重定向
+
+### 使用方法
+
+#### 1. 基本重定向
+```python
+from utils.page_redirect_manager import PageRedirectManager
+
+# 创建重定向管理器
+manager = PageRedirectManager()
+
+# 单页面重定向
+manager.redirect_page(tab, "https://target-url.com")
+```
+
+#### 2. 规则管理
+```python
+from utils.page_redirect_manager import PageRedirectManager, RedirectRule
+
+# 创建重定向管理器
+manager = PageRedirectManager()
+
+# 添加重定向规则
+rule = RedirectRule(
+    source_pattern="google.com",  # 源URL模式
+    target_url="https://www.baidu.com",  # 目标URL
+    enabled=True  # 是否启用
+)
+manager.add_rule("google_to_baidu", rule)
+
+# 应用规则
+manager.apply_rule(tab, "google_to_baidu")
+
+# 或者直接通过URL应用匹配的规则
+manager.apply_rule(tab, "https://www.google.com/search?q=python")
+```
+
+#### 3. 条件重定向
+```python
+# 条件重定向（当URL包含"youtube"时重定向）
+manager.conditional_redirect(tab, lambda url: "youtube" in url)
+```
+
+#### 4. 批量重定向
+```python
+# 批量重定向多个标签页
+tabs = [tab1, tab2, tab3]
+results = manager.batch_redirect(tabs)
+```
+
+#### 5. 规则持久化
+```python
+# 保存规则到配置文件
+manager.save_rules()
+
+# 从配置文件加载规则
+manager.load_rules()
+```
+
+### 演示脚本
+项目提供了演示脚本，展示页面重定向功能的使用方法：
+- `demos/redirect_demo_fixed.py` - 完整功能演示
+
+运行演示：
+```bash
+python demos/redirect_demo_fixed.py
+```
 - 锁文件位置：系统临时目录下的 `qw_browser_app.lock`
 - 如需重新启动，请先关闭现有实例
 
@@ -458,6 +539,174 @@ Chrome路径配置保存在 `chrome_config.json` 文件中：
 5. **多平台支持**：配置工具会根据操作系统自动适配路径格式
 A: 这是Windows构建环境中的字符编码问题，已在构建工作流中添加UTF-8编码设置和Unicode字符替换。详细的修复方案请参考 `UNICODE_ENCODING_FIX.md` 文件，包括环境变量设置、字符替换规则和语法错误修复等。
 
+## 🔄 页面重定向功能
+
+### 功能概述
+
+页面重定向功能允许您自动将浏览器从一个URL重定向到另一个URL，支持多种重定向模式和规则管理。
+
+### 核心特性
+
+- **规则管理**: 创建、编辑、删除重定向规则
+- **条件重定向**: 基于自定义条件的智能重定向
+- **批量操作**: 同时处理多个重定向规则
+- **规则持久化**: 自动保存和加载重定向规则
+- **统计监控**: 跟踪重定向执行情况和性能指标
+
+### 使用方法
+
+#### 1. 基本重定向
+
+```python
+from utils.page_redirect_manager import redirect_manager
+from utils.browser_operator import BrowserOperator
+
+# 创建浏览器操作实例
+browser_op = BrowserOperator()
+
+# 单页面重定向
+await redirect_manager.redirect_page(
+    browser_op.tab,  # 浏览器标签页
+    "https://example.com",  # 目标URL
+    delay=1.0  # 延迟时间（秒）
+)
+```
+
+#### 2. 规则管理
+
+```python
+from utils.page_redirect_manager import redirect_manager, RedirectRule
+from datetime import datetime
+
+# 创建重定向规则
+rule = RedirectRule(
+    name="示例重定向",
+    source_pattern="https://old-site.com/*",
+    target_url="https://new-site.com",
+    condition=lambda url: "old-site" in url,
+    enabled=True,
+    created_at=datetime.now()
+)
+
+# 添加规则
+redirect_manager.add_rule(rule)
+
+# 应用规则进行重定向
+if redirect_manager.apply_rule(browser_op.tab, "https://old-site.com/page"):
+    print("重定向规则已应用")
+```
+
+#### 3. 批量重定向
+
+```python
+# 批量重定向配置
+redirect_configs = [
+    {"target_url": "https://site1.com", "delay": 1.0},
+    {"target_url": "https://site2.com", "delay": 2.0},
+    {"target_url": "https://site3.com", "delay": 1.5}
+]
+
+# 执行批量重定向
+await redirect_manager.batch_redirect(browser_op.tab, redirect_configs)
+```
+
+#### 4. 条件重定向
+
+```python
+# 定义重定向条件
+def should_redirect(current_url: str) -> bool:
+    """检查是否需要重定向"""
+    return "old-domain" in current_url or current_url.endswith(".html")
+
+# 执行条件重定向
+result = await redirect_manager.conditional_redirect(
+    browser_op.tab,
+    "https://new-destination.com",
+    should_redirect,
+    delay=1.0
+)
+
+if result:
+    print("条件满足，已执行重定向")
+else:
+    print("条件不满足，未执行重定向")
+```
+
+#### 5. 规则持久化
+
+```python
+# 保存规则到文件
+redirect_manager.save_rules()
+
+# 从文件加载规则
+redirect_manager.load_rules()
+
+# 获取统计信息
+stats = redirect_manager.get_stats()
+print(f"总规则数: {stats['total_rules']}")
+print(f"启用规则数: {stats['enabled_rules']}")
+print(f"执行次数: {stats['execution_count']}")
+```
+
+### 演示脚本
+
+运行演示脚本查看完整的重定向功能：
+
+```bash
+python redirect_demo.py
+```
+
+该演示脚本包含：
+- 重定向规则设置
+- 单页面重定向演示
+- 基于规则的重定向
+- 条件重定向示例
+- 与BrowserOperator的集成
+- 规则管理功能展示
+
+### 测试验证
+
+运行测试脚本验证重定向功能：
+
+```bash
+# 运行简化测试（推荐）
+python tests/test_redirect_simple.py
+
+# 运行完整测试
+python tests/test_redirect_functionality.py
+```
+
+### 配置文件
+
+重定向规则会自动保存到 `redirect_rules.json` 文件中，格式如下：
+
+```json
+{
+  "rules": [
+    {
+      "name": "示例重定向",
+      "source_pattern": "https://old-site.com/*",
+      "target_url": "https://new-site.com",
+      "enabled": true,
+      "created_at": "2024-01-01T12:00:00"
+    }
+  ],
+  "stats": {
+    "total_rules": 1,
+    "enabled_rules": 1,
+    "execution_count": 0
+  }
+}
+```
+
+### 注意事项
+
+1. **异步操作**: 所有重定向操作都是异步的，需要使用 `await` 关键字
+2. **延迟设置**: 适当设置延迟时间，避免过快的重定向影响用户体验
+3. **条件函数**: 条件重定向的判断函数应该简洁高效，避免复杂的计算
+4. **规则优先级**: 规则按添加顺序执行，先添加的规则优先级更高
+5. **错误处理**: 重定向过程中的错误会被记录到日志中，不会中断程序执行
+
 ## 项目优化建议
 
 ### 1. 依赖管理优化 ✅
@@ -631,6 +880,74 @@ python examples/performance_optimization_example.py
 - 优化异常处理的粒度
 - 完善代码文档和注释
 - 处理 TODO 项目
+
+## 🏷️ 用户标签注入功能
+
+### 功能概述
+用户标签注入功能会在每个浏览器标签页的左上角自动显示用户标识，帮助用户区分不同的浏览器实例。
+
+### 技术特点
+- **自动注入**: 每个新创建的标签页都会自动注入用户标签
+- **DOM状态检查**: 智能检测页面加载状态，确保注入时机正确
+- **错误重试机制**: 当DOM元素不可用时自动重试
+- **避免重复注入**: 检查现有标签，防止重复添加
+- **跨网站兼容**: 支持各种网站的标签注入
+
+### 使用方法
+
+#### 基本使用
+```python
+from browser.browser_manager import BrowserManager
+
+# 创建浏览器管理器
+bm = BrowserManager('your_user_id')
+
+# 初始化浏览器（会自动为现有标签页注入用户标签）
+bm.initialize()
+
+# 创建新标签页并自动注入用户标签
+tab = bm.create_tab_with_user_tag('https://www.example.com')
+```
+
+#### 手动注入标签
+```python
+# 为指定标签页手动注入用户标签
+success = bm.inject_user_tag_to_tab(tab)
+if success:
+    print("用户标签注入成功")
+```
+
+### 演示脚本
+运行以下命令查看用户标签注入功能的完整演示：
+
+```bash
+# 运行演示脚本
+python demo_user_tag.py
+
+# 运行测试脚本
+python test_user_tag_fix.py
+```
+
+### 故障排除
+
+#### 常见问题
+1. **标签未显示**: 检查页面是否完全加载，系统会自动重试
+2. **JavaScript错误**: 确保浏览器支持现代JavaScript特性
+3. **DOM元素冲突**: 系统会自动选择合适的父元素进行注入
+
+#### 技术实现细节
+- 使用IIFE（立即执行函数表达式）避免全局变量污染
+- 实现递归重试机制处理DOM加载时序问题
+- 支持`document.body`和`document.documentElement`两种注入方式
+- 使用`data-user-tag`属性避免重复注入
+
+### 最近修复
+**2025-01-02 修复内容**:
+- ✅ 修复JavaScript语法错误（添加IIFE包装）
+- ✅ 解决DOM元素为null时的appendChild错误
+- ✅ 优化延迟执行和重试机制
+- ✅ 改进错误处理和日志记录
+- ✅ 确保每个新标签页都能正确注入用户标签
 
 ## 许可证
 MIT License

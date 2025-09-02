@@ -328,7 +328,11 @@ class BrowserService:
             co.set_local_port(manager.port)
             
             # 尝试连接到现有浏览器
-            browser = ChromiumPage(addr_or_opts=co)
+            try:
+                browser = ChromiumPage(addr_or_opts=co)
+            except Exception as e:
+                logger.error(f"ChromiumPage初始化失败: {e}")
+                raise
             
             # 验证连接是否成功
             if browser and hasattr(browser, 'tabs_count'):

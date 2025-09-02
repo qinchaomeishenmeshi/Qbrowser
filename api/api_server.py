@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse
 from api.api_business import business_router
 from api.scheduler_api import router as scheduler_router
 from api.chrome_config_api import router as chrome_config_router
+from api.redirect_api import router as redirect_router
 from browser.browser_manager import BrowserManager
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
@@ -577,7 +578,11 @@ async def detect_browser_on_port(port: int):
                 co = ChromiumOptions()
                 co.set_local_port(port)
 
-                browser = ChromiumPage(addr_or_opts=co)
+                try:
+                    browser = ChromiumPage(addr_or_opts=co)
+                except Exception as e:
+                    logger.error(f"ChromiumPage初始化失败: {e}")
+                    raise
 
                 if browser and hasattr(browser, "tabs_count"):
                     tabs_count = browser.tabs_count
@@ -622,6 +627,7 @@ app.include_router(api_router, prefix="/api")  # 浏览器管理接口
 app.include_router(business_router)  # 业务接口
 app.include_router(scheduler_router)  # 定时任务管理接口
 app.include_router(chrome_config_router, prefix="/api")  # Chrome配置接口
+app.include_router(redirect_router, prefix="/api")  # 页面重定向接口
 
 
 # 定时任务管理界面路由
