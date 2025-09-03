@@ -3,7 +3,7 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 
 from DrissionPage._base.chromium import Chromium
 from DrissionPage._configs.chromium_options import ChromiumOptions
@@ -11,6 +11,7 @@ from DrissionPage._configs.chromium_options import ChromiumOptions
 from conf import BASE_DIR, resource_path
 from conf.browser_config import chrome_path_manager
 from utils.common_logger import get_logger
+from utils.network_listener import EnhancedNetworkListener
 
 logger = get_logger(__name__)
 
@@ -53,6 +54,7 @@ class BrowserManager:
     """浏览器管理器类
     
     负责单个浏览器实例的生命周期管理，包括初始化、配置、启动和清理。
+    支持网络监听功能，可以监控和分析网络请求。
     """
     
     def __init__(self, user_id: str, port: int = 9111) -> None:
@@ -71,6 +73,7 @@ class BrowserManager:
         if not self.last_urls_file.exists():
             self.last_urls_file.touch()
         self.browser: Optional[Chromium] = None
+        self.network_listener = None
 
     def inject_user_tag_to_tab(self, tab) -> bool:
         """为指定标签页注入用户标签
@@ -378,12 +381,99 @@ class BrowserManager:
             except Exception as e:
                 logger.error(f"❌ 设置自动重定向时出错: {e}")
             
+            # 初始化网络监听器属性
+            self.network_listener = None
+            
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}", exc_info=True)
             self.cleanup()
             return False
 
+    def create_network_listener(self, tab=None) -> Optional[EnhancedNetworkListener]:
+        """创建增强版网络监听器
+        
+        Args:
+            tab: 要监听的标签页，如果为None则使用当前活动标签页
+            
+        Returns:
+            创建的网络监听器对象，如果创建失败则返回None
+        """
+        try:
+            if not self.browser:
+                logger.error("浏览器实例不存在，无法创建网络监听器")
+                return None
+                
+            # 如果没有指定标签页，使用当前活动标签页
+            if tab is None:
+                tab = self.browser.get_tab()
+                
+            # 创建网络监听器
+            self.network_listener = EnhancedNetworkListener(tab)
+            logger.info(f"✅ 成功为用户 {self.user_id} 创建网络监听器")
+            return self.network_listener
+        except Exception as e:
+            logger.error(f"❌ 创建网络监听器失败: {e}")
+            return None
+            
+    def start_network_listening(self, url_patterns: Optional[Union[str, List[str]]] = None) -> bool:
+        """开始监听网络请求
+        
+        Args:
+            url_patterns: 要监听的URL模式，可以是字符串或字符串列表，支持正则表达式
+                          如果为None，则监听所有请求
+                          
+        Returns:
+            是否成功启动监听
+        """
+        try:
+            if not self.network_listener:
+                logger.warning("网络监听器不存在，尝试创建新的监听器")
+                if not self.create_network_listener():
+                    return False
+                    
+            # 开始监听
+            self.network_listener.start_listening(url_patterns)
+            return True
+        except Exception as e:
+            logger.error(f"启动网络监听失败: {e}")
+            return False
+            
+    def stop_network_listening(self) -> bool:
+        """停止网络请求监听
+        
+        Returns:
+            是否成功停止监听
+        """
+        try:
+            if self.network_listener:
+                self.network_listener.stop_listening()
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"停止网络监听失败: {e}")
+            return False
+            
+    def get_captured_packets(self, url_filter: Optional[str] = None) -> List[Any]:
+        """获取捕获的数据包
+        
+        Args:
+            url_filter: 可选的URL过滤器，用于筛选特定URL的数据包
+            
+        Returns:
+            捕获的数据包列表
+        """
+        if not self.network_listener:
+            logger.warning("网络监听器不存在，无法获取数据包")
+            return []
+            
+        # 如果指定了URL过滤器，使用过滤功能
+        if url_filter:
+            return self.network_listener.filter_by_url(url_filter)
+            
+        # 否则返回所有捕获的数据包
+        return self.network_listener.captured_packets
+    
     def cleanup(self) -> None:
         """清理浏览器实例和相关资源
         
@@ -393,6 +483,15 @@ class BrowserManager:
             Exception: 清理过程中发生的任何异常
         """
         try:
+            # 停止网络监听器
+            if hasattr(self, 'network_listener') and self.network_listener:
+                try:
+                    self.stop_network_listening()
+                    logger.info(f"✅ 成功停止用户 {self.user_id} 的网络监听")
+                except Exception as e:
+                    logger.error(f"❌ 停止网络监听时出错: {e}")
+                self.network_listener = None
+                
             if self.browser:
                 urls = []
                 seen = set()  # 用于去重
