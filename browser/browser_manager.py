@@ -267,8 +267,8 @@ class BrowserManager:
             co.set_argument("--window-size", "1910,1070")
             
             # 启用扩展相关参数
-            co.set_argument("--enable-extensions")
-            co.set_argument("--no-default-browser-check")
+            # co.set_argument("--enable-extensions")
+            # co.set_argument("--no-default-browser-check")
             # 注意：不要使用 --disable-extensions-except，它会导致扩展加载失败
             # co.set_argument("--disable-extensions-except")
             # co.set_argument("--allowlisted-extension-id=*")
@@ -279,10 +279,13 @@ class BrowserManager:
             
             # 使用--load-extension参数加载插件（更可靠的方式）
             if valid_extensions:
-                extension_paths = ",".join(valid_extensions)
-                co.set_argument(f"--load-extension={extension_paths}")
-                logger.info(f"[OK] 使用--load-extension加载插件: {len(valid_extensions)}个")
-                logger.info(f"[OK] 扩展路径: {extension_paths}")
+                # extension_paths = ",".join(valid_extensions)
+                # co.set_argument(f"--load-extension={extension_paths}")
+                # 循环插入extension_paths
+                for path in valid_extensions:
+                    co.add_extension(path)
+                    logger.info(f"[OK] 扩展路径: {path}")
+                
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
             
