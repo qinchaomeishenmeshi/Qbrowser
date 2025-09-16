@@ -30,7 +30,6 @@ datas = []
 
 # 必需的扩展目录
 datas.extend(add_dir_if_exists('extensions/live_room', 'extensions/live_room'))
-datas.extend(add_dir_if_exists('extensions/block_videos', 'extensions/block_videos'))
 
 # frp客户端文件
 datas.extend(add_data_if_exists('frp_client/frpc.exe', 'frp_client'))

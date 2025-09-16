@@ -18,10 +18,10 @@ logger = get_logger(__name__)
 
 def get_absolute_extension_path(relative_path: str) -> str:
     """获取插件的绝对路径
-    
+
     Args:
         relative_path: 相对路径
-        
+
     Returns:
         插件的绝对路径字符串
     """
@@ -33,7 +33,7 @@ def get_absolute_extension_path(relative_path: str) -> str:
             return str(extension_path.resolve())
     except Exception as e:
         logger.debug(f"resource_path方式失败: {e}")
-    
+
     # 回退到BASE_DIR方式
     extension_path = Path(BASE_DIR) / relative_path
     return str(extension_path.resolve())
@@ -43,23 +43,23 @@ def get_absolute_extension_path(relative_path: str) -> str:
 class BrowserConfig:
     def __post_init__(self):
         # 在实例化时动态计算路径，避免类定义时的路径问题
-        self.live_room_extension_path = get_absolute_extension_path("extensions/live_room")
-        self.block_videos_extension_path = get_absolute_extension_path("extensions/block_videos")
-    
+        self.live_room_extension_path = get_absolute_extension_path(
+            "extensions/live_room"
+        )
+
     data_dir_base: Path = Path("browser_data") / "douyin"
- 
 
 
 class BrowserManager:
     """浏览器管理器类
-    
+
     负责单个浏览器实例的生命周期管理，包括初始化、配置、启动和清理。
     支持网络监听功能，可以监控和分析网络请求。
     """
-    
+
     def __init__(self, user_id: str, port: int = 9111) -> None:
         """初始化浏览器管理器
-        
+
         Args:
             user_id: 用户ID
             port: 浏览器调试端口，默认9111
@@ -77,16 +77,16 @@ class BrowserManager:
 
     def inject_user_tag_to_tab(self, tab) -> bool:
         """为指定标签页注入用户标签
-        
+
         Args:
             tab: 要注入用户标签的标签页对象
-            
+
         Returns:
             注入成功返回True，失败返回False
         """
         try:
             tab.run_js(
-                 f"""
+                f"""
                  (function() {{
                      function injectUserTag() {{
                          // 检查是否已经存在用户标签，避免重复注入
@@ -146,38 +146,38 @@ class BrowserManager:
         except Exception as js_error:
             logger.warning(f"注入用户标签失败: {js_error}")
             return False
-    
+
     def create_tab_with_user_tag(self, url: str = None):
         """创建新标签页并自动注入用户标签
-        
+
         Args:
             url: 要打开的URL，如果为None则打开空白页
-            
+
         Returns:
             创建的标签页对象
         """
         if not self.browser:
             raise RuntimeError("浏览器实例不存在")
-            
+
         tab = self.browser.new_tab(url=url)
-        
+
         # 等待页面开始加载
         time.sleep(0.5)
-        
+
         # 注入用户标签
         self.inject_user_tag_to_tab(tab)
-        
+
         return tab
 
     def get_user_blank_html_path(self) -> str:
         """为每个用户生成专属的本地空白页
-        
+
         为每个 user_id 生成专属的本地空白页，带 user_id 标识。
         模板和生成的 html 都放在 BASE_DIR/static 下，避免 PyInstaller 路径混乱。
-        
+
         Returns:
             生成的本地 html 文件的 file:// URI 路径
-            
+
         Raises:
             Exception: 文件读写操作失败时抛出异常
         """
@@ -216,7 +216,10 @@ class BrowserManager:
         html = template_content.replace("【USER_ID】", self.user_id)
         user_blank_path = static_dir / f"blank_{self.user_id}.html"
         try:
-            if not user_blank_path.exists() or user_blank_path.read_text(encoding="utf-8") != html:
+            if (
+                not user_blank_path.exists()
+                or user_blank_path.read_text(encoding="utf-8") != html
+            ):
                 user_blank_path.write_text(html, encoding="utf-8")
         except Exception as e:
             logger.error(f"写入用户专属空白页失败: {e}")
@@ -225,34 +228,32 @@ class BrowserManager:
 
     def initialize(self) -> bool:
         """初始化浏览器实例
-        
+
         配置并启动Chromium浏览器，加载插件，恢复上次打开的标签页。
-        
+
         Returns:
             初始化成功返回True，失败返回False
-            
+
         Raises:
             Exception: 浏览器初始化过程中发生的任何异常
         """
         try:
             # 检查插件路径是否存在
             valid_extensions = []
-            
+
             if Path(self.config.live_room_extension_path).exists():
                 valid_extensions.append(self.config.live_room_extension_path)
-                logger.info(f"[OK] Live Room 插件路径有效: {self.config.live_room_extension_path}")
+                logger.info(
+                    f"[OK] Live Room 插件路径有效: {self.config.live_room_extension_path}"
+                )
             else:
-                logger.warning(f"[WARNING] Live Room 插件路径不存在: {self.config.live_room_extension_path}")
-            
-            if Path(self.config.block_videos_extension_path).exists():
-                valid_extensions.append(self.config.block_videos_extension_path)
-                logger.info(f"[OK] Block Videos 插件路径有效: {self.config.block_videos_extension_path}")
-            else:
-                logger.warning(f"[WARNING] Block Videos 插件路径不存在: {self.config.block_videos_extension_path}")
-            
+                logger.warning(
+                    f"[WARNING] Live Room 插件路径不存在: {self.config.live_room_extension_path}"
+                )
+
             # 配置并启动 Chromium（持久化用户数据）
             co = ChromiumOptions()
-            
+
             # 设置自定义Chrome路径（如果配置了的话）
             chrome_path = chrome_path_manager.get_chrome_path()
             if chrome_path:
@@ -260,23 +261,23 @@ class BrowserManager:
                 co.set_browser_path(chrome_path)
             else:
                 logger.warning("未找到Chrome路径，将使用系统默认")
-            
+
             # 设置其他配置
             co.set_local_port(self.port)
             co.set_user_data_path(str(self.user_data_dir))
             co.set_argument("--window-size", "1910,1070")
-            
+
             # 启用扩展相关参数
             # co.set_argument("--enable-extensions")
             # co.set_argument("--no-default-browser-check")
             # 注意：不要使用 --disable-extensions-except，它会导致扩展加载失败
             # co.set_argument("--disable-extensions-except")
             # co.set_argument("--allowlisted-extension-id=*")
-            
+
             # 移除可能导致扩展加载问题的参数
             # co.set_argument("--enable-automation")
             # co.set_argument("--disable-blink-features=AutomationControlled")
-            
+
             # 使用--load-extension参数加载插件（更可靠的方式）
             if valid_extensions:
                 # extension_paths = ",".join(valid_extensions)
@@ -285,58 +286,44 @@ class BrowserManager:
                 for path in valid_extensions:
                     co.add_extension(path)
                     logger.info(f"[OK] 扩展路径: {path}")
-                
+
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
-            
+
             # DrissionPage 4.1.x 兼容性改进
 
-            
             try:
 
-            
                 self.browser = Chromium(co)
 
-            
                 # 等待浏览器完全启动
 
-            
                 time.sleep(1)
 
-            
                 # 验证浏览器是否正常运行
 
-            
-                if not self.browser or not hasattr(self.browser, 'tabs_count'):
+                if not self.browser or not hasattr(self.browser, "tabs_count"):
 
-            
                     raise Exception("浏览器启动失败或状态异常")
 
-            
-                logger.info(f"浏览器启动成功，当前标签页数量: {self.browser.tabs_count}")
+                logger.info(
+                    f"浏览器启动成功，当前标签页数量: {self.browser.tabs_count}"
+                )
 
-            
             except Exception as e:
 
-            
                 logger.error(f"浏览器启动失败: {e}")
 
-            
-                if hasattr(self, 'browser') and self.browser:
+                if hasattr(self, "browser") and self.browser:
 
-            
                     try:
 
-            
                         self.browser.quit()
 
-            
                     except:
 
-            
                         pass
 
-            
                 raise
             logger.info(f"Browser started for user: {self.user_id}")
 
@@ -353,7 +340,7 @@ class BrowserManager:
                     # 等待页面完全加载
                     time.sleep(2)
                     # 检查页面连接状态
-                    if hasattr(tab, 'url') and tab.url:
+                    if hasattr(tab, "url") and tab.url:
                         # 使用新的注入方法
                         self.inject_user_tag_to_tab(tab)
                     else:
@@ -370,12 +357,12 @@ class BrowserManager:
                 logger.info(f"成功打开自定义空白页: {blank_url}")
             except Exception as e:
                 logger.warning(f"打开自定义空白页失败: {e}")
-            
+
             # 设置自动重定向
             try:
                 # 导入自动重定向模块
                 from browser.auto_redirect import auto_redirect
-                
+
                 # 为浏览器设置自动重定向
                 if auto_redirect.setup_browser(self.browser):
                     logger.info(f"✅ 成功为用户 {self.user_id} 设置自动重定向")
@@ -383,10 +370,10 @@ class BrowserManager:
                     logger.warning(f"⚠️ 为用户 {self.user_id} 设置自动重定向失败")
             except Exception as e:
                 logger.error(f"❌ 设置自动重定向时出错: {e}")
-            
+
             # 初始化网络监听器属性
             self.network_listener = None
-            
+
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}", exc_info=True)
@@ -395,10 +382,10 @@ class BrowserManager:
 
     def create_network_listener(self, tab=None) -> Optional[EnhancedNetworkListener]:
         """创建增强版网络监听器
-        
+
         Args:
             tab: 要监听的标签页，如果为None则使用当前活动标签页
-            
+
         Returns:
             创建的网络监听器对象，如果创建失败则返回None
         """
@@ -406,11 +393,11 @@ class BrowserManager:
             if not self.browser:
                 logger.error("浏览器实例不存在，无法创建网络监听器")
                 return None
-                
+
             # 如果没有指定标签页，使用当前活动标签页
             if tab is None:
                 tab = self.browser.get_tab()
-                
+
             # 创建网络监听器
             self.network_listener = EnhancedNetworkListener(tab)
             logger.info(f"✅ 成功为用户 {self.user_id} 创建网络监听器")
@@ -418,14 +405,16 @@ class BrowserManager:
         except Exception as e:
             logger.error(f"❌ 创建网络监听器失败: {e}")
             return None
-            
-    def start_network_listening(self, url_patterns: Optional[Union[str, List[str]]] = None) -> bool:
+
+    def start_network_listening(
+        self, url_patterns: Optional[Union[str, List[str]]] = None
+    ) -> bool:
         """开始监听网络请求
-        
+
         Args:
             url_patterns: 要监听的URL模式，可以是字符串或字符串列表，支持正则表达式
                           如果为None，则监听所有请求
-                          
+
         Returns:
             是否成功启动监听
         """
@@ -434,17 +423,17 @@ class BrowserManager:
                 logger.warning("网络监听器不存在，尝试创建新的监听器")
                 if not self.create_network_listener():
                     return False
-                    
+
             # 开始监听
             self.network_listener.start_listening(url_patterns)
             return True
         except Exception as e:
             logger.error(f"启动网络监听失败: {e}")
             return False
-            
+
     def stop_network_listening(self) -> bool:
         """停止网络请求监听
-        
+
         Returns:
             是否成功停止监听
         """
@@ -456,45 +445,45 @@ class BrowserManager:
         except Exception as e:
             logger.error(f"停止网络监听失败: {e}")
             return False
-            
+
     def get_captured_packets(self, url_filter: Optional[str] = None) -> List[Any]:
         """获取捕获的数据包
-        
+
         Args:
             url_filter: 可选的URL过滤器，用于筛选特定URL的数据包
-            
+
         Returns:
             捕获的数据包列表
         """
         if not self.network_listener:
             logger.warning("网络监听器不存在，无法获取数据包")
             return []
-            
+
         # 如果指定了URL过滤器，使用过滤功能
         if url_filter:
             return self.network_listener.filter_by_url(url_filter)
-            
+
         # 否则返回所有捕获的数据包
         return self.network_listener.captured_packets
-    
+
     def cleanup(self) -> None:
         """清理浏览器实例和相关资源
-        
+
         保存当前打开的标签页URL，关闭浏览器，清理临时文件。
-        
+
         Raises:
             Exception: 清理过程中发生的任何异常
         """
         try:
             # 停止网络监听器
-            if hasattr(self, 'network_listener') and self.network_listener:
+            if hasattr(self, "network_listener") and self.network_listener:
                 try:
                     self.stop_network_listening()
                     logger.info(f"✅ 成功停止用户 {self.user_id} 的网络监听")
                 except Exception as e:
                     logger.error(f"❌ 停止网络监听时出错: {e}")
                 self.network_listener = None
-                
+
             if self.browser:
                 urls = []
                 seen = set()  # 用于去重
@@ -539,7 +528,7 @@ class BrowserManager:
     @property
     def is_running(self) -> bool:
         """检查浏览器是否正在运行
-        
+
         Returns:
             浏览器实例存在且运行中返回True，否则返回False
         """
@@ -547,7 +536,7 @@ class BrowserManager:
 
     def close(self) -> None:
         """关闭浏览器实例
-        
+
         直接关闭浏览器，不保存状态。
         """
         if self.browser:
@@ -557,7 +546,7 @@ class BrowserManager:
     @property
     def uptime(self) -> Optional[float]:
         """获取浏览器运行时间
-        
+
         Returns:
             浏览器运行时间（秒），如果浏览器未运行则返回None
         """

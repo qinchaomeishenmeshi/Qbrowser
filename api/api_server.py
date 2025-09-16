@@ -75,7 +75,7 @@ async def get_extensions_status():
     return {
         "status": "running",
         "total_browsers": len(active_browsers),
-        "configured_extensions": ["live_room (直播中控)", "block_videos (视频屏蔽器)"],
+        "configured_extensions": ["live_room (直播中控)"],
         "message": f"扩展服务运行中，{len(active_browsers)} 个浏览器实例活跃",
     }
 
