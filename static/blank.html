@@ -1,43 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang='zh-CN'>
 <head>
-    <meta charset="UTF-8">
-    <title>【USER_ID】</title>
-    <style>
-        body {
-            background: #f7f7f7;
-            margin: 0;
-            font-family: "Segoe UI", "Arial", "PingFang SC", "Microsoft YaHei", sans-serif;
-        }
-        #user-id-tag {
-            position: fixed;
-            top: 24px;
-            left: 24px;
-            background: linear-gradient(90deg, #4f8cff 0%, #1ec8e1 100%);
-            color: #fff;
-            padding: 14px 32px;
-            border-radius: 12px;
-            font-size: 22px;
-            font-weight: bold;
-            box-shadow: 0 4px 16px rgba(79,140,255,0.15);
-            z-index: 9999;
-            letter-spacing: 2px;
-        }
-        #desc {
-            position: absolute;
-            top: 80px;
-            left: 24px;
-            color: #888;
-            font-size: 16px;
-        }
-        @media (max-width: 600px) {
-            #user-id-tag { font-size: 16px; padding: 8px 16px; }
-            #desc { font-size: 13px; top: 60px; }
-        }
-    </style>
+<meta charset='UTF-8'>
+<title>【USER_ID】</title>
+<style>body{background:#fff;}#user-id-tag{position:fixed;top:10px;left:10px;background:#333;color:#fff;padding:8px 16px;border-radius:8px;font-size:16px;z-index:9999;}</style>
 </head>
-<body>
-    <div id="user-id-tag">Browser ID: 【USER_ID】</div>
-    <div id="desc">本页面用于区分浏览器实例，user_id 如上。你可以关闭此标签页或继续操作。</div>
-</body>
+<body><div id='user-id-tag'>Browser ID: 【USER_ID】</div></body>
 </html>

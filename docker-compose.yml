@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  qw-browser-api:
+    build: .
+    container_name: qw-browser-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./conf/chrome_config.json:/app/conf/chrome_config.json
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai

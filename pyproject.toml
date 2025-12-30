@@ -14,33 +14,22 @@ dependencies = [
     "certifi>=2024.0.0",
     "charset-normalizer>=3.0.0",
     "click>=8.0.0",
-    "cssselect>=1.2.0",
     "datarecorder>=3.6.0",
     "downloadkit>=2.0.0",
     "drissionpage>=4.1.0,<5.0.0", # 使用范围约束而非波浪号
-    "et-xmlfile>=1.1.0,<2.0.0",
     "fastapi[all]>=0.115.0,<0.116.0",
-    "filelock>=3.15.0,<4.0.0",
     "frozenlist>=1.4.0",
     "h11>=0.14.0",
     "httpcore>=1.0.0",
     "httpx>=0.28.0,<0.29.0",
     "idna>=3.4",
     "loguru>=0.7.0,<0.8.0",
-    "lxml>=4.9.0",
     "multidict>=6.0.0",
-    "openpyxl>=3.1.0",
     "propcache>=0.2.0,<1.0.0",
     "psutil>=5.9.0,<6.1.0", # 使用更保守的版本范围，避免7.0.0的潜在问题
     "pydantic>=2.11.0,<3.0.0",
     "pydantic-core>=2.33.0,<3.0.0",
-    "pyqt6>=6.7.0,<6.9.0", # 使用更稳定的版本范围
-    "pyqt6-qt6>=6.7.0,<6.9.0",
-    "pyqt6-sip>=13.8.0,<14.0.0",
-    "pyqt6-webengine>=6.7.0,<6.9.0",
     "qasync>=0.27.0",
-    "requests>=2.32.0,<3.0.0",
-    "requests-file>=2.0.0",
     "sniffio>=1.3.0",
     "starlette>=0.46.0,<0.47.0",
     "tldextract>=5.0.0",
@@ -49,7 +38,6 @@ dependencies = [
     "ujson>=5.10.0,<6.0.0",
     "urllib3>=2.0.0,<3.0.0",
     "uvicorn>=0.34.0,<0.35.0",
-    "websocket-client>=1.8.0",
     "yarl>=1.20.0",
     "apscheduler>=3.10.4",
     "aiofiles>=23.2.1",
@@ -59,6 +47,7 @@ dependencies = [
     "tzlocal>=5.0.1",
     "watchdog",
 ]
+
 
 [project.optional-dependencies]
 # 调度器相关依赖

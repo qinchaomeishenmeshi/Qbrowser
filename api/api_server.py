@@ -5,9 +5,8 @@ from typing import List
 import uvicorn
 from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from api.api_business import business_router
 from api.scheduler_api import router as scheduler_router
@@ -23,14 +22,6 @@ logger = get_logger(__name__)
 app = FastAPI()
 api_router = APIRouter(tags=["浏览器管理"])
 
-# 配置模板和静态文件
-templates = Jinja2Templates(directory=resource_path("templates"))
-
-# 挂载静态文件（如果存在）
-try:
-    app.mount("/static", StaticFiles(directory=resource_path("static")), name="static")
-except Exception:
-    pass  # 静态文件目录不存在时忽略
 
 app.add_middleware(
     CORSMiddleware,
@@ -628,25 +619,6 @@ app.include_router(business_router)  # 业务接口
 app.include_router(scheduler_router)  # 定时任务管理接口
 app.include_router(chrome_config_router, prefix="/api")  # Chrome配置接口
 app.include_router(redirect_router, prefix="/api")  # 页面重定向接口
-
-
-# 定时任务管理界面路由
-@app.get("/", response_class=HTMLResponse)
-async def dashboard_redirect(request: Request):
-    """根路径重定向到定时任务管理界面"""
-    return templates.TemplateResponse("scheduler_dashboard.html", {"request": request})
-
-
-@app.get("/scheduler/dashboard", response_class=HTMLResponse)
-async def scheduler_dashboard(request: Request):
-    """定时任务管理界面"""
-    return templates.TemplateResponse("scheduler_dashboard.html", {"request": request})
-
-
-@app.get("/chrome/config", response_class=HTMLResponse)
-async def chrome_config_page(request: Request):
-    """Chrome配置管理界面"""
-    return templates.TemplateResponse("chrome_config.html", {"request": request})
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000):
