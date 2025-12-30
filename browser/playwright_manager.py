@@ -29,8 +29,8 @@ class PlaywrightManager:
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
 
-        # 数据目录
-        self.data_dir_base = Path("browser_data") / "douyin"
+        # 数据目录 - 使用绝对路径
+        self.data_dir_base = Path(BASE_DIR) / "browser_data" / "douyin"
         self.user_data_dir = self.data_dir_base / user_id
         self.user_data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -50,15 +50,13 @@ class PlaywrightManager:
         try:
             self.playwright = await async_playwright().start()
 
-            # 准备启动参数
+            # 1. 基础启动参数
             args = [
                 "--disable-blink-features=AutomationControlled",
                 "--no-default-browser-check",
-                f"--remote-debugging-port={self.port}",
             ]
 
-            # 加载扩展
-            ignore_default_args = []
+            # 2. 加载扩展的特殊处理
             if self.extensions:
                 ext_paths = ",".join(self.extensions)
                 args.extend(
@@ -67,25 +65,23 @@ class PlaywrightManager:
                         f"--load-extension={ext_paths}",
                     ]
                 )
-                ignore_default_args.append("--disable-extensions")
                 logger.info(f"Extension paths added to args: {ext_paths}")
 
-            # 启动持久化上下文 (Persistent Context) 模拟用户配置
-            # 注意: Playwright Persistent Context 需要指定 user_data_dir
-            chrome_path = await chrome_path_manager.get_chrome_path()
+            # 3. 启动持久化上下文
+            # 暂时不强制指定 executable_path，使用 Playwright 自带 Chromium 进行测试
+            # chrome_path = await chrome_path_manager.get_chrome_path()
 
+            abs_user_data_dir = str(self.user_data_dir.resolve())
             logger.info(
-                f"Launching Playwright context for user {self.user_id} with Chrome at {chrome_path}..."
+                f"Launching Playwright context. User data dir: {abs_user_data_dir}"
             )
+
             self.context = await self.playwright.chromium.launch_persistent_context(
-                user_data_dir=str(self.user_data_dir),
-                executable_path=chrome_path,
+                user_data_dir=abs_user_data_dir,
+                # executable_path=chrome_path,
                 headless=self.headless,
                 args=args,
-                ignore_default_args=(
-                    ignore_default_args if ignore_default_args else None
-                ),
-                viewport=get_viewport_dict(),  # 动态获取设备屏幕分辨率
+                viewport=get_viewport_dict(),
                 accept_downloads=True,
             )
 
