@@ -1,4 +1,4 @@
-import codecs
+import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -12,6 +12,8 @@ from conf import BASE_DIR, resource_path
 from conf.browser_config import chrome_path_manager
 from utils.common_logger import get_logger
 from utils.network_listener import EnhancedNetworkListener
+from utils.screen_utils import get_window_size_argument
+from utils.database_manager import db_manager
 
 logger = get_logger(__name__)
 
@@ -69,9 +71,7 @@ class BrowserManager:
         self.config = BrowserConfig()
         self.user_data_dir = self.config.data_dir_base / user_id
         self.user_data_dir.mkdir(parents=True, exist_ok=True)
-        self.last_urls_file = self.user_data_dir / "last_urls.json"
-        if not self.last_urls_file.exists():
-            self.last_urls_file.touch()
+        # self.last_urls_file = self.user_data_dir / "last_urls.json" # Moved to DB
         self.browser: Optional[Chromium] = None
         self.network_listener = None
 
@@ -161,7 +161,7 @@ class BrowserManager:
 
         tab = self.browser.new_tab(url=url)
 
-        # 等待页面开始加载
+        # 等待页面开始加载 (DrissionPage can block here, but it's okay)
         time.sleep(0.5)
 
         # 注入用户标签
@@ -226,7 +226,7 @@ class BrowserManager:
 
         return user_blank_path.as_uri()
 
-    def initialize(self) -> bool:
+    async def initialize(self) -> bool:
         """初始化浏览器实例
 
         配置并启动Chromium浏览器，加载插件，恢复上次打开的标签页。
@@ -255,7 +255,7 @@ class BrowserManager:
             co = ChromiumOptions()
 
             # 设置自定义Chrome路径（如果配置了的话）
-            chrome_path = chrome_path_manager.get_chrome_path()
+            chrome_path = await chrome_path_manager.get_chrome_path()
             if chrome_path:
                 logger.info(f"使用Chrome路径: {chrome_path}")
                 co.set_browser_path(chrome_path)
@@ -265,45 +265,25 @@ class BrowserManager:
             # 设置其他配置
             co.set_local_port(self.port)
             co.set_user_data_path(str(self.user_data_dir))
-            co.set_argument("--window-size", "1910,1070")
+            # 动态获取设备屏幕分辨率作为窗口大小
+            window_size = get_window_size_argument()
+            co.set_argument("--window-size", window_size)
 
-            # 启用扩展相关参数
-            # co.set_argument("--enable-extensions")
-            # co.set_argument("--no-default-browser-check")
-            # 注意：不要使用 --disable-extensions-except，它会导致扩展加载失败
-            # co.set_argument("--disable-extensions-except")
-            # co.set_argument("--allowlisted-extension-id=*")
-
-            # 移除可能导致扩展加载问题的参数
-            # co.set_argument("--enable-automation")
-            # co.set_argument("--disable-blink-features=AutomationControlled")
-
-            # 使用--load-extension参数加载插件（更可靠的方式）
+            # 使用--load-extension参数加载插件
             if valid_extensions:
-                # extension_paths = ",".join(valid_extensions)
-                # co.set_argument(f"--load-extension={extension_paths}")
-                # 循环插入extension_paths
                 for path in valid_extensions:
                     co.add_extension(path)
                     logger.info(f"[OK] 扩展路径: {path}")
-
             else:
                 logger.warning("[WARNING] 没有有效的插件可以加载")
 
-            # DrissionPage 4.1.x 兼容性改进
-
             try:
-
                 self.browser = Chromium(co)
-
                 # 等待浏览器完全启动
-
-                time.sleep(1)
+                await asyncio.sleep(1)
 
                 # 验证浏览器是否正常运行
-
                 if not self.browser or not hasattr(self.browser, "tabs_count"):
-
                     raise Exception("浏览器启动失败或状态异常")
 
                 logger.info(
@@ -311,26 +291,19 @@ class BrowserManager:
                 )
 
             except Exception as e:
-
                 logger.error(f"浏览器启动失败: {e}")
-
                 if hasattr(self, "browser") and self.browser:
-
                     try:
-
                         self.browser.quit()
-
                     except:
-
                         pass
-
                 raise
             logger.info(f"Browser started for user: {self.user_id}")
 
-            urls = json.loads(self.last_urls_file.read_text() or "[]")
-            print("urls:", urls)
+            urls = await db_manager.get_value(f"last_urls_{self.user_id}", [])
+            logger.info(f"从数据库获取到上次打开的 URLs: {urls}")
+
             tabs = self.browser.get_tabs()
-            print("tabs:", tabs)
             for url in urls:
                 # 判断url是否已经被打开
                 if url in [tab.url for tab in tabs]:
@@ -338,7 +311,7 @@ class BrowserManager:
                 try:
                     tab = self.browser.new_tab(url=url)
                     # 等待页面完全加载
-                    time.sleep(2)
+                    await asyncio.sleep(2)
                     # 检查页面连接状态
                     if hasattr(tab, "url") and tab.url:
                         # 使用新的注入方法
@@ -353,7 +326,7 @@ class BrowserManager:
             try:
                 blank_url = self.get_user_blank_html_path()
                 blank_tab = self.browser.new_tab(url=blank_url)
-                time.sleep(1)  # 等待空白页加载
+                await asyncio.sleep(1)  # 等待空白页加载
                 logger.info(f"成功打开自定义空白页: {blank_url}")
             except Exception as e:
                 logger.warning(f"打开自定义空白页失败: {e}")
@@ -363,7 +336,7 @@ class BrowserManager:
                 # 导入自动重定向模块
                 from browser.auto_redirect import auto_redirect
 
-                # 为浏览器设置自动重定向
+                # 为浏览器设置自动重定向 (DrissionPage is sync, keep as is for now)
                 if auto_redirect.setup_browser(self.browser):
                     logger.info(f"✅ 成功为用户 {self.user_id} 设置自动重定向")
                 else:
@@ -377,7 +350,7 @@ class BrowserManager:
             return True
         except Exception as e:
             logger.error(f"Initialization failed: {e}", exc_info=True)
-            self.cleanup()
+            await self.cleanup()
             return False
 
     def create_network_listener(self, tab=None) -> Optional[EnhancedNetworkListener]:
@@ -466,13 +439,10 @@ class BrowserManager:
         # 否则返回所有捕获的数据包
         return self.network_listener.captured_packets
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """清理浏览器实例和相关资源
 
         保存当前打开的标签页URL，关闭浏览器，清理临时文件。
-
-        Raises:
-            Exception: 清理过程中发生的任何异常
         """
         try:
             # 停止网络监听器
@@ -499,16 +469,13 @@ class BrowserManager:
                     ):
                         urls.append(url)
                         seen.add(url)
-                        logger.debug(f"[Tab {i}] Saved URL: {url}")  # 可选调试输出
+                        logger.debug(f"[Tab {i}] Saved URL: {url}")
 
                 if urls:
-                    self.last_urls_file.write_text(
-                        json.dumps(urls, ensure_ascii=False, indent=2)
-                    )
-                    logger.info(f"[OK] Saved {len(urls)} unique URLs.")
+                    await db_manager.set_value(f"last_urls_{self.user_id}", urls)
+                    logger.info(f"[OK] Saved {len(urls)} unique URLs to database.")
                 else:
-                    # 重写last_urls_file为空
-                    self.last_urls_file.write_text("[]")
+                    await db_manager.set_value(f"last_urls_{self.user_id}", [])
                     logger.info("[INFO] No URLs to save.")
 
                 self.browser.quit()

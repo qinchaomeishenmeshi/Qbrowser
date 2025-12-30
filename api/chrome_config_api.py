@@ -11,12 +11,16 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/chrome-config", tags=["Chrome配置"])
 
+
 class ChromePathRequest(BaseModel):
     """设置Chrome路径的请求模型"""
+
     path: Optional[str] = None
+
 
 class ChromePathResponse(BaseModel):
     """Chrome路径响应模型"""
+
     success: bool
     message: str
     data: Optional[dict] = None
@@ -28,37 +32,35 @@ def _handle_chrome_operation_error(operation: str, error: Exception) -> None:
     raise HTTPException(status_code=500, detail=str(error))
 
 
-def _create_chrome_response(success: bool, message: str, data: Optional[dict] = None) -> ChromePathResponse:
+def _create_chrome_response(
+    success: bool, message: str, data: Optional[dict] = None
+) -> ChromePathResponse:
     """创建Chrome配置响应的工厂函数"""
     return ChromePathResponse(success=success, message=message, data=data)
 
 
-def _clear_chrome_path_operation() -> ChromePathResponse:
+async def _clear_chrome_path_operation() -> ChromePathResponse:
     """清除Chrome路径的核心操作"""
-    success = chrome_path_manager.set_chrome_path(None)
+    success = await chrome_path_manager.set_chrome_path(None)
     if success:
         return _create_chrome_response(
-            success=True,
-            message="已清除自定义Chrome路径，将使用系统默认路径"
+            success=True, message="已清除自定义Chrome路径，将使用系统默认路径"
         )
     else:
-        return _create_chrome_response(
-            success=False,
-            message="清除Chrome路径失败"
-        )
+        return _create_chrome_response(success=False, message="清除Chrome路径失败")
+
 
 @router.get("/current", response_model=ChromePathResponse, summary="获取当前Chrome配置")
 async def get_current_chrome_config():
     """获取当前Chrome配置信息"""
     try:
-        config = chrome_path_manager.get_current_config()
+        config = await chrome_path_manager.get_current_config()
         return _create_chrome_response(
-            success=True,
-            message="获取Chrome配置成功",
-            data=config
+            success=True, message="获取Chrome配置成功", data=config
         )
     except Exception as e:
         _handle_chrome_operation_error("获取Chrome配置", e)
+
 
 @router.get("/detect", response_model=ChromePathResponse, summary="检测Chrome浏览器")
 async def detect_chrome_browsers():
@@ -68,10 +70,11 @@ async def detect_chrome_browsers():
         return _create_chrome_response(
             success=True,
             message=f"检测到 {len(available_paths)} 个可用的Chrome浏览器",
-            data={"available_paths": available_paths}
+            data={"available_paths": available_paths},
         )
     except Exception as e:
         _handle_chrome_operation_error("检测Chrome浏览器", e)
+
 
 @router.post("/set-path", response_model=ChromePathResponse, summary="设置Chrome路径")
 async def set_chrome_path(request: ChromePathRequest):
@@ -79,29 +82,31 @@ async def set_chrome_path(request: ChromePathRequest):
     try:
         # 如果路径为空或None，则清除自定义路径
         if not request.path or not request.path.strip():
-            return _clear_chrome_path_operation()
-        
+            return await _clear_chrome_path_operation()
+
         # 设置自定义路径
         cleaned_path = request.path.strip()
-        success = chrome_path_manager.set_chrome_path(cleaned_path)
-        
+        success = await chrome_path_manager.set_chrome_path(cleaned_path)
+
         if success:
             return _create_chrome_response(
-                success=True,
-                message=f"Chrome路径设置成功: {cleaned_path}"
+                success=True, message=f"Chrome路径设置成功: {cleaned_path}"
             )
         else:
             return _create_chrome_response(
                 success=False,
-                message=f"Chrome路径设置失败，请检查路径是否正确: {cleaned_path}"
+                message=f"Chrome路径设置失败，请检查路径是否正确: {cleaned_path}",
             )
     except Exception as e:
         _handle_chrome_operation_error("设置Chrome路径", e)
 
-@router.delete("/clear-path", response_model=ChromePathResponse, summary="清除Chrome路径")
+
+@router.delete(
+    "/clear-path", response_model=ChromePathResponse, summary="清除Chrome路径"
+)
 async def clear_chrome_path():
     """清除自定义Chrome路径，恢复使用系统默认路径"""
     try:
-        return _clear_chrome_path_operation()
+        return await _clear_chrome_path_operation()
     except Exception as e:
         _handle_chrome_operation_error("清除Chrome路径", e)

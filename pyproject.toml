@@ -16,7 +16,6 @@ dependencies = [
     "click>=8.0.0",
     "datarecorder>=3.6.0",
     "downloadkit>=2.0.0",
-    "drissionpage>=4.1.0,<5.0.0", # 使用范围约束而非波浪号
     "fastapi[all]>=0.115.0,<0.116.0",
     "frozenlist>=1.4.0",
     "h11>=0.14.0",
@@ -46,6 +45,11 @@ dependencies = [
     "orjson>=3.9.10",
     "tzlocal>=5.0.1",
     "watchdog",
+    "playwright>=1.49.0", # Added for migration
+    "playwright-stealth>=1.0.6,<2.0.0", # Added for anti-detection
+    "setuptools", # Required for pkg_resources used by playwright-stealth
+    "screeninfo>=0.8.1", # 用于获取设备屏幕分辨率
+    "aiosqlite>=0.20.0", # 异步 SQLite 驱动
 ]
 
 

@@ -7,7 +7,10 @@ from typing import Dict, Any, Optional, Union
 
 import requests
 
-from browser.browser_operator import browser_operator, BrowserOperator
+from browser.playwright_operator import (
+    playwright_operator as browser_operator,
+    PlaywrightOperator as BrowserOperator,
+)
 from conf import PORTS_FILE
 from utils.common_logger import get_logger
 from utils.common_response import PublicResponse
@@ -46,24 +49,27 @@ class CouponClient:
         确保包含所有必要的认证和会话 cookies
         """
         cookies_list = await browser_operator.get_user_cookies(user_id)
-        
+
         # 处理不同的 cookies 数据格式
         cookies_dict = {}
         if cookies_list is None:
             logger.warning(f"用户 {user_id} 的 cookies 为空")
             return cookies_dict
-            
+
         if isinstance(cookies_list, dict):
             # 如果已经是字典格式，直接使用
             cookies_dict = cookies_list
         elif isinstance(cookies_list, list):
             # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
             cookies_dict = {
-                c["name"]: c["value"] for c in cookies_list 
+                c["name"]: c["value"]
+                for c in cookies_list
                 if isinstance(c, dict) and "name" in c and "value" in c
             }
         else:
-            logger.error(f"用户 {user_id} 的 cookies 格式不支持，类型: {type(cookies_list)}")
+            logger.error(
+                f"用户 {user_id} 的 cookies 格式不支持，类型: {type(cookies_list)}"
+            )
             return cookies_dict
         return cookies_dict
 
@@ -127,10 +133,10 @@ class CouponClient:
         return await self.get_basic_list(user_id)
 
     async def create_coupon(
-            self,
-            user_id: str,
-            coupon_data: Dict[str, Any],
-            extra_params: Optional[Dict[str, Any]] = None,
+        self,
+        user_id: str,
+        coupon_data: Dict[str, Any],
+        extra_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         发送创建达人券请求，返回接口 JSON

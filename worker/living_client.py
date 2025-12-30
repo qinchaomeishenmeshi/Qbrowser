@@ -5,7 +5,10 @@ from typing import Dict, Any, Optional, Tuple
 
 import aiohttp
 
-from browser.browser_operator import browser_operator, BrowserOperator
+from browser.playwright_operator import (
+    playwright_operator as browser_operator,
+    PlaywrightOperator as BrowserOperator,
+)
 from utils.common_logger import get_logger
 from utils.common_response import PublicResponse
 from utils.util import get_date_range

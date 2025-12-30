@@ -1,26 +1,26 @@
 import asyncio
-import json
 import os
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any
 
-from browser.browser_manager import BrowserManager
+from browser.playwright_manager import PlaywrightManager
 from browser.browser_store import browser_store
-from conf import CACHE_FILE, PORTS_FILE, DATA_DIR
+from conf import DATA_DIR
 from utils.common_logger import get_logger
 from utils.cookies_manager import CookiesManager
 from utils.port_manager import PortManager
+from utils.database_manager import db_manager
 
 logger = get_logger(__name__)
 
 
 class BrowserService:
     """浏览器服务类
-    
+
     负责管理多个浏览器实例的启动、停止、状态监控等功能。
-    提供统一的浏览器管理接口和端口分配机制。
+    使用 SQLite 数据库持久化状态。
     """
-    
+
     def __init__(self) -> None:
         """初始化浏览器服务"""
         self.browser_store = browser_store  # 全局单例
@@ -28,25 +28,13 @@ class BrowserService:
         self.cookies_manager = CookiesManager(Path(os.path.join(DATA_DIR, "cookies")))
 
     async def start_browsers(self, user_ids: List[str]) -> List[Dict[str, Any]]:
-        """批量启动浏览器实例
-        
-        Args:
-            user_ids: 用户ID列表
-            
-        Returns:
-            启动结果列表，每个元素包含用户ID、状态、端口等信息
-            
-        Raises:
-            Exception: 当启动过程中发生严重错误时
-        """
+        """批量启动浏览器实例"""
         results = []
         for idx, user_id in enumerate(user_ids, 1):
             try:
-                # 使用get_or_create_browser统一处理浏览器实例获取和创建
                 manager = await self.get_or_create_browser(user_id)
-                
+
                 if manager and manager.is_running:
-                    # 检查是否是已存在的实例
                     existing_manager = await self.browser_store.get(user_id)
                     if existing_manager and existing_manager.is_running:
                         results.append(
@@ -72,7 +60,7 @@ class BrowserService:
                             "port": None,
                         }
                     )
-                    
+
             except Exception as e:
                 logger.error(f"启动浏览器失败 {user_id}: {e}", exc_info=True)
                 results.append(
@@ -88,13 +76,7 @@ class BrowserService:
         return results
 
     async def stop_all_browsers(self) -> None:
-        """停止所有浏览器实例
-        
-        清理所有运行中的浏览器实例，释放端口资源并保存状态。
-        
-        Raises:
-            Exception: 当停止过程中发生错误时
-        """
+        """停止所有浏览器实例"""
         try:
             await self.browser_store.clear()
             await self.port_manager.clear_ports()
@@ -105,177 +87,105 @@ class BrowserService:
             raise
 
     async def save_ports(self) -> None:
-        """保存端口映射到文件
-        
-        将当前的用户ID到端口的映射关系持久化到文件中。
-        
-        Raises:
-            IOError: 当文件写入失败时
-            Exception: 当保存过程中发生其他错误时
-        """
-        managers = await self.browser_store.get_all()
-        mapping = {m.user_id: {"port": m.port} for m in managers}
+        """保存端口映射到数据库"""
         try:
-            with open(PORTS_FILE, "w", encoding="utf-8") as f:
-                json.dump(mapping, f, ensure_ascii=False, indent=2)
-            logger.info(f"保存端口映射成功，共 {len(mapping)} 个实例")
+            managers = await self.browser_store.get_all()
+            # 清空旧数据并更新
+            await db_manager.clear_all_ports()
+            for m in managers:
+                await db_manager.save_port(m.user_id, m.port)
+            logger.info(f"保存端口映射到数据库成功，共 {len(managers)} 个实例")
         except Exception as e:
             logger.error(f"保存端口映射失败: {e}")
 
     async def load_ports(self) -> None:
-        """从文件加载端口映射并尝试恢复浏览器实例
-        
-        从持久化文件中读取端口映射信息，并尝试重新连接到现有的浏览器进程。
-        对于无法连接的实例，会自动清理相关缓存。
-        
-        Raises:
-            IOError: 当文件读取失败时
-            Exception: 当恢复过程中发生其他错误时
-        """
-        if os.path.exists(PORTS_FILE):
-            try:
-                with open(PORTS_FILE, encoding="utf-8") as f:
-                    mapping = json.load(f)
+        """从数据库加载端口映射并尝试恢复浏览器实例"""
+        try:
+            mapping = await db_manager.get_all_ports()
+            if not mapping:
+                return
 
-                ports = {
-                    v["port"]
-                    for v in mapping.values()
-                    if isinstance(v, dict) and "port" in v
-                }
-                await self.port_manager.load_ports(ports)
-                
-                # 尝试恢复浏览器实例
-                recovered_count = 0
-                invalid_entries = []
-                
-                for user_id, config in mapping.items():
-                    if isinstance(config, dict) and "port" in config:
-                        port = config["port"]
-                        try:
-                            # 检查端口是否真的在使用中
-                            if await self._is_browser_running_on_port(port):
-                                # 创建浏览器管理器实例但不初始化（连接到现有进程）
-                                manager = BrowserManager(user_id, port)
-                                if await self._try_connect_existing_browser(manager):
-                                    await self.browser_store.add(manager)
-                                    recovered_count += 1
-                                    logger.info(f"恢复浏览器实例成功: {user_id} (端口: {port})")
-                                else:
-                                    invalid_entries.append(user_id)
-                                    await self.port_manager.release_port(port)
-                            else:
-                                invalid_entries.append(user_id)
-                                await self.port_manager.release_port(port)
-                        except Exception as e:
-                            logger.warning(f"恢复浏览器实例失败 {user_id}: {e}")
+            ports = list(mapping.values())
+            await self.port_manager.load_ports(ports)
+
+            recovered_count = 0
+            invalid_entries = []
+
+            for user_id, port in mapping.items():
+                try:
+                    if await self._is_browser_running_on_port(port):
+                        manager = PlaywrightManager(user_id, port)
+                        if await self._try_connect_existing_browser(manager):
+                            await self.browser_store.add(manager)
+                            recovered_count += 1
+                            logger.info(f"恢复浏览器实例成功: {user_id} (端口: {port})")
+                        else:
                             invalid_entries.append(user_id)
                             await self.port_manager.release_port(port)
-                
-                # 清理无效的缓存条目
-                if invalid_entries:
-                    for user_id in invalid_entries:
-                        mapping.pop(user_id, None)
-                    
-                    # 更新缓存文件
-                    with open(PORTS_FILE, "w", encoding="utf-8") as f:
-                        json.dump(mapping, f, ensure_ascii=False, indent=2)
-                    
-                    logger.info(f"清理无效缓存条目: {invalid_entries}")
-                
-                logger.info(f"加载端口映射成功: {mapping}, 恢复实例: {recovered_count}个")
-            except Exception as e:
-                logger.error(f"加载端口映射失败: {e}", exc_info=True)
+                    else:
+                        invalid_entries.append(user_id)
+                        await self.port_manager.release_port(port)
+                except Exception as e:
+                    logger.warning(f"恢复浏览器实例失败 {user_id}: {e}")
+                    invalid_entries.append(user_id)
+                    await self.port_manager.release_port(port)
 
-    def save_cache(self, user_ids: List[str]) -> None:
-        """保存用户ID缓存到文件
-        
-        Args:
-            user_ids: 用户ID列表
-            
-        Raises:
-            IOError: 当文件写入失败时
-        """
+            # 清理无效记录
+            for u_id in invalid_entries:
+                await db_manager.delete_port(u_id)
+
+            logger.info(f"数据库加载端口成功，恢复实例: {recovered_count}个")
+        except Exception as e:
+            logger.error(f"加载端口映射失败: {e}", exc_info=True)
+
+    async def save_cache(self, user_ids: List[str]) -> None:
+        """保存用户ID缓存到数据库"""
         try:
-            with open(CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(user_ids, f, ensure_ascii=False, indent=2)
-            logger.info(f"保存用户缓存成功，共 {len(user_ids)} 个用户")
+            await db_manager.set_value("user_ids_cache", user_ids)
+            logger.info(f"保存用户缓存到数据库成功，共 {len(user_ids)} 个用户")
         except Exception as e:
             logger.error(f"保存用户缓存失败: {e}", exc_info=True)
 
-    def load_cache(self) -> List[str]:
-        """从文件加载用户ID缓存
-        
-        Returns:
-            用户ID列表，如果文件不存在或加载失败则返回空列表
-        """
-        if os.path.exists(CACHE_FILE):
-            try:
-                with open(CACHE_FILE, encoding="utf-8") as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"加载用户缓存失败: {e}", exc_info=True)
-                return []
-        return []
+    async def load_cache(self) -> List[str]:
+        """从数据库加载用户ID缓存"""
+        try:
+            return await db_manager.get_value("user_ids_cache", [])
+        except Exception as e:
+            logger.error(f"加载用户缓存失败: {e}", exc_info=True)
+            return []
 
-    def clear_cache(self) -> None:
-        """清除用户缓存文件和端口映射文件
-        
-        删除本地缓存文件并清理端口分配记录。
-        
-        Raises:
-            OSError: 当文件删除失败时
-        """
-        if os.path.exists(CACHE_FILE):
-            try:
-                os.remove(CACHE_FILE)
-                logger.info("清除用户缓存成功")
-            except Exception as e:
-                logger.error(f"清除用户缓存失败: {e}", exc_info=True)
-        self.clear_ports()
+    async def clear_cache(self) -> None:
+        """清除用户缓存和端口映射"""
+        try:
+            await db_manager.delete_value("user_ids_cache")
+            await self.clear_ports()
+            logger.info("清除用户缓存成功")
+        except Exception as e:
+            logger.error(f"清除用户缓存失败: {e}", exc_info=True)
 
-    def clear_ports(self) -> None:
-        """清除端口映射文件和端口管理器状态
-        
-        删除端口映射文件并重置端口管理器的内部状态。
-        
-        Raises:
-            OSError: 当文件删除失败时
-        """
-        if os.path.exists(PORTS_FILE):
-            try:
-                os.remove(PORTS_FILE)
-                logger.info("清除端口映射文件成功")
-            except Exception as e:
-                logger.error(f"清除端口映射文件失败: {e}", exc_info=True)
-        asyncio.create_task(self.port_manager.clear_ports())
+    async def clear_ports(self) -> None:
+        """清空端口映射记录"""
+        try:
+            await db_manager.clear_all_ports()
+            await self.port_manager.clear_ports()
+            logger.info("库中端口映射已清空")
+        except Exception as e:
+            logger.error(f"清除端口映射失败: {e}", exc_info=True)
 
-    async def get_or_create_browser(self, user_id: str) -> Optional[BrowserManager]:
-        """获取已存在的浏览器实例，否则新建并返回
-        
-        Args:
-            user_id: 用户ID
-            
-        Returns:
-            浏览器管理器实例，如果创建失败则返回None
-            
-        Raises:
-            Exception: 当浏览器创建过程中发生严重错误时
-        """
-
+    async def get_or_create_browser(self, user_id: str) -> Optional[PlaywrightManager]:
+        """获取已存在的浏览器实例，否则新建并返回"""
         manager = await self.browser_store.get(user_id)
-        print(f"获取或创建浏览器实例 {manager}")
         if manager and manager.is_running:
             return manager
-        
-        # 如果存在但未运行的实例，先清理掉
+
         if manager and not manager.is_running:
             await self.browser_store.remove(user_id)
             logger.warning(f"清理未运行的浏览器实例: {user_id}")
 
         try:
             port = await self.port_manager.allocate_port()
-            manager = BrowserManager(user_id, port)
-            ok = await asyncio.to_thread(manager.initialize)
+            manager = PlaywrightManager(user_id, port)
+            ok = await manager.initialize()
             if ok and manager.is_running:
                 await self.browser_store.add(manager)
                 await self.save_ports()
@@ -289,59 +199,39 @@ class BrowserService:
             return None
 
     async def _is_browser_running_on_port(self, port: int) -> bool:
-        """检查指定端口是否有浏览器进程在运行
-        
-        Args:
-            port: 要检查的端口号
-            
-        Returns:
-            如果端口上有浏览器进程运行则返回True，否则返回False
-        """
+        """检查指定端口是否有浏览器进程在运行"""
         try:
             import socket
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.settimeout(1)
-            result = sock.connect_ex(('localhost', port))
+            result = sock.connect_ex(("localhost", port))
             sock.close()
             return result == 0
         except Exception as e:
             logger.error(f"检查端口 {port} 连接失败: {e}", exc_info=True)
             return False
-    
-    async def _try_connect_existing_browser(self, manager: BrowserManager) -> bool:
-        """尝试连接到现有的浏览器进程
-        
-        Args:
-            manager: 浏览器管理器实例
-            
-        Returns:
-            如果成功连接到现有浏览器则返回True，否则返回False
-            
-        Raises:
-            Exception: 连接过程中发生的任何异常
-        """
+
+    async def _try_connect_existing_browser(self, manager: PlaywrightManager) -> bool:
+        """尝试连接到现有的浏览器进程"""
         try:
-            from DrissionPage import ChromiumPage, ChromiumOptions
-            
-            # 创建连接选项
-            co = ChromiumOptions()
-            co.set_local_port(manager.port)
-            
-            # 尝试连接到现有浏览器
-            try:
-                browser = ChromiumPage(addr_or_opts=co)
-            except Exception as e:
-                logger.error(f"ChromiumPage初始化失败: {e}")
-                raise
-            
-            # 验证连接是否成功
-            if browser and hasattr(browser, 'tabs_count'):
-                manager.browser = browser
-                return True
-            else:
-                return False
+            from playwright.async_api import async_playwright
+
+            async with async_playwright() as p:
+                try:
+                    browser = await p.chromium.connect_over_cdp(
+                        f"http://localhost:{manager.port}"
+                    )
+                    await browser.close()
+                    return True
+                except:
+                    return False
         except Exception as e:
-            logger.error(f"连接现有浏览器失败 (端口: {manager.port}): {e}", exc_info=True)
+            logger.warning(f"Check existing browser failed: {e}")
             return False
+
+
+browser_service = BrowserService()
+
 
 browser_service = BrowserService()

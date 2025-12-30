@@ -8,7 +8,11 @@ import aiohttp
 # 新增：引入时间模块用于实现简单TTL缓存
 import time
 
-from browser.browser_operator import browser_operator, BrowserOperator, SITE_CONFIGS
+from browser.playwright_operator import (
+    playwright_operator as browser_operator,
+    PlaywrightOperator as BrowserOperator,
+    SITE_CONFIGS,
+)
 from utils.common_logger import get_logger
 from utils.common_response import PublicResponse
 from utils.api_client import default_api_client
@@ -401,7 +405,9 @@ class EosClient:
                 "room_id": room_id,
             }
 
-            logger.debug(f"发送请求：{self.live_key_index_url} user_id={user_id} room_id={room_id}")
+            logger.debug(
+                f"发送请求：{self.live_key_index_url} user_id={user_id} room_id={room_id}"
+            )
             # 不打印敏感/冗长请求数据，仅在调试时查看
             logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
@@ -450,7 +456,9 @@ class EosClient:
                 "room_id": room_id,
             }
 
-            logger.debug(f"发送请求：{self.conversion_funnel_url} user_id={user_id} room_id={room_id}")
+            logger.debug(
+                f"发送请求：{self.conversion_funnel_url} user_id={user_id} room_id={room_id}"
+            )
             logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
             async with aiohttp.ClientSession() as session:
@@ -495,7 +503,9 @@ class EosClient:
             # 构造请求数据，参考live.py
             json_data = {"calculate": "all", "room_id": room_id, "type": "order"}
 
-            logger.debug(f"发送请求：{self.live_portrait_url} user_id={user_id} room_id={room_id}")
+            logger.debug(
+                f"发送请求：{self.live_portrait_url} user_id={user_id} room_id={room_id}"
+            )
             logger.debug(f"请求数据keys: {list(json_data.keys())}")
 
             async with aiohttp.ClientSession() as session:
