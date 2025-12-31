@@ -10,8 +10,8 @@ on:
         default: 'release'
         type: choice
         options:
-        - release
-        - debug
+          - release
+          - debug
       upload_artifact:
         description: '上传构建产物'
         required: true
@@ -21,117 +21,117 @@ on:
 jobs:
   quick-build:
     runs-on: windows-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-      
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-    
-    # 添加快速构建缓存
-    - name: Cache quick build dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/uv
-          .venv
-        key: ${{ runner.os }}-quick-${{ hashFiles('requirements.txt') }}-${{ github.event.inputs.build_type }}
-        restore-keys: |
-          ${{ runner.os }}-quick-
-        
-    - name: Install uv
-      run: |
-        $uvPath = "$env:USERPROFILE\.local\bin"
-        if (-not (Test-Path "$uvPath\uv.exe")) {
-          Write-Host "Installing uv..."
-          Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
-        } else {
-          Write-Host "[OK] uv found in cache"
-        }
-        $env:PATH = "$uvPath;$env:PATH"
-        echo "$uvPath" >> $env:GITHUB_PATH
-        
-    - name: Quick setup
-      run: |
-        $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
-        uv --version
-        if (-not (Test-Path ".venv")) {
-          Write-Host "Creating virtual environment..."
-          uv venv
-        } else {
-          Write-Host "[OK] Virtual environment found in cache"
-        }
-        .venv\Scripts\activate
-        uv pip install pyinstaller PyQt6 qasync DrissionPage fastapi jinja2 uvicorn
-        
-    - name: Prepare build
-      run: |
-        # 创建必要文件
-        @{} | ConvertTo-Json | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
-        @{} | ConvertTo-Json | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
-        
-        # 创建目录
-        New-Item -ItemType Directory -Force -Path "data", "static"
-        
-    - name: Build with PyInstaller
-      run: |
-        .venv\Scripts\activate
-        if ("${{ github.event.inputs.build_type }}" -eq "debug") {
-          pyinstaller app.spec --clean --debug all
-        } else {
-          pyinstaller app.spec --clean
-        }
-        
-    - name: Check build result
-      run: |
-        if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
-          Write-Host "[OK] Build successful!"
-          $size = (Get-Item "dist\全网直播浏览器\全网直播浏览器.exe").Length / 1MB
-          Write-Host "[INFO] File size: $([math]::Round($size, 2)) MB"
-        } else {
-          Write-Host "[ERROR] Build failed!"
-          Get-ChildItem "dist" -Recurse -ErrorAction SilentlyContinue
-          exit 1
-        }
-        
-    - name: Compress build artifacts
-      if: ${{ github.event.inputs.upload_artifact == 'true' }}
-      run: |
-        $buildDir = "dist\全网直播浏览器"
-        $zipFile = "qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip"
-        
-        Write-Host "[INFO] Compressing build artifacts..."
-        Compress-Archive -Path "$buildDir\*" -DestinationPath $zipFile -CompressionLevel Optimal
-        
-        $zipSize = (Get-Item $zipFile).Length / 1MB
-        Write-Host "[OK] Compressed file size: $([math]::Round($zipSize, 2)) MB"
-        
-    - name: Upload build artifact
-      if: ${{ github.event.inputs.upload_artifact == 'true' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}
-        path: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip
-        retention-days: 3
-        
-    - name: Trigger cleanup workflow
-      if: always()
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          console.log('触发清理旧artifacts工作流...');
-          try {
-            const result = await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'cleanup-artifacts.yml',
-              ref: 'main'
-            });
-            console.log('✅ 清理工作流已触发:', result.status);
-          } catch (error) {
-            console.log('⚠️  触发清理工作流失败:', error.message);
-            // 忽略错误，继续执行
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # 添加快速构建缓存
+      - name: Cache quick build dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            .venv
+          key: ${{ runner.os }}-quick-${{ hashFiles('requirements.txt') }}-${{ github.event.inputs.build_type }}
+          restore-keys: |
+            ${{ runner.os }}-quick-
+
+      - name: Install uv
+        run: |
+          $uvPath = "$env:USERPROFILE\.local\bin"
+          if (-not (Test-Path "$uvPath\uv.exe")) {
+            Write-Host "Installing uv..."
+            Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+          } else {
+            Write-Host "[OK] uv found in cache"
           }
+          $env:PATH = "$uvPath;$env:PATH"
+          echo "$uvPath" >> $env:GITHUB_PATH
+
+      - name: Quick setup
+        run: |
+          $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
+          uv --version
+          if (-not (Test-Path ".venv")) {
+            Write-Host "Creating virtual environment..."
+            uv venv
+          } else {
+            Write-Host "[OK] Virtual environment found in cache"
+          }
+          .venv\Scripts\activate
+          uv pip install pyinstaller PyQt6 qasync playwright playwright-stealth fastapi jinja2 uvicorn
+
+      - name: Prepare build
+        run: |
+          # 创建必要文件
+          @{} | ConvertTo-Json | Out-File -FilePath "user_ids_cache.json" -Encoding UTF8
+          @{} | ConvertTo-Json | Out-File -FilePath "user_ports_cache.json" -Encoding UTF8
+
+          # 创建目录
+          New-Item -ItemType Directory -Force -Path "data", "static"
+
+      - name: Build with PyInstaller
+        run: |
+          .venv\Scripts\activate
+          if ("${{ github.event.inputs.build_type }}" -eq "debug") {
+            pyinstaller app.spec --clean --debug all
+          } else {
+            pyinstaller app.spec --clean
+          }
+
+      - name: Check build result
+        run: |
+          if (Test-Path "dist\全网直播浏览器\全网直播浏览器.exe") {
+            Write-Host "[OK] Build successful!"
+            $size = (Get-Item "dist\全网直播浏览器\全网直播浏览器.exe").Length / 1MB
+            Write-Host "[INFO] File size: $([math]::Round($size, 2)) MB"
+          } else {
+            Write-Host "[ERROR] Build failed!"
+            Get-ChildItem "dist" -Recurse -ErrorAction SilentlyContinue
+            exit 1
+          }
+
+      - name: Compress build artifacts
+        if: ${{ github.event.inputs.upload_artifact == 'true' }}
+        run: |
+          $buildDir = "dist\全网直播浏览器"
+          $zipFile = "qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip"
+
+          Write-Host "[INFO] Compressing build artifacts..."
+          Compress-Archive -Path "$buildDir\*" -DestinationPath $zipFile -CompressionLevel Optimal
+
+          $zipSize = (Get-Item $zipFile).Length / 1MB
+          Write-Host "[OK] Compressed file size: $([math]::Round($zipSize, 2)) MB"
+
+      - name: Upload build artifact
+        if: ${{ github.event.inputs.upload_artifact == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}
+          path: qw-browser-${{ github.event.inputs.build_type }}-${{ github.run_number }}.zip
+          retention-days: 3
+
+      - name: Trigger cleanup workflow
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log('触发清理旧artifacts工作流...');
+            try {
+              const result = await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'cleanup-artifacts.yml',
+                ref: 'main'
+              });
+              console.log('✅ 清理工作流已触发:', result.status);
+            } catch (error) {
+              console.log('⚠️  触发清理工作流失败:', error.message);
+              // 忽略错误，继续执行
+            }

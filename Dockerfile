@@ -9,9 +9,8 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies (for Chrome if needed, though DrissionPage often manages its own, 
-# for headless server environment, we might need some deps or just rely on DrissionPage's ability to find/download browser)
-# Here we install basic tools. For a true headless chrome env, more deps might be needed.
+# Install system dependencies for Playwright and browser environment
+# For a true headless chrome env, more deps might be needed.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \

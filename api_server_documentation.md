@@ -8,7 +8,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 
 - **框架**: FastAPI
 - **异步支持**: asyncio
-- **浏览器引擎**: DrissionPage (Chromium)
+- **浏览器引擎**: Playwright (Chromium)
 - **模板引擎**: Jinja2
 - **CORS**: 支持跨域请求
 
@@ -26,6 +26,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 1. 健康检查接口
 
 #### GET /api/health
+
 - **功能**: 系统健康检查
 - **参数**: 无
 - **返回值**:
@@ -42,6 +43,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 2. 浏览器管理接口
 
 #### GET /api/browser/status
+
 - **功能**: 获取浏览器服务详细状态
 - **参数**: 无
 - **返回值**:
@@ -56,6 +58,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 - **说明**: 返回浏览器服务状态、总实例数和活跃实例数
 
 #### GET /api/active_instances
+
 - **功能**: 获取所有活跃的浏览器实例
 - **参数**: 无
 - **返回值**:
@@ -66,13 +69,14 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
     "active_instances": ["user1", "user2", "user3"]
   }
   ```
-- **说明**: 返回当前运行中的浏览器实例用户ID列表
+- **说明**: 返回当前运行中的浏览器实例用户 ID 列表
 
 #### POST /api/start/{user_id}
+
 - **功能**: 启动指定用户的浏览器实例
-- **参数**: 
-  - `user_id` (路径参数): 用户ID
-  - `url` (查询参数，可选): 要打开的页面URL
+- **参数**:
+  - `user_id` (路径参数): 用户 ID
+  - `url` (查询参数，可选): 要打开的页面 URL
 - **返回值**:
   ```json
   {
@@ -89,10 +93,11 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   - `error`: 启动过程中出错
 
 #### POST /api/start_all
+
 - **功能**: 批量启动多个浏览器实例
 - **参数**:
-  - `user_ids` (查询参数): 用户ID列表
-  - `url` (查询参数，可选): 要打开的页面URL
+  - `user_ids` (查询参数): 用户 ID 列表
+  - `url` (查询参数，可选): 要打开的页面 URL
 - **返回值**:
   ```json
   {
@@ -107,6 +112,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   ```
 
 #### POST /api/stop
+
 - **功能**: 停止所有浏览器实例
 - **参数**: 无
 - **返回值**:
@@ -122,9 +128,10 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 3. 浏览器连接管理接口
 
 #### POST /api/connect/{user_id}
+
 - **功能**: 连接到已打开的浏览器实例
 - **参数**:
-  - `user_id` (路径参数): 用户ID
+  - `user_id` (路径参数): 用户 ID
   - `port` (查询参数): 浏览器运行的端口号
 - **返回值**:
   ```json
@@ -142,13 +149,14 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   - `connection_error`: 连接过程中出错
 
 #### POST /api/connect_batch
+
 - **功能**: 批量连接多个已打开的浏览器实例
 - **参数** (请求体):
   ```json
   {
     "connections": [
-      {"user_id": "user1", "port": 9001},
-      {"user_id": "user2", "port": 9002}
+      { "user_id": "user1", "port": 9001 },
+      { "user_id": "user2", "port": 9002 }
     ]
   }
   ```
@@ -167,6 +175,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   ```
 
 #### GET /api/detect_browser/{port}
+
 - **功能**: 检测指定端口是否有浏览器实例运行
 - **参数**:
   - `port` (路径参数): 要检测的端口号
@@ -191,6 +200,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 4. 扩展管理接口
 
 #### GET /api/extensions/status
+
 - **功能**: 获取全局扩展状态
 - **参数**: 无
 - **返回值**:
@@ -198,18 +208,16 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   {
     "status": "running",
     "total_browsers": 3,
-    "configured_extensions": [
-      "live_room (直播中控)",
-      "block_videos (视频屏蔽器)"
-    ],
+    "configured_extensions": ["live_room (直播中控)", "block_videos (视频屏蔽器)"],
     "message": "扩展服务运行中，3 个浏览器实例活跃"
   }
   ```
 
 #### GET /api/extensions/{user_id}
+
 - **功能**: 获取指定用户浏览器的扩展状态
 - **参数**:
-  - `user_id` (路径参数): 用户ID
+  - `user_id` (路径参数): 用户 ID
 - **返回值**:
   ```json
   {
@@ -222,10 +230,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
       "extensions": [],
       "chrome_available": true
     },
-    "configured_extensions": [
-      "live_room (直播中控)",
-      "block_videos (视频屏蔽器)"
-    ],
+    "configured_extensions": ["live_room (直播中控)", "block_videos (视频屏蔽器)"],
     "message": "扩展状态检查完成"
   }
   ```
@@ -235,6 +240,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 5. 任务调度接口
 
 #### GET /api/scheduler/recent
+
 - **功能**: 获取最近的任务记录
 - **参数**: 无
 - **返回值**:
@@ -253,9 +259,10 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ### 6. 系统管理接口
 
 #### GET /api/system/logs
+
 - **功能**: 获取系统日志
 - **参数**:
-  - `limit` (查询参数，可选): 日志条数限制，默认10
+  - `limit` (查询参数，可选): 日志条数限制，默认 10
 - **返回值**:
   ```json
   {
@@ -264,7 +271,7 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
         "timestamp": "2024-01-20T10:30:00.123456",
         "level": "INFO",
         "message": "系统运行正常，当前活跃浏览器实例: 3 个",
-        "component": "browser_manager"
+        "component": "playwright_manager"
       }
     ],
     "total_count": 1,
@@ -276,10 +283,11 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 
 ---
 
-### 7. UI设置接口
+### 7. UI 设置接口
 
 #### GET /api/settings/ui
-- **功能**: 获取UI设置
+
+- **功能**: 获取 UI 设置
 - **参数**: 无
 - **返回值**:
   ```json
@@ -294,7 +302,8 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
   ```
 
 #### POST /api/settings/ui
-- **功能**: 保存UI设置
+
+- **功能**: 保存 UI 设置
 - **参数** (请求体):
   ```json
   {
@@ -316,28 +325,33 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ## 页面路由
 
 ### GET /
+
 - **功能**: 根路径，重定向到定时任务管理界面
-- **返回**: HTML页面
+- **返回**: HTML 页面
 
 ### GET /scheduler/dashboard
+
 - **功能**: 定时任务管理界面
-- **返回**: HTML页面
+- **返回**: HTML 页面
 
 ### GET /chrome/config
-- **功能**: Chrome配置管理界面
-- **返回**: HTML页面
+
+- **功能**: Chrome 配置管理界面
+- **返回**: HTML 页面
 
 ---
 
 ## 错误处理
 
-### HTTP状态码
+### HTTP 状态码
+
 - `200`: 请求成功
 - `400`: 请求参数错误
 - `404`: 资源不存在
 - `500`: 服务器内部错误
 
 ### 错误响应格式
+
 ```json
 {
   "detail": "错误描述信息"
@@ -349,16 +363,19 @@ QW-Browser API 服务器是一个基于 FastAPI 的浏览器管理服务，提�
 ## 使用示例
 
 ### 启动浏览器实例
+
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/start/user1?url=https://example.com"
 ```
 
 ### 连接现有浏览器
+
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/connect/user1?port=9001"
 ```
 
 ### 批量连接浏览器
+
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/connect_batch" \
   -H "Content-Type: application/json" \
@@ -371,6 +388,7 @@ curl -X POST "http://127.0.0.1:8000/api/connect_batch" \
 ```
 
 ### 检测端口浏览器
+
 ```bash
 curl "http://127.0.0.1:8000/api/detect_browser/9001"
 ```
@@ -390,6 +408,7 @@ curl "http://127.0.0.1:8000/api/detect_browser/9001"
 ## 更新日志
 
 ### v1.1 (最新)
+
 - 移除重复的 `/api/status` 接口
 - 优化 `/api/extensions/status` 接口，添加活跃浏览器统计
 - 改进 `/api/scheduler/recent` 接口，添加开发说明
@@ -397,6 +416,7 @@ curl "http://127.0.0.1:8000/api/detect_browser/9001"
 - 统一错误信息为中文，提升用户体验
 
 ### v1.0
+
 - 初始版本，包含基础浏览器管理功能
 - 支持浏览器启动、停止、连接操作
 - 提供扩展状态检查功能

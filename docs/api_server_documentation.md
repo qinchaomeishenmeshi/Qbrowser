@@ -8,7 +8,7 @@
 
 - **框架**: FastAPI
 - **异步支持**: asyncio, uvicorn
-- **浏览器控制**: DrissionPage
+- **浏览器控制**: Playwright
 - **模板引擎**: Jinja2Templates
 - **跨域支持**: CORS 中间件
 
@@ -93,11 +93,11 @@
 **功能**: 启动指定用户的浏览器实例  
 **路径参数**:
 
-- `user_id` (string): 用户ID
+- `user_id` (string): 用户 ID
 
 **查询参数**:
 
-- `url` (string, 可选): 要打开的页面URL
+- `url` (string, 可选): 要打开的页面 URL
 
 **返回值**:
 
@@ -122,8 +122,8 @@
 **功能**: 批量启动多个用户的浏览器实例  
 **查询参数**:
 
-- `user_ids` (List[string]): 要批量启动的用户ID列表
-- `url` (string, 可选): 要打开的页面URL
+- `user_ids` (List[string]): 要批量启动的用户 ID 列表
+- `url` (string, 可选): 要打开的页面 URL
 
 **返回值**:
 
@@ -160,7 +160,7 @@
 **功能**: 连接到已打开的浏览器实例  
 **路径参数**:
 
-- `user_id` (string): 用户ID
+- `user_id` (string): 用户 ID
 
 **查询参数**:
 
@@ -192,8 +192,8 @@
 ```json
 {
   "connections": [
-    {"user_id": "user1", "port": 9001},
-    {"user_id": "user2", "port": 9002}
+    { "user_id": "user1", "port": 9001 },
+    { "user_id": "user2", "port": 9002 }
   ]
 }
 ```
@@ -259,7 +259,7 @@
 **功能**: 获取指定用户浏览器的扩展状态  
 **路径参数**:
 
-- `user_id` (string): 用户ID
+- `user_id` (string): 用户 ID
 
 **返回值**:
 
@@ -275,16 +275,13 @@
     "runtime_available": true,
     "extensions": [
       {
-        "name": "Chrome扩展API可用",
+        "component": "playwright_manager",
         "status": "active",
         "type": "chrome_extension_api"
       }
     ]
   },
-  "configured_extensions": [
-    "live_room (直播中控)",
-    "block_videos (视频屏蔽器)"
-  ],
+  "configured_extensions": ["live_room (直播中控)", "block_videos (视频屏蔽器)"],
   "message": "扩展状态检查完成"
 }
 ```
@@ -311,7 +308,7 @@
 **功能**: 获取系统日志  
 **查询参数**:
 
-- `limit` (int, 默认10): 日志条数限制
+- `limit` (int, 默认 10): 日志条数限制
 
 **返回值**:
 
@@ -324,7 +321,7 @@
 
 #### GET /api/settings/ui
 
-**功能**: 获取UI设置  
+**功能**: 获取 UI 设置  
 **参数**: 无  
 **返回值**:
 
@@ -341,7 +338,7 @@
 
 #### POST /api/settings/ui
 
-**功能**: 保存UI设置  
+**功能**: 保存 UI 设置  
 **请求体**: 设置对象  
 **返回值**:
 
@@ -354,7 +351,7 @@
 
 ## 核心功能模块
 
-### 浏览器管理器 (BrowserManager)
+### 浏览器管理器 (PlaywrightManager)
 
 - 负责单个浏览器实例的生命周期管理
 - 支持端口分配和浏览器初始化
@@ -396,7 +393,7 @@
 
 ### 端口管理
 
-- 动态端口分配（从9000开始递增）
+- 动态端口分配（从 9000 开始递增）
 - 端口占用检测和验证
 - 防止端口冲突
 

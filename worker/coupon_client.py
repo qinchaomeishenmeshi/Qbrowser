@@ -60,7 +60,7 @@ class CouponClient:
             # 如果已经是字典格式，直接使用
             cookies_dict = cookies_list
         elif isinstance(cookies_list, list):
-            # DrissionPage cookies 格式为 dict 列表，包含 name 和 value
+            # 浏览器 cookies 格式为 dict 列表，包含 name 和 value
             cookies_dict = {
                 c["name"]: c["value"]
                 for c in cookies_list

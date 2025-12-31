@@ -11,8 +11,8 @@ logger = get_logger(__name__)
 
 class PlaywrightNetworkListener:
     """
-    Playwright 版网络监听器 (Migration Phase 2)
-    替代原有的 EnhancedNetworkListener，利用 Playwright 原生 API 实现
+    Playwright 网络监听器
+    利用 Playwright 原生 API 实现请求和响应捕获
     """
 
     def __init__(self, page: Page):
@@ -132,7 +132,7 @@ class PlaywrightNetworkListener:
     async def wait_for_packet(
         self, url_pattern: str, timeout: int = 10000
     ) -> Optional[Dict[str, Any]]:
-        """等待特定请求包 (类似 DrissionPage listen.wait)"""
+        """等待特定请求包"""
         future = asyncio.get_event_loop().create_future()
 
         async def _wait_handler(response: Response):

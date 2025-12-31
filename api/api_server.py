@@ -13,7 +13,6 @@ from api.scheduler_api import router as scheduler_router
 from api.chrome_config_api import router as chrome_config_router
 from api.redirect_api import router as redirect_router
 
-# from browser.browser_manager import BrowserManager # Deprecated
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
 from conf import resource_path
@@ -221,7 +220,7 @@ async def get_system_logs(limit: int = 10):
                 "timestamp": current_time,
                 "level": "INFO",
                 "message": f"系统运行正常，当前活跃浏览器实例: {active_count} 个",
-                "component": "browser_manager",
+                "component": "playwright_manager",
             }
         ],
         "total_count": 1,
@@ -381,7 +380,7 @@ async def connect_existing_browser(
             # 如果我们只是 connect，我们得到的是 CDPSession 或 Browser。
             # 真正的 PlaywrightManager 需要 launchPersistentContext。
             # 如果是 connect_over_cdp，我们得到的是 Browser，无法直接转为 PersistentContext。
-            # 这是一个 Playwright vs DrissionPage 的差异。
+            # Playwright vs Connect-mode difference.
             # 临时方案：如果 connect 成功，我们认为它是 "managed externally" 并尝试接管。
             # 但为了保持一致性，我们可能需要 initialize() 来真正接管，或者此接口仅作为一个 "登记" ?
             # 当前架构下，connect 似乎是想把外部启动的浏览器纳入管理。
