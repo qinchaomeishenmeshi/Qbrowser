@@ -44,20 +44,67 @@
 
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card hover-card">
-          <div class="stat-icon icon-gray">
+          <div class="stat-icon" :class="wsConnected ? 'icon-green' : 'icon-gray'">
             <el-icon :size="28"><Connection /></el-icon>
           </div>
           <div class="stat-content">
-            <div class="stat-label">后端连接</div>
+            <div class="stat-label">实时连接</div>
             <div class="stat-value">
-              <span :class="['status-badge', appStore.backendConnected ? 'success' : 'danger']">
-                {{ appStore.backendConnected ? '正常' : '断开' }}
+              <span :class="['status-badge', wsConnected ? 'success' : 'danger']">
+                {{ wsConnected ? 'WebSocket 已连接' : '未连接' }}
               </span>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 实时任务状态 -->
+    <el-card
+      v-if="runningCount > 0 || eventHistory.length > 0"
+      class="realtime-tasks"
+      shadow="never"
+    >
+      <template #header>
+        <div class="card-header">
+          <span>
+            <el-icon class="pulse-icon"><Loading /></el-icon>
+            实时任务状态
+          </span>
+          <el-tag v-if="runningCount > 0" type="warning">{{ runningCount }} 个运行中</el-tag>
+        </div>
+      </template>
+
+      <div class="event-list">
+        <div
+          v-for="(event, index) in eventHistory.slice(0, 5)"
+          :key="index"
+          class="event-item"
+          :class="event.event"
+        >
+          <el-icon class="event-icon">
+            <SuccessFilled v-if="event.event === 'task_completed'" />
+            <CircleCloseFilled v-else-if="event.event === 'task_failed'" />
+            <Loading v-else />
+          </el-icon>
+          <div class="event-content">
+            <span class="event-name">{{ event.data?.name || event.task_id }}</span>
+            <span class="event-status">
+              {{
+                event.event === 'task_completed'
+                  ? '执行成功'
+                  : event.event === 'task_failed'
+                  ? '执行失败'
+                  : '运行中'
+              }}
+            </span>
+          </div>
+          <span v-if="event.duration" class="event-duration">{{ event.duration.toFixed(2) }}s</span>
+          <span class="event-time">{{ formatTime(event.timestamp) }}</span>
+        </div>
+        <el-empty v-if="eventHistory.length === 0" description="暂无任务事件" :image-size="60" />
+      </div>
+    </el-card>
 
     <!-- 快速操作 -->
     <el-card class="quick-actions" shadow="never">
@@ -140,6 +187,7 @@ import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useBrowserStore, useAppStore } from '@/stores'
 import { usePolling } from '@/composables/usePolling'
+import { useSchedulerSocket } from '@/composables/useSchedulerSocket'
 import {
   Monitor,
   ChromeFilled,
@@ -148,11 +196,16 @@ import {
   Plus,
   VideoPause,
   Refresh,
-  SuccessFilled
+  SuccessFilled,
+  CircleCloseFilled,
+  Loading
 } from '@element-plus/icons-vue'
 
 const browserStore = useBrowserStore()
 const appStore = useAppStore()
+
+// WebSocket 实时状态
+const { isConnected: wsConnected, runningCount, eventHistory } = useSchedulerSocket()
 
 const showStartDialog = ref(false)
 const startForm = ref({
@@ -160,6 +213,13 @@ const startForm = ref({
   url: ''
 })
 const extensionCount = ref(0)
+
+// 格式化时间
+const formatTime = (isoString?: string) => {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
 
 // 开启 5 秒一次的轮询
 const { isPolling } = usePolling(async () => {
@@ -402,5 +462,106 @@ const handleStop = async (userId: string) => {
     transform: scale(1.3);
     opacity: 0.6;
   }
+}
+
+// 实时任务状态卡片样式
+.realtime-tasks {
+  margin-bottom: 24px;
+
+  .pulse-icon {
+    animation: spin 2s linear infinite;
+    margin-right: 8px;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-color-soft);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--bg-color-muted);
+  }
+
+  &.task_completed {
+    border-left: 3px solid var(--success-color);
+
+    .event-icon {
+      color: var(--success-color);
+    }
+  }
+
+  &.task_failed {
+    border-left: 3px solid var(--danger-color);
+
+    .event-icon {
+      color: var(--danger-color);
+    }
+  }
+
+  &.task_started {
+    border-left: 3px solid var(--warning-color);
+
+    .event-icon {
+      color: var(--warning-color);
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+.event-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.event-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .event-name {
+    font-weight: 500;
+    color: var(--text-color);
+  }
+
+  .event-status {
+    font-size: 12px;
+    color: var(--text-color-secondary);
+  }
+}
+
+.event-duration {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary-color);
+  padding: 2px 8px;
+  background: rgba(var(--primary-color-rgb), 0.1);
+  border-radius: 4px;
+}
+
+.event-time {
+  font-size: 12px;
+  color: var(--text-color-placeholder);
+  flex-shrink: 0;
 }
 </style>

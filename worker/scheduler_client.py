@@ -30,6 +30,7 @@ from utils.common_logger import get_logger
 from worker.living_client import LivingClient
 from browser.browser_store import browser_store
 from utils.database_manager import db_manager
+from utils.websocket_manager import broadcast_task_event
 
 logger = get_logger(__name__)
 
@@ -332,6 +333,15 @@ class SchedulerClient:
 
         try:
             logger.info(f"开始执行任务: {task_config.name} ({execution_id})")
+
+            # 广播任务开始事件
+            await broadcast_task_event(
+                event_type="task_started",
+                task_id=task_config.task_id,
+                status="running",
+                data={"name": task_config.name, "execution_id": execution_id},
+            )
+
             result_data = await self._call_target_function(
                 task_config.target_function, task_config.function_params
             )
@@ -342,6 +352,15 @@ class SchedulerClient:
             task_result.duration = (end_time - start_time).total_seconds()
             task_result.result_data = result_data
             logger.info(f"任务执行成功: {task_config.name} ({execution_id})")
+
+            # 广播任务完成事件
+            await broadcast_task_event(
+                event_type="task_completed",
+                task_id=task_config.task_id,
+                status="success",
+                duration=task_result.duration,
+                data={"name": task_config.name},
+            )
         except Exception as e:
             end_time = datetime.now()
             task_result.status = TaskStatus.FAILED
@@ -349,6 +368,16 @@ class SchedulerClient:
             task_result.duration = (end_time - start_time).total_seconds()
             task_result.error_message = str(e)
             logger.error(f"任务执行失败: {task_config.name} ({execution_id}) - {e}")
+
+            # 广播任务失败事件
+            await broadcast_task_event(
+                event_type="task_failed",
+                task_id=task_config.task_id,
+                status="failed",
+                duration=task_result.duration,
+                error=str(e),
+                data={"name": task_config.name},
+            )
         finally:
             self.task_results.append(task_result)
             await self._save_results()

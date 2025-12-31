@@ -3,12 +3,26 @@ from threading import Thread
 from typing import List
 
 import uvicorn
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, APIRouter, HTTPException, Query, Request
+from fastapi import (
+    FastAPI,
+    APIRouter,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.api_business import business_router
+from api.scheduler_api import router as scheduler_router
+from api.chrome_config_api import router as chrome_config_router
+from api.redirect_api import router as redirect_router
+
+from browser.browser_store import browser_store
+from utils.common_logger import get_logger
+from utils.websocket_manager import ws_manager
+from conf import resource_path
 from api.scheduler_api import router as scheduler_router
 from api.chrome_config_api import router as chrome_config_router
 from api.redirect_api import router as redirect_router
@@ -190,15 +204,52 @@ async def get_user_extensions_status(user_id: str):
 
 @api_router.get("/scheduler/recent", summary="获取最近任务")
 async def get_recent_tasks():
-    """获取最近的任务"""
-    # TODO: 实现真实的任务历史记录功能
-    # 当前返回模拟数据，实际应该从数据库或任务队列中获取
-    return {
-        "tasks": [],
-        "total_count": 0,
-        "message": "暂无最近任务记录",
-        "note": "此接口需要集成任务调度系统后才能返回真实数据",
-    }
+    """获取最近的任务执行记录"""
+    try:
+        from worker.scheduler_client import scheduler_client
+
+        # 获取最近 20 条任务执行结果
+        results = scheduler_client.get_task_results(limit=20)
+
+        # 获取任务配置（用于补充任务名称等信息）
+        configs = {c["task_id"]: c for c in scheduler_client.get_task_configs()}
+
+        # 组装返回数据
+        tasks = []
+        for result in results:
+            task_id = result.get("task_id")
+            config = configs.get(task_id, {})
+            tasks.append(
+                {
+                    "execution_id": result.get("execution_id"),
+                    "task_id": task_id,
+                    "name": config.get("name", task_id),
+                    "status": (
+                        result.get("status", {}).get("value")
+                        if isinstance(result.get("status"), dict)
+                        else str(result.get("status", ""))
+                    ),
+                    "start_time": result.get("start_time"),
+                    "end_time": result.get("end_time"),
+                    "duration": result.get("duration"),
+                    "error_message": result.get("error_message"),
+                }
+            )
+
+        return {
+            "tasks": tasks,
+            "total_count": len(tasks),
+            "message": (
+                f"获取到 {len(tasks)} 条最近任务记录" if tasks else "暂无任务记录"
+            ),
+        }
+    except Exception as e:
+        logger.error(f"获取最近任务失败: {e}")
+        return {
+            "tasks": [],
+            "total_count": 0,
+            "message": f"获取失败: {str(e)}",
+        }
 
 
 @api_router.get("/system/logs", summary="获取系统日志")
@@ -545,6 +596,48 @@ app.include_router(business_router)  # 业务接口
 app.include_router(scheduler_router)  # 定时任务管理接口
 app.include_router(chrome_config_router, prefix="/api")  # Chrome配置接口
 app.include_router(redirect_router, prefix="/api")  # 页面重定向接口
+
+
+# ========== WebSocket 端点 ==========
+
+
+@app.websocket("/ws/scheduler")
+async def websocket_scheduler(websocket: WebSocket):
+    """调度器状态实时推送 WebSocket 端点"""
+    await ws_manager.connect(websocket, "scheduler")
+    try:
+        while True:
+            # 保持连接，接收心跳或命令
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_json({"event": "pong"})
+    except WebSocketDisconnect:
+        await ws_manager.disconnect(websocket, "scheduler")
+    except Exception as e:
+        logger.warning(f"WebSocket scheduler 异常: {e}")
+        await ws_manager.disconnect(websocket, "scheduler")
+
+
+@app.websocket("/ws/browser")
+async def websocket_browser(websocket: WebSocket):
+    """浏览器状态实时推送 WebSocket 端点"""
+    await ws_manager.connect(websocket, "browser")
+    try:
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_json({"event": "pong"})
+    except WebSocketDisconnect:
+        await ws_manager.disconnect(websocket, "browser")
+    except Exception as e:
+        logger.warning(f"WebSocket browser 异常: {e}")
+        await ws_manager.disconnect(websocket, "browser")
+
+
+@app.get("/ws/status", summary="获取WebSocket状态")
+async def get_ws_status():
+    """获取 WebSocket 连接状态"""
+    return ws_manager.get_status()
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000):
