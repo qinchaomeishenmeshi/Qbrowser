@@ -6,6 +6,7 @@ export const useBrowserStore = defineStore('browser', {
   state: () => ({
     status: null as BrowserStatus | null,
     activeInstances: [] as string[],
+    allInstances: [] as any[], // 新增：包含已停止的实例
     activeCount: 0,
     loading: false,
     error: null as string | null
@@ -13,7 +14,8 @@ export const useBrowserStore = defineStore('browser', {
 
   getters: {
     isRunning: (state) => state.status?.status === 'running',
-    instanceCount: (state) => state.activeInstances.length
+    instanceCount: (state) => state.activeInstances.length,
+    totalCount: (state) => state.allInstances.length
   },
 
   actions: {
@@ -43,13 +45,22 @@ export const useBrowserStore = defineStore('browser', {
       }
     },
 
+    async fetchAllInstances() {
+      try {
+        const result = await browserApi.getAllInstances()
+        this.allInstances = result.instances
+      } catch (e) {
+        console.error('Failed to fetch all instances:', e)
+      }
+    },
+
     async startInstance(userId: string, url?: string): Promise<StartResult | null> {
       this.loading = true
       this.error = null
       try {
         const result = await browserApi.start(userId, url)
-        if (result.status === 'success') {
-          await this.fetchActiveInstances()
+        if (result.status === 'success' || result.status === 'already_running') {
+          await this.refresh()
         }
         return result
       } catch (e) {
@@ -65,8 +76,23 @@ export const useBrowserStore = defineStore('browser', {
       this.error = null
       try {
         const result = await browserApi.stopInstance(userId)
+        await this.refresh()
+        return result
+      } catch (e) {
+        this.error = (e as Error).message
+        return null
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async deleteInstance(userId: string) {
+      this.loading = true
+      this.error = null
+      try {
+        const result = await browserApi.deleteInstance(userId)
         if (result.status === 'success') {
-          await this.fetchActiveInstances()
+          await this.refresh()
         }
         return result
       } catch (e) {
@@ -83,9 +109,7 @@ export const useBrowserStore = defineStore('browser', {
       try {
         const result = await browserApi.stopAll()
         if (result.status === 'success') {
-          this.activeInstances = []
-          this.activeCount = 0
-          await this.fetchStatus()
+          await this.refresh()
         }
         return result
       } catch (e) {
@@ -97,15 +121,16 @@ export const useBrowserStore = defineStore('browser', {
     },
 
     async refresh() {
-      // 避免重复加载导致的 loading 闪烁，这里内部调用不设置全局 loading
       try {
-        const [status, active] = await Promise.all([
+        const [status, active, all] = await Promise.all([
           browserApi.getStatus(),
-          browserApi.getActiveInstances()
+          browserApi.getActiveInstances(),
+          browserApi.getAllInstances()
         ])
         this.status = status
         this.activeInstances = active.active_instances
         this.activeCount = active.active_count
+        this.allInstances = all.instances
       } catch (e) {
         this.error = (e as Error).message
       }

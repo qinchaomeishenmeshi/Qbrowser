@@ -101,5 +101,23 @@ export const browserApi = {
     const res = await fetch(`${API_BASE}/detect_browser/${port}`)
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json()
+  },
+
+  /**
+   * 获取所有实例列表（从缓存或运行中）
+   */
+  async getAllInstances(): Promise<{ status: string; total_count: number; instances: any[] }> {
+    const res = await fetch(`${API_BASE}/all_instances`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  },
+
+  /**
+   * 彻底删除浏览器实例和其本地数据
+   */
+  async deleteInstance(userId: string): Promise<{ status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/delete/${userId}`, { method: 'POST' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
   }
 }

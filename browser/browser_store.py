@@ -32,8 +32,25 @@ class BrowserManagerStore:
                 # 如果已存在同 user_id，可选择覆盖或忽略，这里忽略
                 pass
 
+    async def stop(self, user_id: str) -> bool:
+        """停止指定用户的浏览器实例，但保留在存储中
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            如果成功停止返回True，如果用户不存在返回False
+        """
+        async with self._lock:
+            for m in self._managers:
+                if m.user_id == user_id:
+                    if m.is_running:
+                        await m.cleanup()
+                    return True
+            return False
+
     async def remove(self, user_id: str) -> bool:
-        """移除指定用户的浏览器管理器实例
+        """从存储中移除指定用户的浏览器实例
 
         Args:
             user_id: 要移除的用户ID

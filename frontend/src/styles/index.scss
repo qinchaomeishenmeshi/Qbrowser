@@ -160,65 +160,161 @@ body,
 
   /* 主按钮 (Primary) */
   &--primary {
-    background: linear-gradient(135deg, var(--color-blue-600) 0%, var(--color-blue-700) 100%);
-    border: none;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+    &:not(.is-plain):not(.is-link):not(.is-text) {
+      background: linear-gradient(135deg, var(--color-blue-600) 0%, var(--color-blue-700) 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+    }
+    &.is-plain {
+      color: var(--color-blue-600);
+      background: var(--color-blue-50);
+      border-color: var(--color-blue-100);
+    }
+    &.is-link,
+    &.is-text {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: var(--color-blue-600);
+      &:hover {
+        background: var(--color-blue-50);
+        color: var(--color-blue-500);
+      }
+    }
 
     &:hover,
     &:focus {
-      background: linear-gradient(135deg, var(--color-blue-500) 0%, var(--color-blue-600) 100%);
-      color: white;
-      border: none;
-      box-shadow: 0 8px 12px -3px rgba(37, 99, 235, 0.5);
+      &:not(.is-plain):not(.is-link):not(.is-text) {
+        background: linear-gradient(135deg, var(--color-blue-500) 0%, var(--color-blue-600) 100%);
+        box-shadow: 0 8px 12px -3px rgba(37, 99, 235, 0.5);
+      }
     }
   }
 
   /* 成功按钮 (Success) */
   &--success {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    border: none;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);
+    &:not(.is-plain):not(.is-link):not(.is-text) {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);
+    }
+    &.is-plain {
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+    &.is-link,
+    &.is-text {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #10b981;
+      &:hover {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+      }
+    }
 
     &:hover,
     &:focus {
-      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-      color: white;
-      border: none;
-      box-shadow: 0 8px 12px -3px rgba(16, 185, 129, 0.5);
+      &:not(.is-plain):not(.is-link):not(.is-text) {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        box-shadow: 0 8px 12px -3px rgba(16, 185, 129, 0.5);
+      }
     }
   }
 
   /* 危险按钮 (Danger) */
   &--danger {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    border: none;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4);
+    &:not(.is-plain):not(.is-link):not(.is-text) {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4);
+    }
+    &.is-plain {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    &.is-link,
+    &.is-text {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #ef4444;
+      &:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+      }
+    }
 
     &:hover,
     &:focus {
-      background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
-      color: white;
-      border: none;
-      box-shadow: 0 8px 12px -3px rgba(239, 68, 68, 0.5);
+      &:not(.is-plain):not(.is-link):not(.is-text) {
+        background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+        box-shadow: 0 8px 12px -3px rgba(239, 68, 68, 0.5);
+      }
     }
   }
 
   /* 警告按钮 (Warning) */
   &--warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    border: none;
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);
+    &:not(.is-plain):not(.is-link):not(.is-text) {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      border: none;
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);
+    }
+    &.is-plain {
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+    &.is-link,
+    &.is-text {
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      color: #f59e0b;
+      &:hover {
+        background: rgba(245, 158, 11, 0.1);
+        color: #d97706;
+      }
+    }
 
     &:hover,
     &:focus {
-      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-      color: white;
-      border: none;
-      box-shadow: 0 8px 12px -3px rgba(245, 158, 11, 0.5);
+      &:not(.is-plain):not(.is-link):not(.is-text) {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        box-shadow: 0 8px 12px -3px rgba(245, 158, 11, 0.5);
+      }
+    }
+  }
+}
+
+.el-button-group {
+  display: inline-flex;
+  vertical-align: middle;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+
+  .el-button {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover {
+      z-index: 1;
     }
   }
 }
@@ -459,6 +555,59 @@ body,
 
   .el-drawer__body {
     padding: 20px;
+  }
+}
+
+.el-message-box {
+  --el-messagebox-border-radius: 16px;
+  --el-messagebox-title-color: var(--text-color);
+  --el-messagebox-content-color: var(--text-color-secondary);
+  border: 1px solid var(--border-color);
+  background: var(--bg-color-light);
+  box-shadow: var(--shadow-lg);
+
+  .el-message-box__header {
+    padding: 24px 24px 12px;
+    .el-message-box__title {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+  }
+
+  .el-message-box__content {
+    padding: 12px 24px;
+    font-size: 14px;
+    .el-message-box__container {
+      margin-left: 0;
+      .el-message-box__status {
+        font-size: 24px !important;
+        margin-right: 12px;
+      }
+    }
+  }
+
+  .el-message-box__btns {
+    padding: 12px 24px 24px;
+    .el-button {
+      height: 38px;
+      padding: 0 20px;
+    }
+  }
+
+  /* 危险/错误类型特殊样式 */
+  &.el-message-box--error {
+    .el-message-box__btns {
+      .el-button--primary {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+        box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4) !important;
+        border: none !important;
+        &:hover {
+          background: linear-gradient(135deg, #f87171 0%, #ef4444 100%) !important;
+          box-shadow: 0 8px 12px -3px rgba(239, 68, 68, 0.5) !important;
+        }
+      }
+    }
   }
 }
 

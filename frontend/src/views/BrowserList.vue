@@ -15,31 +15,60 @@
         </div>
       </template>
 
-      <el-empty v-if="browserStore.activeInstances.length === 0" description="暂无活跃实例">
+      <el-empty v-if="browserStore.allInstances.length === 0" description="暂无浏览器记录">
         <el-space>
-          <el-button type="primary" @click="showStartDialog = true">创建单个实例</el-button>
-          <el-button type="success" @click="showBatchStart = true">批量创建实例</el-button>
+          <el-button type="primary" @click="showStartDialog = true">新建实例</el-button>
         </el-space>
       </el-empty>
 
       <el-row v-else :gutter="20">
-        <el-col v-for="userId in browserStore.activeInstances" :key="userId" :span="8">
+        <el-col v-for="instance in browserStore.allInstances" :key="instance.user_id" :span="8">
           <el-card class="browser-card hover-card" shadow="hover">
             <div class="browser-card-header">
               <el-icon :size="32" color="#409eff"><ChromeFilled /></el-icon>
               <div class="browser-info">
-                <div class="browser-name">{{ userId }}</div>
-                <span class="status-badge success">
-                  <el-icon><SuccessFilled /></el-icon>
-                  运行中
+                <div class="browser-name">{{ instance.user_id }}</div>
+                <span :class="['status-badge', instance.is_running ? 'success' : 'warning']">
+                  <el-icon>
+                    <component :is="instance.is_running ? SuccessFilled : CircleCloseFilled" />
+                  </el-icon>
+                  {{ instance.is_running ? '运行中' : '已停止' }}
                 </span>
               </div>
             </div>
             <div class="browser-card-actions">
-              <el-button size="small" :icon="View" @click="handleView(userId)">查看</el-button>
-              <el-button size="small" type="danger" :icon="Close" @click="handleStop(userId)"
-                >停止</el-button
+              <el-button size="small" :icon="View" plain @click="handleView(instance.user_id)">
+                详情
+              </el-button>
+              <el-button
+                v-if="!instance.is_running"
+                size="small"
+                type="primary"
+                plain
+                :icon="VideoPlay"
+                @click="handleRun(instance.user_id)"
               >
+                启动
+              </el-button>
+              <el-button
+                v-else
+                size="small"
+                type="warning"
+                plain
+                :icon="VideoPause"
+                @click="handleStop(instance.user_id)"
+              >
+                停止
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                plain
+                :icon="Delete"
+                @click="handleDelete(instance.user_id)"
+              >
+                删除
+              </el-button>
             </div>
           </el-card>
         </el-col>
@@ -173,7 +202,18 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useBrowserStore } from '@/stores'
 import { usePolling } from '@/composables/usePolling'
 import { browserApi } from '@/api/browser'
-import { Plus, ChromeFilled, SuccessFilled, View, Close, Loading } from '@element-plus/icons-vue'
+import {
+  Plus,
+  ChromeFilled,
+  SuccessFilled,
+  View,
+  Close,
+  Loading,
+  VideoPlay,
+  VideoPause,
+  Delete,
+  CircleCloseFilled
+} from '@element-plus/icons-vue'
 
 const browserStore = useBrowserStore()
 
@@ -195,7 +235,7 @@ const instanceDetail = ref<any>(null)
 
 // 开启 5 秒一次的轮询
 usePolling(async () => {
-  await browserStore.fetchActiveInstances()
+  await browserStore.refresh()
 }, 5000)
 
 const handleStart = async () => {
@@ -267,9 +307,42 @@ const handleStop = async (userId: string) => {
     })
     const result = await browserStore.stopInstance(userId)
     if (result?.status === 'success') {
-      ElMessage.success(`实例 ${userId} 已停止`)
+      ElMessage.success(`实例 ${userId} 已停止（已缓存）`)
     } else {
       ElMessage.error('停止失败')
+    }
+  } catch {
+    // 取消
+  }
+}
+
+const handleRun = async (userId: string) => {
+  const result = await browserStore.startInstance(userId)
+  if (result?.status === 'success' || result?.status === 'already_running') {
+    ElMessage.success(`实例 ${userId} 已恢复运行`)
+  } else {
+    ElMessage.error('恢复失败')
+  }
+}
+
+const handleDelete = async (userId: string) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除实例 <strong style="color: #ef4444">${userId}</strong> 及其本地数据吗？<br/><small style="color: #94a3b8">此操作将永久清理磁盘空间，且不可恢复。</small>`,
+      '危险操作',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        dangerouslyUseHTMLString: true,
+        distinguishCancelAndClose: true
+      }
+    )
+    const result = await browserStore.deleteInstance(userId)
+    if (result?.status === 'success') {
+      ElMessage.success(`实例 ${userId} 已彻底删除`)
+    } else {
+      ElMessage.error('删除失败')
     }
   } catch {
     // 取消

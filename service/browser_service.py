@@ -173,30 +173,74 @@ class BrowserService:
             logger.error(f"清除端口映射失败: {e}", exc_info=True)
 
     async def get_or_create_browser(self, user_id: str) -> Optional[PlaywrightManager]:
-        """获取已存在的浏览器实例，否则新建并返回"""
+        """获取已存在的浏览器实例（运行中或已停止），否则新建并返回"""
         manager = await self.browser_store.get(user_id)
+
+        # 如果已存在且正在运行，直接返回
         if manager and manager.is_running:
             return manager
 
-        if manager and not manager.is_running:
-            await self.browser_store.remove(user_id)
-            logger.warning(f"清理未运行的浏览器实例: {user_id}")
-
+        # 如果存在但已停止，我们需要重新初始化
         try:
-            port = await self.port_manager.allocate_port()
-            manager = PlaywrightManager(user_id, port)
+            if manager:
+                # 如果 manager 已经存在，可能需要尝试使用原有端口或重新分配
+                port = manager.port
+                # 检查原有端口是否仍可用，不可用则重新分配
+                if not await self._is_port_available(port):
+                    port = await self.port_manager.allocate_port()
+                    manager.port = port
+            else:
+                port = await self.port_manager.allocate_port()
+                manager = PlaywrightManager(user_id, port)
+                await self.browser_store.add(manager)
+
             ok = await manager.initialize()
             if ok and manager.is_running:
-                await self.browser_store.add(manager)
                 await self.save_ports()
-                logger.info(f"成功创建浏览器实例: {user_id} (端口: {port})")
+                logger.info(f"成功启动浏览器实例: {user_id} (端口: {port})")
                 return manager
             else:
-                await self.port_manager.release_port(port)
                 raise RuntimeError(f"初始化浏览器失败: {user_id}")
         except Exception as e:
-            logger.error(f"创建浏览器实例失败 {user_id}: {e}", exc_info=True)
+            logger.error(f"创建或启动浏览器实例失败 {user_id}: {e}", exc_info=True)
             return None
+
+    async def delete_browser(self, user_id: str) -> bool:
+        """删除浏览器实例及其本地缓存数据"""
+        try:
+            manager = await self.browser_store.get(user_id)
+            if manager:
+                # 1. 停止并从存储移除
+                await self.browser_store.remove(user_id)
+                # 2. 释放端口
+                await self.port_manager.release_port(manager.port)
+                # 3. 从数据库移除端口记录
+                await db_manager.delete_port(user_id)
+
+                # 4. 删除本地数据目录
+                import shutil
+
+                if manager.user_data_dir.exists():
+                    shutil.rmtree(manager.user_data_dir)
+                    logger.info(f"已删除用户数据目录: {manager.user_data_dir}")
+
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"删除浏览器实例失败 {user_id}: {e}", exc_info=True)
+            return False
+
+    async def _is_port_available(self, port: int) -> bool:
+        """检查端口是否可用（未被占用）"""
+        import socket
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        try:
+            result = sock.connect_ex(("127.0.0.1", port))
+            return result != 0  # 0 means occupied
+        finally:
+            sock.close()
 
     async def _is_browser_running_on_port(self, port: int) -> bool:
         """检查指定端口是否有浏览器进程在运行"""

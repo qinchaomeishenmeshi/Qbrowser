@@ -118,7 +118,7 @@
         <el-button type="primary" :icon="Plus" @click="showStartDialog = true">
           新建实例
         </el-button>
-        <el-button type="danger" :icon="VideoPause" @click="handleStopAll"> 停止全部 </el-button>
+        <el-button type="warning" :icon="SwitchButton" @click="handleStopAll"> 停止全部 </el-button>
         <el-button :icon="Refresh" @click="handleRefresh" :loading="browserStore.loading">
           刷新状态
         </el-button>
@@ -129,34 +129,77 @@
       </el-space>
     </el-card>
 
-    <!-- 活跃实例列表 -->
+    <!-- 浏览器实例列表 -->
     <el-card class="instance-list" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>活跃实例</span>
-          <el-tag type="info">{{ browserStore.activeCount }} 个</el-tag>
+          <span>浏览器实例 (已缓存)</span>
+          <el-tag type="info">{{ browserStore.totalCount }} 个</el-tag>
         </div>
       </template>
 
-      <el-empty v-if="browserStore.activeInstances.length === 0" description="暂无活跃实例" />
+      <el-empty v-if="browserStore.allInstances.length === 0" description="暂无实例记录" />
 
-      <el-table v-else :data="browserStore.activeInstances" style="width: 100%">
-        <el-table-column prop="userId" label="用户 ID" width="200">
+      <el-table v-else :data="browserStore.allInstances" style="width: 100%">
+        <el-table-column prop="user_id" label="用户 ID" width="200">
           <template #default="{ row }">
-            <el-tag>{{ row }}</el-tag>
+            <el-tag>{{ row.user_id }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态">
-          <template #default>
-            <span class="status-badge success">
+        <el-table-column label="状态" width="150">
+          <template #default="{ row }">
+            <span v-if="row.is_running" class="status-badge success">
               <el-icon><SuccessFilled /></el-icon>
               运行中
             </span>
+            <span v-else class="status-badge warning">
+              <el-icon><CircleCloseFilled /></el-icon>
+              已停止
+            </span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120">
+        <el-table-column prop="port" label="端口" width="100" />
+        <el-table-column label="操作" width="180" align="center">
           <template #default="{ row }">
-            <el-button size="small" type="danger" text @click="handleStop(row)"> 停止 </el-button>
+            <el-space>
+              <el-tooltip
+                :content="row.is_running ? '停止进程并保留缓存' : '恢复浏览器运行'"
+                placement="top"
+              >
+                <el-button
+                  v-if="!row.is_running"
+                  size="small"
+                  type="primary"
+                  link
+                  :icon="VideoPlay"
+                  @click="handleRun(row.user_id)"
+                >
+                  启动
+                </el-button>
+                <el-button
+                  v-else
+                  size="small"
+                  type="warning"
+                  link
+                  :icon="VideoPause"
+                  @click="handleStop(row.user_id)"
+                >
+                  停止
+                </el-button>
+              </el-tooltip>
+
+              <el-tooltip content="彻底删除实例及本地数据" placement="top">
+                <el-button
+                  size="small"
+                  type="danger"
+                  link
+                  :icon="Delete"
+                  @click="handleDelete(row.user_id)"
+                >
+                  删除
+                </el-button>
+              </el-tooltip>
+            </el-space>
           </template>
         </el-table-column>
       </el-table>
@@ -194,11 +237,14 @@ import {
   Opportunity,
   Connection,
   Plus,
+  VideoPlay,
   VideoPause,
   Refresh,
   SuccessFilled,
   CircleCloseFilled,
-  Loading
+  Loading,
+  Delete,
+  SwitchButton
 } from '@element-plus/icons-vue'
 
 const browserStore = useBrowserStore()
@@ -278,9 +324,42 @@ const handleStop = async (userId: string) => {
     })
     const result = await browserStore.stopInstance(userId)
     if (result?.status === 'success') {
-      ElMessage.success(`实例 ${userId} 已停止`)
+      ElMessage.success(`实例 ${userId} 已停止（已缓存）`)
     } else {
       ElMessage.error('停止失败')
+    }
+  } catch {
+    // 取消
+  }
+}
+
+const handleRun = async (userId: string) => {
+  const result = await browserStore.startInstance(userId)
+  if (result?.status === 'success' || result?.status === 'already_running') {
+    ElMessage.success(`实例 ${userId} 已启动`)
+  } else {
+    ElMessage.error('启动失败')
+  }
+}
+
+const handleDelete = async (userId: string) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除实例 <strong style="color: #ef4444">${userId}</strong> 及其本地数据吗？<br/><small style="color: #94a3b8">此操作将永久清理磁盘空间，且不可恢复。</small>`,
+      '危险操作',
+      {
+        confirmButtonText: '彻底删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        dangerouslyUseHTMLString: true,
+        distinguishCancelAndClose: true
+      }
+    )
+    const result = await browserStore.deleteInstance(userId)
+    if (result?.status === 'success') {
+      ElMessage.success(`实例 ${userId} 已彻底删除`)
+    } else {
+      ElMessage.error('删除失败: ' + (result?.message || '未知错误'))
     }
   } catch {
     // 取消

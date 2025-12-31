@@ -315,6 +315,20 @@ async def get_active_instances():
     }
 
 
+@api_router.get("/all_instances", summary="获取所有实例")
+async def get_all_instances():
+    """获取所有缓存或运行中的浏览器实例"""
+    managers = await browser_store.get_all()
+
+    instances = []
+    for m in managers:
+        instances.append(
+            {"user_id": m.user_id, "port": m.port, "is_running": m.is_running}
+        )
+
+    return {"status": "success", "total_count": len(instances), "instances": instances}
+
+
 async def launch_browser(user_id: str, url: str = "") -> dict:
     manager = await browser_store.get(user_id)
     if manager is not None and manager.is_running:
@@ -379,18 +393,36 @@ async def start_browser(
 
 @api_router.post("/stop", summary="停止所有浏览器")
 async def stop_all():
-    await browser_store.clear()
+    managers = await browser_store.get_all()
+    for m in managers:
+        if m.is_running:
+            await m.cleanup()
     return {"status": "success", "message": "所有浏览器已关闭"}
 
 
 @api_router.post("/stop/{user_id}", summary="停止指定浏览器")
 async def stop_browser_instance(user_id: str):
-    success = await browser_store.remove(user_id)
+    success = await browser_store.stop(user_id)
     if not success:
         raise HTTPException(
-            status_code=404, detail=f"未找到用户 {user_id} 的活跃浏览器实例"
+            status_code=404, detail=f"未找到用户 {user_id} 的浏览器实例"
         )
-    return {"status": "success", "message": f"用户 {user_id} 的浏览器已关闭"}
+    return {
+        "status": "success",
+        "message": f"用户 {user_id} 的浏览器进程已停止，实例已缓存",
+    }
+
+
+@api_router.post("/delete/{user_id}", summary="彻底删除浏览器实例")
+async def delete_browser_instance(user_id: str):
+    from service.browser_service import browser_service
+
+    success = await browser_service.delete_browser(user_id)
+    if not success:
+        raise HTTPException(
+            status_code=404, detail=f"未找到用户 {user_id} 的浏览器实例或删除失败"
+        )
+    return {"status": "success", "message": f"用户 {user_id} 的浏览器和数据已彻底删除"}
 
 
 @api_router.post("/start_all", summary="批量启动浏览器")
@@ -638,6 +670,34 @@ async def websocket_browser(websocket: WebSocket):
 async def get_ws_status():
     """获取 WebSocket 连接状态"""
     return ws_manager.get_status()
+
+
+@app.on_event("startup")
+async def startup_event():
+    """服务器启动时加载缓存的实例"""
+    from service.browser_service import browser_service
+    from browser.playwright_manager import PlaywrightManager
+    from utils.database_manager import db_manager
+
+    logger.info("正在加载缓存的浏览器实例...")
+    try:
+        # 1. 尝试恢复运行中的实例 (基于端口映射)
+        await browser_service.load_ports()
+
+        # 2. 从数据库加载所有已知的端口映射，并作为缓存实例添加到 store
+        mapping = await db_manager.get_all_ports()
+        all_managers = await browser_store.get_all()
+        managed_uids = [m.user_id for m in all_managers]
+
+        for user_id, port in mapping.items():
+            if user_id not in managed_uids:
+                # 作为一个停止的实例加载到 store 中
+                manager = PlaywrightManager(user_id, port)
+                await browser_store.add(manager)
+                logger.info(f"加载缓存实例: {user_id} (已停止)")
+
+    except Exception as e:
+        logger.error(f"启动加载过程中出错: {e}")
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000):
