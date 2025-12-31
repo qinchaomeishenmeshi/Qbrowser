@@ -1,0 +1,129 @@
+:root {
+  --primary-color: #409eff;
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+
+  --bg-color: #f5f7fa;
+  --bg-color-light: #ffffff;
+  --text-color: #303133;
+  --text-color-secondary: #606266;
+  --border-color: #dcdfe6;
+
+  --sidebar-width: 220px;
+  --sidebar-width-collapsed: 64px;
+  --header-height: 60px;
+}
+
+.dark {
+  --bg-color: #1a1a2e;
+  --bg-color-light: #16213e;
+  --text-color: #e8e8e8;
+  --text-color-secondary: #b0b0b0;
+  --border-color: #3a3a5c;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #909399;
+}
+
+/* Element Plus 覆盖 */
+.el-menu {
+  border-right: none !important;
+}
+
+/* 卡片悬停效果 */
+.hover-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hover-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 状态徽章 */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.success {
+  background: rgba(103, 194, 58, 0.1);
+  color: var(--success-color);
+}
+
+.status-badge.warning {
+  background: rgba(230, 162, 60, 0.1);
+  color: var(--warning-color);
+}
+
+.status-badge.danger {
+  background: rgba(245, 108, 108, 0.1);
+  color: var(--danger-color);
+}
+
+.status-badge.info {
+  background: rgba(144, 147, 153, 0.1);
+  color: var(--info-color);
+}
+
+/* 动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(-100%);
+}
+
+.slide-leave-to {
+  transform: translateX(-100%);
+}

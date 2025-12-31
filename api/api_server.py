@@ -332,6 +332,16 @@ async def stop_all():
     return {"status": "success", "message": "所有浏览器已关闭"}
 
 
+@api_router.post("/stop/{user_id}", summary="停止指定浏览器")
+async def stop_browser_instance(user_id: str):
+    success = await browser_store.remove(user_id)
+    if not success:
+        raise HTTPException(
+            status_code=404, detail=f"未找到用户 {user_id} 的活跃浏览器实例"
+        )
+    return {"status": "success", "message": f"用户 {user_id} 的浏览器已关闭"}
+
+
 @api_router.post("/start_all", summary="批量启动浏览器")
 async def start_all_browsers(
     user_ids: List[str] = Query(..., description="要批量启动的user_id列表"),
