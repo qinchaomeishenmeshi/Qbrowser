@@ -4,10 +4,7 @@
     <el-row :gutter="20" class="stat-cards">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card hover-card">
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%)"
-          >
+          <div class="stat-icon icon-blue">
             <el-icon :size="28"><Monitor /></el-icon>
           </div>
           <div class="stat-content">
@@ -23,10 +20,7 @@
 
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card hover-card">
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #67c23a 0%, #85ce61 100%)"
-          >
+          <div class="stat-icon icon-green">
             <el-icon :size="28"><ChromeFilled /></el-icon>
           </div>
           <div class="stat-content">
@@ -38,10 +32,7 @@
 
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card hover-card">
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #e6a23c 0%, #ebb563 100%)"
-          >
+          <div class="stat-icon icon-orange">
             <el-icon :size="28"><Opportunity /></el-icon>
           </div>
           <div class="stat-content">
@@ -53,10 +44,7 @@
 
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card hover-card">
-          <div
-            class="stat-icon"
-            style="background: linear-gradient(135deg, #909399 0%, #a6a9ad 100%)"
-          >
+          <div class="stat-icon icon-gray">
             <el-icon :size="28"><Connection /></el-icon>
           </div>
           <div class="stat-content">
@@ -250,11 +238,14 @@ const handleStop = async (userId: string) => {
 }
 
 .stat-card {
-  .el-card__body {
+  /* 让卡片高度一致 */
+  height: 100%;
+
+  :deep(.el-card__body) {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 20px;
+    padding: 24px;
+    height: 100%;
   }
 }
 
@@ -262,23 +253,54 @@ const handleStop = async (userId: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px; /* 更圆润的圆角 */
   color: white;
+  margin-right: 20px; /* 图标与右侧内容的间距 */
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+
+  &.icon-blue {
+    background: linear-gradient(135deg, var(--color-blue-500) 0%, var(--color-blue-600) 100%);
+    box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.4);
+  }
+
+  &.icon-green {
+    background: linear-gradient(135deg, var(--success-color) 0%, #34d399 100%);
+    box-shadow: 0 8px 16px -4px rgba(16, 185, 129, 0.4);
+  }
+
+  &.icon-orange {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #fbbf24 100%);
+    box-shadow: 0 8px 16px -4px rgba(245, 158, 11, 0.4);
+  }
+
+  &.icon-gray {
+    background: linear-gradient(135deg, var(--color-slate-500) 0%, var(--color-slate-600) 100%);
+    box-shadow: 0 8px 16px -4px rgba(100, 116, 139, 0.4);
+  }
 }
 
 .stat-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+
   .stat-label {
     font-size: 14px;
+    font-weight: 500;
     color: var(--text-color-secondary);
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
 
   .stat-value {
     font-size: 24px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-color);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
   }
 }
 

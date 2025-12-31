@@ -1,5 +1,5 @@
 <template>
-  <el-header class="app-header">
+  <el-header class="app-header glass-effect">
     <div class="header-left">
       <el-breadcrumb separator="/">
         <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
@@ -59,10 +59,10 @@ const toggleTheme = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
+  height: var(--header-height);
   padding: 0 24px;
-  background-color: var(--bg-color-light);
-  border-bottom: 1px solid var(--border-color);
+  /* background-color: var(--bg-color-light); */ /* 移除背景色，由 glass-effect 接管 */
+  /* border-bottom: 1px solid var(--border-color); */ /* 移除这里的边框，glass-effect 自带 */
 }
 
 .header-left {

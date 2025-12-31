@@ -1,27 +1,64 @@
 :root {
-  --primary-color: #409eff;
-  --success-color: #67c23a;
-  --warning-color: #e6a23c;
-  --danger-color: #f56c6c;
-  --info-color: #909399;
+  /* Palette: Slate */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
 
-  --bg-color: #f5f7fa;
+  /* Palette: Primary Blue (Vibrant) */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+
+  /* Semantic Colors */
+  --primary-color: var(--color-blue-600);
+  --success-color: #10b981; /* Emerald 500 */
+  --warning-color: #f59e0b; /* Amber 500 */
+  --danger-color: #ef4444; /* Red 500 */
+  --info-color: var(--color-slate-500);
+
+  /* Layout Variables */
+  --bg-color: var(--color-slate-50);
   --bg-color-light: #ffffff;
-  --text-color: #303133;
-  --text-color-secondary: #606266;
-  --border-color: #dcdfe6;
+  --bg-color-soft: var(--color-slate-100);
 
-  --sidebar-width: 220px;
-  --sidebar-width-collapsed: 64px;
-  --header-height: 60px;
+  --text-color: var(--color-slate-800);
+  --text-color-secondary: var(--color-slate-500);
+  --text-color-placeholder: var(--color-slate-400);
+
+  --border-color: var(--color-slate-200);
+  --border-color-light: var(--color-slate-100);
+
+  /* Dimensions */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 68px;
+  --header-height: 64px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .dark {
-  --bg-color: #1a1a2e;
-  --bg-color-light: #16213e;
-  --text-color: #e8e8e8;
-  --text-color-secondary: #b0b0b0;
-  --border-color: #3a3a5c;
+  --bg-color: var(--color-slate-900);
+  --bg-color-light: var(--color-slate-800);
+  --bg-color-soft: #1e293b; /* slate-800 */
+
+  --text-color: #f1f5f9; /* slate-100 */
+  --text-color-secondary: #94a3b8; /* slate-400 */
+  --border-color: #334155; /* slate-700 */
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
 }
 
 * {
@@ -34,43 +71,168 @@ html,
 body,
 #app {
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: var(--bg-color);
   color: var(--text-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
 }
 
-/* 滚动条样式 */
+/* 滚动条美化 */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-color);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c0c4cc;
-  border-radius: 4px;
+  background: var(--border-color);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #909399;
+  background: var(--text-color-secondary);
 }
 
-/* Element Plus 覆盖 */
-.el-menu {
-  border-right: none !important;
+/* 工具类与通用样式 */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+
+  .dark & {
+    background: rgba(30, 41, 59, 0.7); /* slate-800 alpha */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
 }
 
-/* 卡片悬停效果 */
-.hover-card {
-  transition: transform 0.2s, box-shadow 0.2s;
+/* 卡片样式覆盖 */
+.el-card {
+  --el-card-border-color: var(--border-color);
+  --el-card-bg-color: var(--bg-color-light);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
 }
 
+.el-card.is-hover-shadow:hover,
 .hover-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg) !important;
+  border-color: transparent;
+}
+
+/* 按钮样式深度定制 */
+.el-button {
+  height: 36px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border-color);
+
+  &:not(.is-circle) {
+    padding: 0 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  &.is-circle {
+    width: 36px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: var(--color-blue-50);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  /* 主按钮 (Primary) */
+  &--primary {
+    background: linear-gradient(135deg, var(--color-blue-600) 0%, var(--color-blue-700) 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4);
+
+    &:hover,
+    &:focus {
+      background: linear-gradient(135deg, var(--color-blue-500) 0%, var(--color-blue-600) 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 12px -3px rgba(37, 99, 235, 0.5);
+    }
+  }
+
+  /* 成功按钮 (Success) */
+  &--success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);
+
+    &:hover,
+    &:focus {
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 12px -3px rgba(16, 185, 129, 0.5);
+    }
+  }
+
+  /* 危险按钮 (Danger) */
+  &--danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.4);
+
+    &:hover,
+    &:focus {
+      background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 12px -3px rgba(239, 68, 68, 0.5);
+    }
+  }
+
+  /* 警告按钮 (Warning) */
+  &--warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.4);
+
+    &:hover,
+    &:focus {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 8px 12px -3px rgba(245, 158, 11, 0.5);
+    }
+  }
+}
+
+/* 覆盖 Element Plus 默认的 disabled 样式，防止渐变背景下的样式问题 */
+.el-button.is-disabled,
+.el-button.is-disabled:hover,
+.el-button.is-disabled:focus {
+  background: var(--color-slate-100);
+  background-image: none;
+  border-color: var(--color-slate-200);
+  color: var(--color-slate-400);
+  box-shadow: none;
+  transform: none;
 }
 
 /* 状态徽章 */
@@ -78,52 +240,35 @@ body,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1;
+
+  &.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+  }
+
+  &.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+  }
+
+  &.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+  }
 }
 
-.status-badge.success {
-  background: rgba(103, 194, 58, 0.1);
-  color: var(--success-color);
-}
-
-.status-badge.warning {
-  background: rgba(230, 162, 60, 0.1);
-  color: var(--warning-color);
-}
-
-.status-badge.danger {
-  background: rgba(245, 108, 108, 0.1);
-  color: var(--danger-color);
-}
-
-.status-badge.info {
-  background: rgba(144, 147, 153, 0.1);
-  color: var(--info-color);
-}
-
-/* 动画 */
+/* 动画通用 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-  transition: transform 0.3s ease;
-}
-
-.slide-enter-from {
-  transform: translateX(-100%);
-}
-
-.slide-leave-to {
-  transform: translateX(-100%);
 }

@@ -1,9 +1,7 @@
 <template>
-  <el-aside :width="collapsed ? '64px' : '220px'" class="app-sidebar">
+  <el-aside :width="collapsed ? '64px' : '220px'" class="app-sidebar glass-effect">
     <div class="logo">
-      <el-icon :size="28" color="#409eff">
-        <Monitor />
-      </el-icon>
+      <img src="/app-icon.png" class="logo-icon" alt="Logo" />
       <span v-show="!collapsed" class="logo-text">QW-Browser</span>
     </div>
 
@@ -77,25 +75,38 @@ const activeMenu = computed(() => route.path)
 .app-sidebar {
   display: flex;
   flex-direction: column;
-  background-color: var(--bg-color-light);
-  border-right: 1px solid var(--border-color);
-  transition: width 0.3s;
+  /* background-color: var(--bg-color-light); */
+  background: transparent; /* 使用父级或自身 glass */
+  border-right: 1px solid var(--border-color); /* 保留极细边框或移除 */
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  z-index: 10; /* 确保在内容之上 */
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px;
-  height: 60px;
+  padding: 0 24px; /* 增加左右内边距 */
+  height: var(--header-height);
   border-bottom: 1px solid var(--border-color);
 
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
   .logo-text {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
     color: var(--text-color);
     white-space: nowrap;
+    background: linear-gradient(120deg, var(--primary-color), #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 }
 
