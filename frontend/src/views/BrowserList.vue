@@ -279,36 +279,69 @@ const handleStop = async (userId: string) => {
 
 <style scoped lang="scss">
 .browser-list {
-  padding: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg-color-soft) 0%, var(--bg-color) 100%);
+  min-height: 100%;
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: 600;
 }
 
 .browser-card {
   margin-bottom: 20px;
+  animation: cardEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+
+  @for $i from 1 through 12 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.08}s;
+    }
+  }
+
+  @keyframes cardEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
 
   .browser-card-header {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 16px;
+
+    .el-icon {
+      transition: all 0.3s ease;
+    }
+
+    &:hover .el-icon {
+      transform: scale(1.1) rotate(-5deg);
+    }
   }
 
   .browser-info {
     .browser-name {
       font-size: 16px;
       font-weight: 600;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      color: var(--text-color);
     }
   }
 
   .browser-card-actions {
     display: flex;
     gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color-light);
   }
 }
 
@@ -326,27 +359,48 @@ const handleStop = async (userId: string) => {
   h4 {
     margin-bottom: 12px;
     font-size: 16px;
+    font-weight: 600;
     color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: linear-gradient(180deg, var(--primary-color) 0%, #60a5fa 100%);
+      border-radius: 2px;
+    }
   }
 }
 
 .batch-results {
   max-height: 300px;
   overflow-y: auto;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: 4px;
-  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg-color-soft);
 }
 
 .batch-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
-  border-bottom: 1px solid var(--el-border-color-extra-light);
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-color-light);
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
 
   &:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
   }
 }
 </style>

@@ -74,6 +74,55 @@ const handleTest = async () => {
 
 <style scoped lang="scss">
 .settings-page {
-  padding: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg-color-soft) 0%, var(--bg-color) 100%);
+  min-height: 100%;
+
+  .el-card {
+    margin-bottom: 24px;
+
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+      background: var(--bg-color-soft);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    :deep(.el-card__body) {
+      padding: 24px;
+    }
+  }
+
+  /* 关于卡片装饰 */
+  .el-card:last-child {
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 24px;
+  }
+
+  :deep(.el-descriptions) {
+    .el-descriptions__label {
+      font-weight: 500;
+      color: var(--text-color-secondary);
+    }
+
+    .el-descriptions__content {
+      color: var(--text-color);
+    }
+  }
 }
 </style>

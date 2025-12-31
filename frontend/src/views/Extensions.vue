@@ -61,16 +61,34 @@ onMounted(fetchData)
 
 <style scoped lang="scss">
 .extensions-page {
-  padding: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg-color-soft) 0%, var(--bg-color) 100%);
+  min-height: 100%;
+
+  .el-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+      background: var(--bg-color-soft);
+      border-bottom: 1px solid var(--border-color);
+    }
+  }
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: 600;
 }
 
 .extension-tag {
   margin-right: 8px;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
 }
 </style>

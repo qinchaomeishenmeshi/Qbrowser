@@ -87,17 +87,67 @@ const getLevelType = (level: string) => {
 
 <style scoped lang="scss">
 .logs-page {
-  padding: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg-color-soft) 0%, var(--bg-color) 100%);
+  min-height: 100%;
+
+  .el-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+      background: var(--bg-color-soft);
+      border-bottom: 1px solid var(--border-color);
+    }
+  }
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: 600;
+
+  span {
+    color: var(--text-color);
+  }
 }
 
 .header-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+/* 表格行样式增强 */
+:deep(.el-table) {
+  .el-table__row {
+    transition: all 0.2s ease;
+
+    &:hover {
+      td {
+        background-color: rgba(59, 130, 246, 0.04) !important;
+      }
+    }
+  }
+
+  /* 日志级别标签增强 */
+  .el-tag {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+
+    &.el-tag--danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: transparent;
+    }
+
+    &.el-tag--warning {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: transparent;
+    }
+
+    &.el-tag--success {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: transparent;
+    }
+  }
 }
 </style>

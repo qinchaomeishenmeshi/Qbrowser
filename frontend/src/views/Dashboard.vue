@@ -230,16 +230,44 @@ const handleStop = async (userId: string) => {
 
 <style scoped lang="scss">
 .dashboard {
-  padding: 20px;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg-color-soft) 0%, var(--bg-color) 100%);
+  min-height: 100%;
 }
 
 .stat-cards {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  /* 让卡片高度一致 */
   height: 100%;
+  /* 入场动画 */
+  animation: cardEnter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+
+  &:nth-child(1) {
+    animation-delay: 0s;
+  }
+  &:nth-child(2) {
+    animation-delay: 0.1s;
+  }
+  &:nth-child(3) {
+    animation-delay: 0.2s;
+  }
+  &:nth-child(4) {
+    animation-delay: 0.3s;
+  }
+
+  @keyframes cardEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
 
   :deep(.el-card__body) {
     display: flex;
@@ -255,11 +283,17 @@ const handleStop = async (userId: string) => {
   justify-content: center;
   width: 56px;
   height: 56px;
-  border-radius: 16px; /* 更圆润的圆角 */
+  border-radius: 16px;
   color: white;
-  margin-right: 20px; /* 图标与右侧内容的间距 */
+  margin-right: 20px;
   flex-shrink: 0;
   transition: all 0.3s ease;
+  position: relative;
+
+  /* 悬停时图标放大 */
+  .stat-card:hover & {
+    transform: scale(1.08);
+  }
 
   &.icon-blue {
     background: linear-gradient(135deg, var(--color-blue-500) 0%, var(--color-blue-600) 100%);
@@ -289,14 +323,16 @@ const handleStop = async (userId: string) => {
   flex: 1;
 
   .stat-label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-color-secondary);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .stat-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 700;
     color: var(--text-color);
     letter-spacing: -0.5px;
@@ -306,55 +342,65 @@ const handleStop = async (userId: string) => {
 
 .quick-actions,
 .instance-list {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+
+  :deep(.el-card__header) {
+    padding: 16px 20px;
+    background: var(--bg-color-soft);
+    border-bottom: 1px solid var(--border-color);
+  }
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  font-weight: 600;
+  color: var(--text-color);
 }
 
 .polling-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   color: var(--text-color-secondary);
-  margin-left: 12px;
-  opacity: 0.6;
-  transition: opacity 0.3s;
+  margin-left: 16px;
+  padding: 6px 12px;
+  background: var(--bg-color-soft);
+  border-radius: 20px;
+  opacity: 0.7;
+  transition: all 0.3s ease;
 
   &.active {
     opacity: 1;
+    background: rgba(16, 185, 129, 0.1);
 
     .dot {
-      background-color: var(--el-color-success);
-      box-shadow: 0 0 6px var(--el-color-success);
-      animation: pulse 2s infinite;
+      background-color: var(--success-color);
+      box-shadow: 0 0 8px var(--success-color);
+      animation: dotPulse 2s infinite;
     }
   }
 
   .dot {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background-color: var(--el-text-color-placeholder);
+    background-color: var(--text-color-placeholder);
+    transition: all 0.3s ease;
   }
 }
 
-@keyframes pulse {
-  0% {
+@keyframes dotPulse {
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
+    transform: scale(1.3);
+    opacity: 0.6;
   }
 }
 </style>
