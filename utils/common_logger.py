@@ -72,7 +72,7 @@ def get_logger(name: Optional[str] = None, log_to_file: bool = True):
             level=LOG_LEVEL,
             format=LOG_FORMAT,
             filter=_console_deduper,
-            enqueue=True,
+            enqueue=False,  # 禁用 enqueue 避免信号量问题
             diagnose=False,
         )
         _added_sinks.add("console")
@@ -86,7 +86,7 @@ def get_logger(name: Optional[str] = None, log_to_file: bool = True):
             rotation="00:00",
             retention="3 days",
             encoding="utf-8",
-            enqueue=True,
+            enqueue=False,  # 禁用 enqueue 避免信号量问题
             diagnose=False,
         )
         _added_sinks.add("file")
