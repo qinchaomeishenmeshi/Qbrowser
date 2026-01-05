@@ -1,6 +1,6 @@
 import asyncio
 from threading import Thread
-from typing import List
+from typing import List, Optional
 
 import uvicorn
 from fastapi import (
@@ -11,6 +11,7 @@ from fastapi import (
     Request,
     WebSocket,
     WebSocketDisconnect,
+    Body,
 )
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -336,26 +337,46 @@ async def start_browser(
     return result
 
 
-@api_router.post("/stop", summary="停止所有浏览器")
-async def stop_all():
-    managers = await browser_store.get_all()
-    for m in managers:
-        if m.is_running:
-            await m.cleanup()
-    return {"status": "success", "message": "所有浏览器已关闭"}
+@api_router.post("/stop", summary="停止指定或所有浏览器")
+async def stop_all(user_ids: Optional[List[str]] = Body(default=None)):
+    from service.browser_service import browser_service
+
+    await browser_service.stop_all_browsers(user_ids)
+    msg = "选中的浏览器已关闭" if user_ids else "所有运行中的浏览器已关闭"
+    return {"status": "success", "message": msg}
 
 
 @api_router.post("/stop/{user_id}", summary="停止指定浏览器")
 async def stop_browser_instance(user_id: str):
-    success = await browser_store.stop(user_id)
+    from service.browser_service import browser_service
+
+    success = await browser_service.stop_browser(user_id)
     if not success:
         raise HTTPException(
-            status_code=404, detail=f"未找到用户 {user_id} 的浏览器实例"
+            status_code=404, detail=f"未找到用户 {user_id} 的浏览器实例或停止失败"
         )
     return {
         "status": "success",
         "message": f"用户 {user_id} 的浏览器进程已停止，实例已缓存",
     }
+
+
+@api_router.post("/browser/create", summary="新建浏览器配置（不启动）")
+async def create_browser(user_id: str = Body(..., embed=True)):
+    from service.browser_service import browser_service
+
+    manager = await browser_service.create_browser(user_id)
+    if not manager:
+        raise HTTPException(status_code=500, detail="创建浏览器失败")
+    return {"status": "success", "user_id": user_id, "message": "浏览器配置创建成功"}
+
+
+@api_router.post("/delete_batch", summary="批量彻底删除浏览器实例")
+async def delete_browsers_batch(user_ids: List[str] = Body(...)):
+    from service.browser_service import browser_service
+
+    results = await browser_service.delete_browsers(user_ids)
+    return {"status": "success", "results": results}
 
 
 @api_router.post("/delete/{user_id}", summary="彻底删除浏览器实例")
@@ -367,7 +388,7 @@ async def delete_browser_instance(user_id: str):
         raise HTTPException(
             status_code=404, detail=f"未找到用户 {user_id} 的浏览器实例或删除失败"
         )
-    return {"status": "success", "message": f"用户 {user_id} 的浏览器和数据已彻底删除"}
+    return {"status": "success", "message": f"用户 {user_id} 的浏览器数据已彻底清理"}
 
 
 @api_router.post("/start_all", summary="批量启动浏览器")

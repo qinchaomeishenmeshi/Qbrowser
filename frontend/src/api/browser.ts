@@ -57,10 +57,14 @@ export const browserApi = {
   },
 
   /**
-   * 停止所有浏览器实例
+   * 停止指定或所有浏览器实例
    */
-  async stopAll(): Promise<{ status: string; message: string }> {
-    const res = await fetch(`${API_BASE}/stop`, { method: 'POST' })
+  async stopAll(userIds?: string[]): Promise<{ status: string; message: string }> {
+    const res = await fetch(`${API_BASE}/stop`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: userIds ? JSON.stringify(userIds) : null
+    })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json()
   },
@@ -113,10 +117,37 @@ export const browserApi = {
   },
 
   /**
+   /**
+   * 新建浏览器配置（不启动）
+   */
+  async create(userId: string): Promise<{ status: string; user_id: string }> {
+    const res = await fetch(`${API_BASE}/browser/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  },
+
+  /**
    * 彻底删除浏览器实例和其本地数据
    */
   async deleteInstance(userId: string): Promise<{ status: string; message: string }> {
     const res = await fetch(`${API_BASE}/delete/${userId}`, { method: 'POST' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    return res.json()
+  },
+
+  /**
+   * 批量彻底删除浏览器实例
+   */
+  async deleteBatch(userIds: string[]): Promise<{ status: string; results: any }> {
+    const res = await fetch(`${API_BASE}/delete_batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userIds)
+    })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json()
   }

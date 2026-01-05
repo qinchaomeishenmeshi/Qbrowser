@@ -59,178 +59,180 @@
       </el-col>
     </el-row>
 
-    <!-- 实时任务状态 -->
-    <el-card
-      v-if="runningCount > 0 || eventHistory.length > 0"
-      class="realtime-tasks"
-      shadow="never"
-    >
-      <template #header>
-        <div class="card-header">
-          <span>
-            <el-icon class="pulse-icon"><Loading /></el-icon>
-            实时任务状态
-          </span>
-          <el-tag v-if="runningCount > 0" type="warning">{{ runningCount }} 个运行中</el-tag>
-        </div>
-      </template>
-
-      <div class="event-list">
-        <div
-          v-for="(event, index) in eventHistory.slice(0, 5)"
-          :key="index"
-          class="event-item"
-          :class="event.event"
-        >
-          <el-icon class="event-icon">
-            <SuccessFilled v-if="event.event === 'task_completed'" />
-            <CircleCloseFilled v-else-if="event.event === 'task_failed'" />
-            <Loading v-else />
-          </el-icon>
-          <div class="event-content">
-            <span class="event-name">{{ event.data?.name || event.task_id }}</span>
-            <span class="event-status">
-              {{
-                event.event === 'task_completed'
-                  ? '执行成功'
-                  : event.event === 'task_failed'
-                  ? '执行失败'
-                  : '运行中'
-              }}
-            </span>
-          </div>
-          <span v-if="event.duration" class="event-duration">{{ event.duration.toFixed(2) }}s</span>
-          <span class="event-time">{{ formatTime(event.timestamp) }}</span>
-        </div>
-        <el-empty v-if="eventHistory.length === 0" description="暂无任务事件" :image-size="60" />
-      </div>
-    </el-card>
-
     <!-- 快速操作 -->
     <el-card class="quick-actions" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>快速操作</span>
+          <span>资源管理</span>
         </div>
       </template>
 
-      <el-space wrap>
-        <el-button type="primary" :icon="Plus" @click="showStartDialog = true">
-          新建实例
-        </el-button>
-        <el-button type="warning" :icon="SwitchButton" @click="handleStopAll"> 停止全部 </el-button>
-        <el-button :icon="Refresh" @click="handleRefresh" :loading="browserStore.loading">
-          刷新状态
-        </el-button>
-        <div class="polling-indicator" :class="{ active: isPolling }">
-          <span class="dot"></span>
-          实时同步中
-        </div>
-      </el-space>
+      <div class="action-bar">
+        <el-space wrap>
+          <el-button type="primary" :icon="Plus" @click="showStartDialog = true">
+            新建浏览器
+          </el-button>
+          <el-button :icon="Refresh" @click="handleRefresh" :loading="browserStore.loading">
+            刷新状态
+          </el-button>
+          <div class="polling-indicator" :class="{ active: isPolling }">
+            <span class="dot"></span>
+            实时同步中
+          </div>
+        </el-space>
+
+        <!-- 批量操作栏（有选中时显示） -->
+        <transition name="el-zoom-in-top">
+          <div v-if="selectedIds.length > 0" class="batch-bar">
+            <div class="selection-info">
+              已选中 <span class="count">{{ selectedIds.length }}</span> 项
+            </div>
+            <el-divider direction="vertical" />
+            <el-space>
+              <el-button type="primary" size="small" :icon="VideoPlay" @click="handleBatchOpen">
+                批量打开
+              </el-button>
+              <el-button type="warning" size="small" :icon="VideoPause" @click="handleBatchClose">
+                批量关闭
+              </el-button>
+              <el-button type="danger" size="small" :icon="Delete" @click="handleBatchDelete">
+                批量删除
+              </el-button>
+              <el-button size="small" link @click="clearSelection">取消选择</el-button>
+            </el-space>
+          </div>
+        </transition>
+      </div>
     </el-card>
 
     <!-- 浏览器实例列表 -->
     <el-card class="instance-list" shadow="never">
       <template #header>
         <div class="card-header">
-          <span>浏览器实例 (已缓存)</span>
-          <el-tag type="info">{{ browserStore.totalCount }} 个</el-tag>
+          <span>浏览器列表</span>&nbsp;
+          <el-tag type="info" effect="plain">{{ browserStore.totalCount }} 个</el-tag>
         </div>
       </template>
 
-      <el-empty v-if="browserStore.allInstances.length === 0" description="暂无实例记录" />
+      <el-empty v-if="browserStore.allInstances.length === 0" description="暂无浏览器环境" />
 
-      <el-table v-else :data="browserStore.allInstances" style="width: 100%">
-        <el-table-column prop="user_id" label="用户 ID" width="200">
+      <el-table
+        v-else
+        ref="instanceTable"
+        :data="browserStore.allInstances"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column type="selection" width="55" />
+        <el-table-column prop="user_id" label="浏览器名称 / ID" width="220">
           <template #default="{ row }">
-            <el-tag>{{ row.user_id }}</el-tag>
+            <div class="user-id-cell">
+              <el-icon class="browser-icon"><ChromeFilled /></el-icon>
+              <el-tag size="small" effect="light">{{ row.user_id }}</el-tag>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="150">
+        <el-table-column label="运行状态" width="150">
           <template #default="{ row }">
             <span v-if="row.is_running" class="status-badge success">
-              <el-icon><SuccessFilled /></el-icon>
-              运行中
+              <span class="dot pulse"></span>
+              打开中
             </span>
-            <span v-else class="status-badge warning">
-              <el-icon><CircleCloseFilled /></el-icon>
-              已停止
+            <span v-else-if="row.status === 'starting'" class="status-badge info">
+              <span class="dot spinning"></span>
+              启动中...
+            </span>
+            <span v-else-if="row.status === 'stopping'" class="status-badge warning">
+              <span class="dot spinning"></span>
+              关闭中...
+            </span>
+            <span v-else class="status-badge gray">
+              <span class="dot"></span>
+              已关闭
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="port" label="端口" width="100" />
-        <el-table-column label="操作" width="180" align="center">
+        <el-table-column prop="port" label="调试端口" width="120">
+          <template #default="{ row }">
+            <code v-if="row.port">{{ row.port }}</code>
+            <span v-else class="text-secondary">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" min-width="180" align="center">
           <template #default="{ row }">
             <el-space>
-              <el-tooltip
-                :content="row.is_running ? '停止进程并保留缓存' : '恢复浏览器运行'"
-                placement="top"
+              <el-button
+                v-if="!row.is_running"
+                size="small"
+                type="primary"
+                :icon="VideoPlay"
+                @click="handleRun(row.user_id)"
+                :loading="row.status === 'starting'"
               >
-                <el-button
-                  v-if="!row.is_running"
-                  size="small"
-                  type="primary"
-                  link
-                  :icon="VideoPlay"
-                  @click="handleRun(row.user_id)"
-                >
-                  启动
-                </el-button>
-                <el-button
-                  v-else
-                  size="small"
-                  type="warning"
-                  link
-                  :icon="VideoPause"
-                  @click="handleStop(row.user_id)"
-                >
-                  停止
-                </el-button>
-              </el-tooltip>
+                打开
+              </el-button>
+              <el-button
+                v-else
+                size="small"
+                type="warning"
+                :icon="VideoPause"
+                @click="handleStop(row.user_id)"
+                :loading="row.status === 'stopping'"
+              >
+                关闭
+              </el-button>
 
-              <el-tooltip content="彻底删除实例及本地数据" placement="top">
+              <el-dropdown trigger="click">
                 <el-button
-                  size="small"
-                  type="danger"
                   link
-                  :icon="Delete"
-                  @click="handleDelete(row.user_id)"
-                >
-                  删除
-                </el-button>
-              </el-tooltip>
+                  type="primary"
+                  :icon="MoreFilled"
+                  style="font-size: 16px; margin-left: 8px"
+                />
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      :icon="Delete"
+                      @click="handleDelete(row.user_id)"
+                      style="color: var(--el-color-danger)"
+                    >
+                      彻底删除
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </el-space>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
 
-    <!-- 启动实例对话框 -->
-    <el-dialog v-model="showStartDialog" title="启动新实例" width="500">
-      <el-form :model="startForm" label-width="80px">
-        <el-form-item label="用户 ID" required>
-          <el-input v-model="startForm.userId" placeholder="请输入用户 ID" />
-        </el-form-item>
-        <el-form-item label="初始 URL">
-          <el-input v-model="startForm.url" placeholder="https://example.com (可选)" />
+    <!-- 新建浏览器对话框 -->
+    <el-dialog v-model="showStartDialog" title="新建浏览器" width="460px" border-radius="12px">
+      <el-form :model="startForm" label-width="100px" label-position="left">
+        <el-form-item label="浏览器 ID" placeholder="例如：account-01" required>
+          <el-input v-model="startForm.userId" placeholder="请输入浏览器标识符" />
+          <div class="form-tip">标识符用于区分不同的浏览器环境和数据目录</div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showStartDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleStart" :loading="browserStore.loading">
-          启动
-        </el-button>
+        <div class="dialog-footer">
+          <el-button @click="showStartDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateBrowser" :loading="browserStore.loading">
+            立即创建
+          </el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useBrowserStore, useAppStore } from '@/stores'
 import { usePolling } from '@/composables/usePolling'
-import { useSchedulerSocket } from '@/composables/useSchedulerSocket'
+import { useBrowserSocket } from '@/composables/useBrowserSocket'
 import {
   Monitor,
   ChromeFilled,
@@ -240,18 +242,22 @@ import {
   VideoPlay,
   VideoPause,
   Refresh,
-  SuccessFilled,
-  CircleCloseFilled,
-  Loading,
   Delete,
-  SwitchButton
+  MoreFilled
 } from '@element-plus/icons-vue'
 
 const browserStore = useBrowserStore()
 const appStore = useAppStore()
 
-// WebSocket 实时状态
-const { isConnected: wsConnected, runningCount, eventHistory } = useSchedulerSocket()
+onMounted(async () => {
+  // 每次进入仪表盘尝试刷新一次数据
+  if (appStore.backendConnected) {
+    await browserStore.refresh()
+  }
+})
+
+// WebSocket 实时状态 (使用浏览器频道)
+const { isConnected: wsConnected } = useBrowserSocket()
 
 const showStartDialog = ref(false)
 const startForm = ref({
@@ -259,74 +265,111 @@ const startForm = ref({
   url: ''
 })
 const extensionCount = ref(0)
+const instanceTable = ref<any>(null)
+const selectedIds = ref<string[]>([])
 
-// 格式化时间
-const formatTime = (isoString?: string) => {
-  if (!isoString) return ''
-  const date = new Date(isoString)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-}
-
-// 开启 5 秒一次的轮询
+// 轮询逻辑：WebSocket 断开时启用更频繁的轮询作为兜底
 const { isPolling } = usePolling(async () => {
-  await browserStore.refresh()
+  if (!wsConnected.value) {
+    await browserStore.refresh()
+  }
   await appStore.checkBackendHealth()
-}, 5000)
+}, 10000)
 
 const handleRefresh = async () => {
-  await browserStore.refresh()
+  await Promise.all([browserStore.refresh(), appStore.checkBackendHealth()])
   ElMessage.success('数据已刷新')
 }
 
-const handleStart = async () => {
+// 多选处理
+const handleSelectionChange = (selection: any[]) => {
+  selectedIds.value = selection.map((item) => item.user_id)
+}
+
+const clearSelection = () => {
+  instanceTable.value?.clearSelection()
+}
+
+// 新建浏览器（静默创建）
+const handleCreateBrowser = async () => {
   if (!startForm.value.userId.trim()) {
-    ElMessage.warning('请输入用户 ID')
+    ElMessage.warning('请输入浏览器 ID')
     return
   }
 
-  const result = await browserStore.startInstance(
-    startForm.value.userId,
-    startForm.value.url || undefined
-  )
+  const result = await browserStore.createBrowser(startForm.value.userId)
 
   if (result?.status === 'success') {
-    ElMessage.success(`实例 ${startForm.value.userId} 启动成功`)
+    ElMessage.success(`浏览器 ${startForm.value.userId} 创建成功`)
     showStartDialog.value = false
     startForm.value = { userId: '', url: '' }
-  } else if (result?.status === 'already_running') {
-    ElMessage.warning('该实例已在运行中')
   } else {
-    ElMessage.error('启动失败: ' + (result?.message || '未知错误'))
+    ElMessage.error('创建失败')
   }
 }
 
-const handleStopAll = async () => {
-  try {
-    await ElMessageBox.confirm('确定要停止所有浏览器实例吗？', '确认操作', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+// 批量打开
+const handleBatchOpen = async () => {
+  if (selectedIds.value.length === 0) return
 
-    const result = await browserStore.stopAll()
-    if (result?.status === 'success') {
-      ElMessage.success('所有实例已停止')
-    }
+  try {
+    await browserStore.startAll(selectedIds.value)
+    ElMessage.success(`已开始批量打开 ${selectedIds.value.length} 个浏览器`)
+    clearSelection()
+  } catch (error) {
+    ElMessage.error('批量打开操作失败')
+  }
+}
+
+// 批量关闭
+const handleBatchClose = async () => {
+  if (selectedIds.value.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要关闭选中的 ${selectedIds.value.length} 个浏览器吗？`,
+      '批量关闭',
+      {
+        type: 'warning'
+      }
+    )
+    await browserStore.stopAll(selectedIds.value)
+    ElMessage.success('批量关闭指令已下发')
+    clearSelection()
   } catch {
     // 用户取消
   }
 }
 
+// 批量删除
+const handleBatchDelete = async () => {
+  if (selectedIds.value.length === 0) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要彻底删除选中的 <strong style="color: #ef4444">${selectedIds.value.length}</strong> 个浏览器环境及其本地数据吗？<br/><small style="color: #94a3b8">此操作不可恢复。</small>`,
+      '批量删除',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        dangerouslyUseHTMLString: true,
+        type: 'error'
+      }
+    )
+
+    await browserStore.deleteBatch(selectedIds.value)
+    ElMessage.success('批量删除完成')
+    clearSelection()
+  } catch {
+    // 取消
+  }
+}
+
 const handleStop = async (userId: string) => {
   try {
-    await ElMessageBox.confirm(`确定要停止实例 ${userId} 吗？`, '确认操作', {
-      type: 'warning'
-    })
     const result = await browserStore.stopInstance(userId)
-    if (result?.status === 'success') {
-      ElMessage.success(`实例 ${userId} 已停止（已缓存）`)
-    } else {
-      ElMessage.error('停止失败')
+    if (result?.status !== 'success') {
+      ElMessage.error('关闭失败')
     }
   } catch {
     // 取消
@@ -335,24 +378,21 @@ const handleStop = async (userId: string) => {
 
 const handleRun = async (userId: string) => {
   const result = await browserStore.startInstance(userId)
-  if (result?.status === 'success' || result?.status === 'already_running') {
-    ElMessage.success(`实例 ${userId} 已启动`)
-  } else {
-    ElMessage.error('启动失败')
+  if (result?.status !== 'success' && result?.status !== 'already_running') {
+    ElMessage.error('打开失败')
   }
 }
 
 const handleDelete = async (userId: string) => {
   try {
     await ElMessageBox.confirm(
-      `确定要彻底删除实例 <strong style="color: #ef4444">${userId}</strong> 及其本地数据吗？<br/><small style="color: #94a3b8">此操作将永久清理磁盘空间，且不可恢复。</small>`,
+      `确定要彻底删除浏览器 <strong style="color: #ef4444">${userId}</strong> 及其本地数据吗？<br/><small style="color: #94a3b8">此操作将永久清理磁盘空间，且不可恢复。</small>`,
       '危险操作',
       {
         confirmButtonText: '彻底删除',
         cancelButtonText: '取消',
-        type: 'error',
         dangerouslyUseHTMLString: true,
-        distinguishCancelAndClose: true
+        type: 'error'
       }
     )
     const result = await browserStore.deleteInstance(userId)
@@ -479,168 +519,148 @@ const handleDelete = async (userId: string) => {
   }
 }
 
-.quick-actions,
-.instance-list {
-  margin-bottom: 24px;
-
-  :deep(.el-card__header) {
-    padding: 16px 20px;
-    background: var(--bg-color-soft);
-    border-bottom: 1px solid var(--border-color);
-  }
-}
-
-.card-header {
+.action-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-weight: 600;
-  color: var(--text-color);
+  min-height: 40px;
+  position: relative;
 }
 
-.polling-indicator {
+.batch-bar {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background: var(--bg-color);
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+  z-index: 10;
+  animation: slideInRight 0.3s ease;
+
+  .selection-info {
+    font-size: 13px;
+    color: var(--text-color-secondary);
+
+    .count {
+      color: var(--primary-color);
+      font-weight: 600;
+      margin: 0 4px;
+    }
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+.user-id-cell {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--text-color-secondary);
-  margin-left: 16px;
-  padding: 6px 12px;
-  background: var(--bg-color-soft);
-  border-radius: 20px;
-  opacity: 0.7;
-  transition: all 0.3s ease;
 
-  &.active {
-    opacity: 1;
+  .browser-icon {
+    font-size: 18px;
+    color: var(--primary-color);
+    opacity: 0.8;
+  }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 6px;
+
+  &.success {
+    color: var(--success-color);
     background: rgba(16, 185, 129, 0.1);
-
-    .dot {
-      background-color: var(--success-color);
-      box-shadow: 0 0 8px var(--success-color);
-      animation: dotPulse 2s infinite;
-    }
+  }
+  &.warning {
+    color: var(--warning-color);
+    background: rgba(245, 158, 11, 0.1);
+  }
+  &.info {
+    color: var(--primary-color);
+    background: rgba(59, 130, 246, 0.1);
+  }
+  &.gray {
+    color: var(--text-color-secondary);
+    background: var(--bg-color-soft);
   }
 
   .dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background-color: var(--text-color-placeholder);
-    transition: all 0.3s ease;
+    background-color: currentColor;
+
+    &.pulse {
+      box-shadow: 0 0 0 0 currentColor;
+      animation: statusPulse 2s infinite;
+    }
+
+    &.spinning {
+      animation: dotScale 1s infinite alternate;
+    }
   }
 }
 
-@keyframes dotPulse {
-  0%,
+@keyframes statusPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
   100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.3);
-    opacity: 0.6;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
   }
 }
 
-// 实时任务状态卡片样式
-.realtime-tasks {
-  margin-bottom: 24px;
-
-  .pulse-icon {
-    animation: spin 2s linear infinite;
-    margin-right: 8px;
-  }
-}
-
-@keyframes spin {
+@keyframes dotScale {
   from {
-    transform: rotate(0deg);
+    transform: scale(0.8);
+    opacity: 0.5;
   }
   to {
-    transform: rotate(360deg);
+    transform: scale(1.2);
+    opacity: 1;
   }
 }
 
-.event-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.event-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-color-soft);
-  border-radius: 8px;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: var(--bg-color-muted);
-  }
-
-  &.task_completed {
-    border-left: 3px solid var(--success-color);
-
-    .event-icon {
-      color: var(--success-color);
-    }
-  }
-
-  &.task_failed {
-    border-left: 3px solid var(--danger-color);
-
-    .event-icon {
-      color: var(--danger-color);
-    }
-  }
-
-  &.task_started {
-    border-left: 3px solid var(--warning-color);
-
-    .event-icon {
-      color: var(--warning-color);
-      animation: spin 1s linear infinite;
-    }
-  }
-}
-
-.event-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.event-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  .event-name {
-    font-weight: 500;
-    color: var(--text-color);
-  }
-
-  .event-status {
-    font-size: 12px;
-    color: var(--text-color-secondary);
-  }
-}
-
-.event-duration {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--primary-color);
-  padding: 2px 8px;
-  background: rgba(var(--primary-color-rgb), 0.1);
-  border-radius: 4px;
-}
-
-.event-time {
+.form-tip {
   font-size: 12px;
   color: var(--text-color-placeholder);
-  flex-shrink: 0;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--bg-color-soft);
+  border-radius: 4px;
+  color: var(--primary-color);
+}
+
+.text-secondary {
+  color: var(--text-color-placeholder);
+  font-size: 12px;
 }
 </style>
