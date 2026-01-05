@@ -36,6 +36,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "externalBin": [
+      "api-server"
+    ],
     "category": "DeveloperTool",
     "shortDescription": "清简浏览器管理工具",
     "longDescription": "清简浏览器 是一个基于 Playwright 的多浏览器实例管理工具，支持浏览器启动、停止、扩展管理等功能。"

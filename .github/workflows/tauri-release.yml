@@ -1,0 +1,86 @@
+name: Release Tauri App
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            python-build-name: 'api-server-aarch64-apple-darwin'
+          - platform: 'windows-latest'
+            args: ''
+            target: 'x86_64-pc-windows-msvc'
+            python-build-name: 'api-server-x86_64-pc-windows-msvc.exe'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Python Dependencies
+        run: |
+          uv sync --extra scheduler --extra dev
+
+      - name: Build Python Backend
+        shell: bash
+        run: |
+          # Make sure the binaries directory exists
+          mkdir -p frontend/src-tauri/binaries
+
+          # Build the python executable
+          # Adjust main.py if your entry point is different
+          uv run pyinstaller --clean --noconfirm --onefile --name api-server main.py
+
+          # Move and rename based on the platform
+          # Note: PyInstaller output is in dist/
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            mv dist/api-server.exe frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+          else
+            mv dist/api-server frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+          fi
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Full App ${{ github.ref_name }}'
+          releaseBody: 'See the assets to download this version and install.'
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
