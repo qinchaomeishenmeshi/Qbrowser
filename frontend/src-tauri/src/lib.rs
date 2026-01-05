@@ -5,7 +5,7 @@ pub fn run() {
     .plugin(tauri_plugin_shell::init()) // 1. 注册 Shell 插件
     .setup(|app| {
         // 2. 启动 Sidecar (Python 后端)
-        let sidecar = app.shell().sidecar("api-server").unwrap();
+        let sidecar = app.shell().sidecar("binaries/api-server").unwrap();
         let (mut _rx, mut _child) = sidecar.spawn().expect("Failed to spawn sidecar");
         
         Ok(())
