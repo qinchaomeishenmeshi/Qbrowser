@@ -14,8 +14,6 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.api_business import business_router
-from api.scheduler_api import router as scheduler_router
 from api.chrome_config_api import router as chrome_config_router
 from api.redirect_api import router as redirect_router
 
@@ -23,9 +21,6 @@ from browser.browser_store import browser_store
 from utils.common_logger import get_logger
 from utils.websocket_manager import ws_manager
 from conf import resource_path
-from api.scheduler_api import router as scheduler_router
-from api.chrome_config_api import router as chrome_config_router
-from api.redirect_api import router as redirect_router
 
 from browser.browser_store import browser_store
 from utils.common_logger import get_logger
@@ -199,56 +194,6 @@ async def get_user_extensions_status(user_id: str):
                 "block_videos (视频屏蔽器)",
             ],
             "message": f"扩展状态检查失败: {e}",
-        }
-
-
-@api_router.get("/scheduler/recent", summary="获取最近任务")
-async def get_recent_tasks():
-    """获取最近的任务执行记录"""
-    try:
-        from worker.scheduler_client import scheduler_client
-
-        # 获取最近 20 条任务执行结果
-        results = scheduler_client.get_task_results(limit=20)
-
-        # 获取任务配置（用于补充任务名称等信息）
-        configs = {c["task_id"]: c for c in scheduler_client.get_task_configs()}
-
-        # 组装返回数据
-        tasks = []
-        for result in results:
-            task_id = result.get("task_id")
-            config = configs.get(task_id, {})
-            tasks.append(
-                {
-                    "execution_id": result.get("execution_id"),
-                    "task_id": task_id,
-                    "name": config.get("name", task_id),
-                    "status": (
-                        result.get("status", {}).get("value")
-                        if isinstance(result.get("status"), dict)
-                        else str(result.get("status", ""))
-                    ),
-                    "start_time": result.get("start_time"),
-                    "end_time": result.get("end_time"),
-                    "duration": result.get("duration"),
-                    "error_message": result.get("error_message"),
-                }
-            )
-
-        return {
-            "tasks": tasks,
-            "total_count": len(tasks),
-            "message": (
-                f"获取到 {len(tasks)} 条最近任务记录" if tasks else "暂无任务记录"
-            ),
-        }
-    except Exception as e:
-        logger.error(f"获取最近任务失败: {e}")
-        return {
-            "tasks": [],
-            "total_count": 0,
-            "message": f"获取失败: {str(e)}",
         }
 
 
@@ -624,8 +569,6 @@ async def detect_browser_on_port(port: int):
 
 
 app.include_router(api_router, prefix="/api")  # 浏览器管理接口
-app.include_router(business_router)  # 业务接口
-app.include_router(scheduler_router)  # 定时任务管理接口
 app.include_router(chrome_config_router, prefix="/api")  # Chrome配置接口
 app.include_router(redirect_router, prefix="/api")  # 页面重定向接口
 

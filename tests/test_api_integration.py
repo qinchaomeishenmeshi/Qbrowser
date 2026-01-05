@@ -12,7 +12,6 @@ from pathlib import Path
 # 导入 API 应用
 from api.api_server import app
 from service.browser_service import browser_service
-from worker.scheduler_client import SchedulerClient
 
 
 class TestAPIIntegration:
@@ -48,18 +47,6 @@ class TestAPIIntegration:
             )
             yield mock_service
 
-    @pytest.fixture
-    def mock_scheduler_client(self):
-        """模拟调度器客户端"""
-        with patch("api.api_server.scheduler_client") as mock_client:
-            mock_client.get_all_tasks = Mock(return_value=[])
-            mock_client.add_task = Mock(return_value="task_123")
-            mock_client.remove_task = Mock(return_value=True)
-            mock_client.get_task = Mock(return_value=None)
-            mock_client.pause_task = Mock(return_value=True)
-            mock_client.resume_task = Mock(return_value=True)
-            yield mock_client
-
     def test_health_check(self, client):
         """测试健康检查端点"""
         response = client.get("/health")
@@ -68,16 +55,6 @@ class TestAPIIntegration:
         data = response.json()
         assert data["status"] == "healthy"
         assert "timestamp" in data
-
-    def test_system_status(self, client, mock_browser_service, mock_scheduler_client):
-        """测试系统状态端点"""
-        response = client.get("/status")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "browser_service" in data
-        assert "scheduler" in data
-        assert "api_server" in data
 
     def test_browser_status(self, client, mock_browser_service):
         """测试浏览器状态端点"""
@@ -183,69 +160,6 @@ class TestAPIIntegration:
             data = response.json()
             assert isinstance(data, list)
             mock_get_extensions.assert_called_once_with(user_id)
-
-    def test_scheduler_tasks_list(self, client, mock_scheduler_client):
-        """测试获取调度器任务列表"""
-        response = client.get("/scheduler/tasks")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        mock_scheduler_client.get_all_tasks.assert_called_once()
-
-    def test_add_scheduler_task(
-        self, client, mock_scheduler_client, sample_task_config
-    ):
-        """测试添加调度器任务"""
-        response = client.post("/scheduler/tasks", json=sample_task_config)
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        assert "task_id" in data
-        mock_scheduler_client.add_task.assert_called_once()
-
-    def test_get_scheduler_task(self, client, mock_scheduler_client):
-        """测试获取单个调度器任务"""
-        task_id = "test_task_123"
-
-        response = client.get(f"/scheduler/tasks/{task_id}")
-
-        assert response.status_code == 200
-        mock_scheduler_client.get_task.assert_called_once_with(task_id)
-
-    def test_delete_scheduler_task(self, client, mock_scheduler_client):
-        """测试删除调度器任务"""
-        task_id = "test_task_123"
-
-        response = client.delete(f"/scheduler/tasks/{task_id}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        mock_scheduler_client.remove_task.assert_called_once_with(task_id)
-
-    def test_pause_scheduler_task(self, client, mock_scheduler_client):
-        """测试暂停调度器任务"""
-        task_id = "test_task_123"
-
-        response = client.post(f"/scheduler/tasks/{task_id}/pause")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        mock_scheduler_client.pause_task.assert_called_once_with(task_id)
-
-    def test_resume_scheduler_task(self, client, mock_scheduler_client):
-        """测试恢复调度器任务"""
-        task_id = "test_task_123"
-
-        response = client.post(f"/scheduler/tasks/{task_id}/resume")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["success"] is True
-        mock_scheduler_client.resume_task.assert_called_once_with(task_id)
 
     def test_get_logs(self, client):
         """测试获取系统日志"""
