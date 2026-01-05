@@ -1,8 +1,8 @@
-# QW-Browser API 服务器文档
+# 清简浏览器 API 服务器文档
 
 ## 概述
 
-`api_server.py` 是 QW-Browser 项目的核心 API 服务器，基于 FastAPI 框架构建，提供了完整的浏览器管理、扩展控制、任务调度等功能的 RESTful API 接口。
+`api_server.py` 是 清简浏览器 项目的核心 API 服务器，基于 FastAPI 框架构建，提供了完整的浏览器管理、扩展控制、任务调度等功能的 RESTful API 接口。
 
 ## 技术栈
 

@@ -30,18 +30,18 @@ def find_lock_files():
         os.getcwd(),  # 当前工作目录
         str(Path(__file__).parent),  # 项目根目录
     ]
-    
+
     lock_files = []
-    
+
     for lock_dir in candidate_dirs:
         if not os.path.exists(lock_dir):
             continue
-            
+
         lock_file_path = os.path.join(lock_dir, "qw_browser_app.lock")
-        
+
         if os.path.exists(lock_file_path):
             lock_files.append(lock_file_path)
-    
+
     return lock_files
 
 
@@ -60,96 +60,91 @@ def is_process_running(pid):
 
 def cleanup_lock_file(lock_file_path):
     """清理单个锁文件"""
-    result = {
-        'path': lock_file_path,
-        'cleaned': False,
-        'reason': '',
-        'pid': None
-    }
-    
+    result = {"path": lock_file_path, "cleaned": False, "reason": "", "pid": None}
+
     try:
         # 尝试读取文件内容
-        with open(lock_file_path, 'r') as f:
+        with open(lock_file_path, "r") as f:
             content = f.read().strip()
-        
+
         if content.isdigit():
             pid = int(content)
-            result['pid'] = pid
-            
+            result["pid"] = pid
+
             # 检查进程是否仍在运行
             if is_process_running(pid):
-                result['reason'] = f'进程 {pid} 仍在运行，不清理锁文件'
+                result["reason"] = f"进程 {pid} 仍在运行，不清理锁文件"
                 return result
             else:
-                result['reason'] = f'进程 {pid} 已停止，可以安全清理'
+                result["reason"] = f"进程 {pid} 已停止，可以安全清理"
         else:
-            result['reason'] = '锁文件内容无效'
-        
+            result["reason"] = "锁文件内容无效"
+
         # 尝试删除锁文件
         os.remove(lock_file_path)
-        result['cleaned'] = True
-        result['reason'] += '，锁文件已成功删除'
-        
+        result["cleaned"] = True
+        result["reason"] += "，锁文件已成功删除"
+
     except PermissionError:
-        result['reason'] = '权限不足，无法删除锁文件'
+        result["reason"] = "权限不足，无法删除锁文件"
     except FileNotFoundError:
-        result['reason'] = '锁文件已不存在'
-        result['cleaned'] = True
+        result["reason"] = "锁文件已不存在"
+        result["cleaned"] = True
     except Exception as e:
-        result['reason'] = f'删除失败: {e}'
-    
+        result["reason"] = f"删除失败: {e}"
+
     return result
 
 
 def main():
     """主函数"""
     print("=" * 60)
-    print("QW-Browser 锁文件清理工具")
+    print("清简浏览器 锁文件清理工具")
     print("=" * 60)
     print()
-    
+
     # 查找锁文件
     print("🔍 正在查找锁文件...")
     lock_files = find_lock_files()
-    
+
     if not lock_files:
         print("✅ 没有发现锁文件，无需清理")
         return
-    
+
     print(f"📁 发现 {len(lock_files)} 个锁文件:")
     for lock_file in lock_files:
         print(f"   - {lock_file}")
     print()
-    
+
     # 清理锁文件
     print("🧹 开始清理...")
     cleaned_count = 0
-    
+
     for lock_file in lock_files:
         print(f"\n处理: {lock_file}")
         result = cleanup_lock_file(lock_file)
-        
-        if result['cleaned']:
+
+        if result["cleaned"]:
             print(f"  ✅ {result['reason']}")
             cleaned_count += 1
         else:
             print(f"  ❌ {result['reason']}")
-            
+
             # 提供手动清理建议
-            if 'Permission' in result['reason'] or '权限' in result['reason']:
+            if "Permission" in result["reason"] or "权限" in result["reason"]:
                 print(f"  💡 手动清理方法:")
                 if sys.platform == "win32":
-                    print(f"     以管理员身份运行: del \"{lock_file}\"")
+                    print(f'     以管理员身份运行: del "{lock_file}"')
                 else:
-                    print(f"     运行: rm \"{lock_file}\"")
-    
+                    print(f'     运行: rm "{lock_file}"')
+
     print()
     print("=" * 60)
     print("清理结果总结:")
     print(f"  总共发现: {len(lock_files)} 个锁文件")
     print(f"  成功清理: {cleaned_count} 个")
     print(f"  清理失败: {len(lock_files) - cleaned_count} 个")
-    
+
     if cleaned_count > 0:
         print("\n✅ 清理完成！现在可以尝试重新启动应用程序")
     elif len(lock_files) > cleaned_count:
@@ -172,6 +167,7 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n\n❌ 清理过程中发生错误: {e}")
         import traceback
+
         traceback.print_exc()
-    
+
     input("\n按任意键退出...")

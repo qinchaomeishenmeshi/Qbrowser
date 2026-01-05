@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "QW-Browser",
+  "productName": "清简浏览器",
   "version": "1.0.0",
   "identifier": "com.qwbrowser.app",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "QW-Browser 控制台",
+        "title": "清简浏览器 控制台",
         "width": 1280,
         "height": 800,
         "minWidth": 1024,
@@ -37,7 +37,7 @@
       "icons/icon.ico"
     ],
     "category": "DeveloperTool",
-    "shortDescription": "QW-Browser 浏览器管理工具",
-    "longDescription": "QW-Browser 是一个基于 Playwright 的多浏览器实例管理工具，支持浏览器启动、停止、扩展管理等功能。"
+    "shortDescription": "清简浏览器管理工具",
+    "longDescription": "清简浏览器 是一个基于 Playwright 的多浏览器实例管理工具，支持浏览器启动、停止、扩展管理等功能。"
   }
 }

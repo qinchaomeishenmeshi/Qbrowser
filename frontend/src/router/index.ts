@@ -40,7 +40,7 @@ const router = createRouter({
 
 // 路由守卫：更新页面标题
 router.beforeEach((to, _from, next) => {
-  document.title = `${to.meta.title || 'QW-Browser'} - QW-Browser`
+  document.title = `${to.meta.title || '清简浏览器'} - 清简浏览器`
   next()
 })
 

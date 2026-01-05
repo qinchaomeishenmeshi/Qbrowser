@@ -37,7 +37,7 @@
       </template>
 
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="应用名称">QW-Browser</el-descriptions-item>
+        <el-descriptions-item label="应用名称">清简浏览器</el-descriptions-item>
         <el-descriptions-item label="版本">1.0.0</el-descriptions-item>
         <el-descriptions-item label="技术栈">Tauri + Vue 3 + Element Plus</el-descriptions-item>
         <el-descriptions-item label="后端">FastAPI + Playwright</el-descriptions-item>

@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title QW-Browser 锁文件清理工具
+title 清简浏览器 锁文件清理工具
 
 echo.
 echo ====================================
-echo QW-Browser 锁文件清理工具
+echo 清简浏览器 锁文件清理工具
 echo ====================================
 echo.
 

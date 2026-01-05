@@ -2,7 +2,7 @@
   <el-aside :width="collapsed ? '64px' : '220px'" class="app-sidebar glass-effect">
     <div class="logo">
       <img src="/app-icon.png" class="logo-icon" alt="Logo" />
-      <span v-show="!collapsed" class="logo-text">QW-Browser</span>
+      <span v-show="!collapsed" class="logo-text">清简浏览器</span>
     </div>
 
     <el-menu

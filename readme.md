@@ -1,8 +1,8 @@
-# QW-Browser API Service (Playwright Edition)
+# 清简浏览器 API Service (Playwright Edition)
 
 ## 项目简介
 
-**QW-Browser API** 是短视频生产系统的核心浏览器服务组件，经过全新重构，现在基于高性能的 **Playwright** 引擎构建。它提供了一套无头(Headless)浏览器管理的 RESTful API，专为高并发、反检测和容器化部署而设计。
+**清简浏览器 API** 是短视频生产系统的核心浏览器服务组件，经过全新重构，现在基于高性能的 **Playwright** 引擎构建。它提供了一套无头(Headless)浏览器管理的 RESTful API，专为高并发、反检测和容器化部署而设计。
 
 本项目不再依赖 GUI 环境，完全由 API 驱动，支持多用户隔离、自动化任务调度和复杂的浏览器交互场景（如百应、直播中控、EOS 等）。
 

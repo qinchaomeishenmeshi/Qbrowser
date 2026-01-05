@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ==========================================
-echo QW-Browser Windows 打包工具
+echo 清简浏览器 Windows 打包工具
 echo ==========================================
 echo.
 

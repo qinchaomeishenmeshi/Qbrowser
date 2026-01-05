@@ -24,7 +24,7 @@ class InternalApiClient:
         self.timeout = timeout
         self.default_headers = {
             "Content-Type": "application/json",
-            "User-Agent": "QW-Browser-Client/1.0",
+            "User-Agent": "清简浏览器-Client/1.0",
         }
 
     async def _make_request(
