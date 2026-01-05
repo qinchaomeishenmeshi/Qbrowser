@@ -1,113 +1,258 @@
-# 清简浏览器 API Service (Playwright Edition)
+# QW-Browser 清简浏览器
 
 ## 项目简介
 
-**清简浏览器 API** 是短视频生产系统的核心浏览器服务组件，经过全新重构，现在基于高性能的 **Playwright** 引擎构建。它提供了一套无头(Headless)浏览器管理的 RESTful API，专为高并发、反检测和容器化部署而设计。
+**QW-Browser** 是一个基于 **Playwright** 引擎和 **Tauri** 框架构建的桌面级浏览器管理系统。它提供了多用户浏览器实例的统一管理、自动化操作和状态监控功能，专为需要多账号隔离、反检测和高效批量操作的业务场景设计。
 
-本项目不再依赖 GUI 环境，完全由 API 驱动，支持多用户隔离、自动化任务调度和复杂的浏览器交互场景（如百应、直播中控、EOS 等）。
+## 技术栈
+
+| 层级           | 技术                                     |
+| -------------- | ---------------------------------------- |
+| **前端**       | Vue 3 + TypeScript + Element Plus + Vite |
+| **桌面框架**   | Tauri (Rust)                             |
+| **后端**       | Python 3.9+ + FastAPI + Uvicorn          |
+| **浏览器引擎** | Playwright (Chromium)                    |
+| **数据存储**   | SQLite + JSON 文件缓存                   |
+| **实时通信**   | WebSocket                                |
 
 ## 核心特性
 
-- 🚀 **Playwright 驱动**: 采用异步 Playwright 引擎，性能远超传统的 Selenium/DrissionPage。
-- 🛡️ **反检测 (Stealth)**: 内置 `playwright-stealth`，自动隐藏 `navigator.webdriver` 等特征，有效规避反爬检测。
+- 🖥️ **桌面应用**: 基于 Tauri 打包的原生桌面应用，支持 macOS / Windows / Linux。
+- 🚀 **Playwright 驱动**: 采用异步 Playwright 引擎，性能优越，支持无头/有头模式。
+- 🛡️ **反检测 (Stealth)**: 内置 `playwright-stealth`，自动隐藏 WebDriver 特征，规避反爬检测。
+- 👥 **多用户隔离**: 每个用户独立的浏览器上下文（Context），数据完全隔离。
 - 🔄 **异步架构**: 全链路 `async/await` 设计，支持高并发浏览器实例管理。
-- 🌐 **高级网络监听**: 基于 CDP 和 Playwright 路由机制，精准捕获特定 API 的 Request/Response 数据（如 Cookies、Headers）。
-- 📦 **容器化就绪**: 完美支持 Docker 部署，开箱即用。
-- 🧩 **扩展系统**: 支持动态注入 Chrome 扩展（如 `live_room` 直播工具）。
+- 🌐 **网络监听**: 基于 CDP 和 Playwright 路由机制，精准捕获 API 的 Cookies/Headers 数据。
+- 🧩 **扩展系统**: 支持动态注入 Chrome 扩展（如直播工具等）。
+- 📡 **实时状态推送**: WebSocket 实时推送浏览器状态变更。
 
-## 功能概览
+## 功能模块
 
-| 模块 | 功能描述 |
-|Args|Description|
-|---|---|
-| **实例管理** | 启动、停止、清理特定用户的浏览器上下文（Context），支持多用户隔离。 |
-| **页面控制** | 页面导航、重定向 (Redirect)、自动刷新、截图。 |
-| **数据采集** | 自动提取指定站点的 Cookies 和 Headers，支持 API 路径过滤。 |
-| **业务集成** | 内置百应 (Baiying)、直播中控 (Screen)、EOS 等特定平台的登录检查和跳转逻辑。 |
-| **状态监控** | 实时查看浏览器活跃数量、扩展加载状态和健康检查。 |
+### 1. 浏览器实例管理
 
-## 🚀 快速开始
+| 功能       | 描述                                             |
+| ---------- | ------------------------------------------------ |
+| 启动浏览器 | 为指定用户创建独立的浏览器实例，支持指定初始 URL |
+| 停止浏览器 | 停止用户的浏览器进程，保留实例配置缓存           |
+| 删除实例   | 彻底删除浏览器实例及其所有用户数据               |
+| 批量操作   | 支持批量启动、停止多个浏览器实例                 |
+| 状态查询   | 查询活跃实例数量、端口占用、运行状态等           |
 
-### 1. 环境与依赖
+### 2. 页面重定向
+
+| 功能         | 描述                                 |
+| ------------ | ------------------------------------ |
+| 单页面重定向 | 将指定用户的当前页面重定向到目标 URL |
+| 批量重定向   | 同时重定向多个用户的页面             |
+| 规则管理     | 创建、查询、删除重定向规则           |
+| 规则应用     | 将预设规则应用到指定用户             |
+
+### 3. Cookies/Headers 采集
+
+| 功能       | 描述                                                 |
+| ---------- | ---------------------------------------------------- |
+| 自动采集   | 监听特定 API 路径，自动提取请求的 Cookies 和 Headers |
+| 多站点支持 | 内置百应 (Baiying)、EOS 等平台的采集配置             |
+| 数据缓存   | 采集数据自动持久化存储，支持智能刷新                 |
+
+### 4. Chrome 配置
+
+| 功能       | 描述                               |
+| ---------- | ---------------------------------- |
+| 路径检测   | 自动检测系统中可用的 Chrome 浏览器 |
+| 自定义路径 | 手动设置 Chrome 可执行文件路径     |
+| 配置管理   | 获取/清除当前 Chrome 配置          |
+
+### 5. 扩展管理
+
+| 功能     | 描述                                     |
+| -------- | ---------------------------------------- |
+| 扩展加载 | 启动时自动加载 `extensions` 目录下的扩展 |
+| 状态检查 | 检查扩展的加载状态和注入情况             |
+
+### 6. 系统监控
+
+| 功能           | 描述                 |
+| -------------- | -------------------- |
+| 健康检查       | 后端服务健康状态检查 |
+| 日志查看       | 系统运行日志查看     |
+| WebSocket 状态 | 实时连接状态查询     |
+
+## 项目结构
+
+```
+qw-browser/
+├── api/                          # FastAPI 路由层
+│   ├── api_server.py             # 主 API 服务入口
+│   ├── redirect_api.py           # 页面重定向接口
+│   └── chrome_config_api.py      # Chrome 配置接口
+├── browser/                      # 浏览器核心层
+│   ├── playwright_manager.py     # Playwright 实例生命周期管理
+│   ├── playwright_operator.py    # 高级操作封装 (重定向、采集等)
+│   └── browser_store.py          # 全局实例存储池
+├── conf/                         # 配置模块
+│   └── browser_config.py         # Chrome 路径配置管理
+├── config/                       # 应用配置
+│   └── settings.py               # 全局设置
+├── extensions/                   # Chrome 扩展目录
+├── frontend/                     # Tauri + Vue 前端
+│   ├── src/                      # Vue 源码
+│   │   ├── views/                # 页面组件
+│   │   │   ├── Dashboard.vue     # 仪表盘首页
+│   │   │   ├── BrowserList.vue   # 浏览器实例列表
+│   │   │   ├── Extensions.vue    # 扩展管理
+│   │   │   ├── Logs.vue          # 日志查看
+│   │   │   └── Settings.vue      # 系统设置
+│   │   ├── api/                  # API 调用封装
+│   │   ├── stores/               # Pinia 状态管理
+│   │   └── router/               # 路由配置
+│   └── src-tauri/                # Tauri 后端 (Rust)
+├── models/                       # Pydantic 数据模型
+├── service/                      # 业务服务层
+│   └── browser_service.py        # 浏览器服务逻辑
+├── utils/                        # 工具库
+│   ├── database_manager.py       # SQLite 数据库管理
+│   ├── cookies_manager.py        # Cookies 管理
+│   ├── websocket_manager.py      # WebSocket 管理
+│   ├── page_redirect_manager.py  # 重定向规则管理
+│   └── playwright_network_listener.py  # 网络请求监听
+├── tests/                        # 测试用例
+├── main.py                       # 后端启动入口
+└── pyproject.toml                # Python 项目配置
+```
+
+## 快速开始
+
+### 环境要求
 
 - **Python**: 3.9+
+- **Node.js**: 18+
+- **Rust**: (用于 Tauri 构建)
 - **Chrome**: 建议安装最新版 Google Chrome
-- **系统**: MacOS / Linux / Windows
 
-安装 Python 依赖：
+### 1. 安装后端依赖
 
 ```bash
+# 使用 uv (推荐)
+uv sync
+
+# 或使用 pip
 pip install -e "."
 ```
 
-_注：项目会自动安装 `playwright` 及其浏览器驱动。_
+### 2. 安装前端依赖
 
-### 2. 启动服务
+```bash
+cd frontend
+npm install
+```
 
-**方式一：直接运行 (开发调试)**
+### 3. 开发模式运行
+
+**方式一：分别运行**
+
+```bash
+# 终端 1: 启动后端 API 服务
+python main.py
+# 后端服务地址: http://127.0.0.1:6001
+
+# 终端 2: 启动前端开发服务器
+cd frontend
+npm run tauri dev
+```
+
+**方式二：仅后端 (API 模式)**
 
 ```bash
 python main.py
-# 服务地址: http://127.0.0.1:8000
+# API 文档: http://127.0.0.1:6001/docs
 ```
 
-**方式二：Docker 运行 (生产部署)**
+### 4. 生产构建
+
+```bash
+cd frontend
+npm run tauri build
+```
+
+## API 接口概览
+
+### 浏览器管理
+
+| 方法 | 路径                    | 描述           |
+| ---- | ----------------------- | -------------- |
+| GET  | `/api/health`           | 健康检查       |
+| GET  | `/api/browser/status`   | 获取浏览器状态 |
+| GET  | `/api/all_instances`    | 获取所有实例   |
+| GET  | `/api/active_instances` | 获取活跃实例   |
+| POST | `/api/start/{user_id}`  | 启动浏览器     |
+| POST | `/api/stop/{user_id}`   | 停止浏览器     |
+| POST | `/api/delete/{user_id}` | 删除浏览器实例 |
+| POST | `/api/start_all`        | 批量启动浏览器 |
+| POST | `/api/stop`             | 停止所有浏览器 |
+
+### 页面重定向
+
+| 方法   | 路径                         | 描述           |
+| ------ | ---------------------------- | -------------- |
+| POST   | `/api/redirect/single`       | 单页面重定向   |
+| POST   | `/api/redirect/batch`        | 批量重定向     |
+| GET    | `/api/redirect/rules`        | 获取重定向规则 |
+| POST   | `/api/redirect/rules`        | 添加重定向规则 |
+| DELETE | `/api/redirect/rules/{name}` | 删除重定向规则 |
+| POST   | `/api/redirect/apply-rule`   | 应用重定向规则 |
+
+### Chrome 配置
+
+| 方法   | 路径                            | 描述             |
+| ------ | ------------------------------- | ---------------- |
+| GET    | `/api/chrome-config/current`    | 获取当前配置     |
+| GET    | `/api/chrome-config/detect`     | 检测可用浏览器   |
+| POST   | `/api/chrome-config/set-path`   | 设置 Chrome 路径 |
+| DELETE | `/api/chrome-config/clear-path` | 清除自定义路径   |
+
+### WebSocket
+
+| 路径            | 描述               |
+| --------------- | ------------------ |
+| `/ws/browser`   | 浏览器状态实时推送 |
+| `/ws/scheduler` | 调度状态实时推送   |
+
+## 使用示例
+
+### 启动浏览器并打开页面
+
+```bash
+curl -X POST "http://127.0.0.1:6001/api/start/user_001?url=https://www.baidu.com"
+```
+
+### 页面重定向
+
+```bash
+curl -X POST "http://127.0.0.1:6001/api/redirect/single" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user_001", "target_url": "https://example.com"}'
+```
+
+### 批量启动浏览器
+
+```bash
+curl -X POST "http://127.0.0.1:6001/api/start_all?user_ids=user_001&user_ids=user_002"
+```
+
+## Docker 部署
 
 ```bash
 docker-compose up -d
 ```
 
-### 3. API 文档
+## 配置说明
 
-启动后访问 Swagger UI 查看完整接口定义：
-[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+### 环境变量
 
-## 典型使用场景
-
-### 1. 启动浏览器并打开页面
-
-```bash
-# 启动用户 test_user_001 的浏览器并打开百度
-curl -X POST "http://127.0.0.1:8000/api/start/test_user_001?url=https://www.baidu.com"
-```
-
-### 2. 采集 Cookies 和 Headers (API 调用)
-
-Python 代码示例 (使用 `httpx` 调用本服务):
-
-```python
-import httpx
-
-# 调用收集接口
-response = httpx.get("http://127.0.0.1:8000/api/redirect/collect/test_user_001?site_key=baiying")
-data = response.json()
-
-print(f"Cookies: {data['cookies']}")
-```
-
-### 3. 页面重定向
-
-```bash
-curl -X POST "http://127.0.0.1:8000/api/redirect/user/test_user_001?target_url=https://example.com"
-```
-
-## 目录结构说明
-
-- `api/`: FastAPI 路由和业务逻辑
-  - `api_server.py`: 主服务入口
-  - `redirect_api.py`: 重定向与采集业务
-- `browser/`: 浏览器核心层
-  - `playwright_manager.py`: 单个 Playwright 实例生命周期管理
-  - `playwright_operator.py`: 高级操作封装 (Redirect, Fetch Cookies)
-  - `browser_store.py`: 全局实例存储池
-- `conf/`: 配置文件 (Chrome 路径, API 端口等)
-- `utils/`: 工具库 (网络监听, Cookies 加密等)
-- `tests/`: 测试脚本 (`verify_playwright.py`)
-
-## 迁移说明 (vs 旧版)
-
-本版本已完全移除 `BrowserManager` (DrissionPage) 和 `socket` 通信模块。所有浏览器交互均通过 Playwright 的 WebSocket (CDP) 进行。请确保 worker 脚本已更新为调用新的 API 端点。
-
----
-
-_短视频生产系统研发部_
+| 变量          | 默认值      | 描述                  |
+| ------------- | ----------- | --------------------- |
+| `API_HOST`    | `127.0.0.1` | API 监听地址          |
+| `API_PORT`    | `6001`      | API 监听端口          |
+| `CHROME_PATH` | 自动检测    | Chrome 可执行文件路径 |
+| `DEBUG`       | `false`     | 调试模式              |
