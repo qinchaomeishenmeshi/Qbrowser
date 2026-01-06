@@ -53,8 +53,10 @@ jobs:
           echo "Target: ${{ matrix.target }}"
           echo "Binary name: ${{ matrix.python-build-name }}"
 
+
           # Make sure the binaries directory exists
-          mkdir -p frontend/src-tauri/binaries
+          echo "Creating binaries directory at ${{ github.workspace }}/frontend/src-tauri/binaries"
+          mkdir -p ${{ github.workspace }}/frontend/src-tauri/binaries
 
           # Build the python executable
           echo "Running PyInstaller..."
@@ -66,15 +68,18 @@ jobs:
           # Move and rename based on the platform
           if [ "${{ runner.os }}" == "Windows" ]; then
             echo "Moving Windows executable..."
-            cp dist/api-server.exe frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            cp dist/api-server.exe ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
           else
             echo "Moving Unix executable..."
-            cp dist/api-server frontend/src-tauri/binaries/${{ matrix.python-build-name }}
-            chmod +x frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            cp dist/api-server ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            chmod +x ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
           fi
 
           echo "=== Verifying binary exists ==="
-          ls -la frontend/src-tauri/binaries/
+          ls -la ${{ github.workspace }}/frontend/src-tauri/binaries/
+
+          echo "=== Recursive list of src-tauri ==="
+          ls -R ${{ github.workspace }}/frontend/src-tauri/
 
       - name: Verify Sidecar Binary
         shell: bash
