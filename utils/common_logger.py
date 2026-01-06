@@ -7,17 +7,19 @@ from time import time
 
 # 导入资源路径函数
 try:
-    from conf import resource_path
+    from conf import resource_path, LOG_DIR
 except ImportError:
-
+    # Fallback for standalone script usage
     def resource_path(relative_path: str) -> str:
         return os.path.join(os.path.dirname(os.path.dirname(__file__)), relative_path)
+
+    LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
 
 
 # 日志配置
 LOG_FORMAT = "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {extra[name]}:{function}:{line} - {message}"
 LOG_LEVEL = "INFO"
-LOG_FILE = os.path.join(resource_path("logs"), "app_{time:YYYY-MM-DD}.log")
+LOG_FILE = os.path.join(LOG_DIR, "app_{time:YYYY-MM-DD}.log")
 os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
 
 _added_sinks: Set[str] = set()

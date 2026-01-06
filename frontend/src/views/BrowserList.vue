@@ -9,7 +9,7 @@
               批量启动
             </el-button>
             <el-button type="primary" :icon="Plus" @click="showStartDialog = true">
-              新建实例
+              新建浏览器
             </el-button>
           </el-space>
         </div>
@@ -17,7 +17,7 @@
 
       <el-empty v-if="browserStore.allInstances.length === 0" description="暂无浏览器记录">
         <el-space>
-          <el-button type="primary" @click="showStartDialog = true">新建实例</el-button>
+          <el-button type="primary" @click="showStartDialog = true">新建浏览器</el-button>
         </el-space>
       </el-empty>
 
@@ -75,21 +75,21 @@
       </el-row>
     </el-card>
 
-    <!-- 启动实例对话框 -->
-    <el-dialog v-model="showStartDialog" title="启动新实例" width="500">
-      <el-form :model="startForm" label-width="100px">
-        <el-form-item label="用户 ID" required>
-          <el-input v-model="startForm.userId" placeholder="请输入用户 ID" />
-        </el-form-item>
-        <el-form-item label="初始 URL">
-          <el-input v-model="startForm.url" placeholder="https://example.com (可选)" />
+    <!-- 启动实例对话框 -> 新建浏览器对话框 -->
+    <el-dialog v-model="showStartDialog" title="新建浏览器" width="460px" border-radius="12px">
+      <el-form :model="startForm" label-width="100px" label-position="left">
+        <el-form-item label="浏览器 ID" placeholder="例如：account-01" required>
+          <el-input v-model="startForm.userId" placeholder="请输入浏览器标识符" />
+          <div class="form-tip">标识符用于区分不同的浏览器环境和数据目录</div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showStartDialog = false">取消</el-button>
-        <el-button type="primary" @click="handleStart" :loading="browserStore.loading">
-          启动
-        </el-button>
+        <div class="dialog-footer">
+          <el-button @click="showStartDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateBrowser" :loading="browserStore.loading">
+            立即创建
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -238,23 +238,20 @@ usePolling(async () => {
   await browserStore.refresh()
 }, 5000)
 
-const handleStart = async () => {
+const handleCreateBrowser = async () => {
   if (!startForm.value.userId.trim()) {
-    ElMessage.warning('请输入用户 ID')
+    ElMessage.warning('请输入浏览器 ID')
     return
   }
 
-  const result = await browserStore.startInstance(
-    startForm.value.userId,
-    startForm.value.url || undefined
-  )
+  const result = await browserStore.createBrowser(startForm.value.userId)
 
   if (result?.status === 'success') {
-    ElMessage.success(`实例 ${startForm.value.userId} 启动成功`)
+    ElMessage.success(`浏览器 ${startForm.value.userId} 创建成功`)
     showStartDialog.value = false
     startForm.value = { userId: '', url: '' }
   } else {
-    ElMessage.error('启动失败')
+    ElMessage.error('创建失败')
   }
 }
 

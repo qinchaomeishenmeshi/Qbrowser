@@ -62,7 +62,7 @@ jobs:
 
           # Build the python executable
           echo "Running PyInstaller..."
-          python -m PyInstaller --clean --noconfirm --onefile --name api-server main.py
+          python -m PyInstaller --clean --noconfirm --onefile --name api-server --collect-all playwright_stealth main.py
 
           echo "=== PyInstaller output ==="
           ls -la dist/
@@ -76,23 +76,15 @@ jobs:
             echo "Moving Windows executable..."
             # Copy to binaries/ folder
             cp dist/api-server.exe "$DEST_DIR/$TARGET_BIN_NAME"
-            # ALSO copy to src-tauri root just in case specific tauri version looks there
-            cp dist/api-server.exe "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
           else
             echo "Moving Unix executable..."
             cp dist/api-server "$DEST_DIR/$TARGET_BIN_NAME"
             chmod +x "$DEST_DIR/$TARGET_BIN_NAME"
-            # Also copy to root
-            cp dist/api-server "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
-            chmod +x "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
           fi
 
           echo "=== Verifying binary exists ==="
           echo "Checking $DEST_DIR/$TARGET_BIN_NAME..."
           ls -la "$DEST_DIR/$TARGET_BIN_NAME"
-
-          echo "Checking $ROOT_SRC_TAURI/$TARGET_BIN_NAME..."
-          ls -la "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
 
       - name: Verify Sidecar Binary
         shell: bash

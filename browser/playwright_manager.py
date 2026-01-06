@@ -7,7 +7,7 @@ from typing import Optional, List, Dict, Any, Union
 from playwright.async_api import async_playwright, BrowserContext, Page, Playwright
 from playwright_stealth import stealth_async
 
-from conf import BASE_DIR, resource_path
+from conf import DATA_DIR, resource_path
 from conf.browser_config import chrome_path_manager
 from utils.common_logger import get_logger
 from utils.screen_utils import get_viewport_dict
@@ -30,7 +30,7 @@ class PlaywrightManager:
         self.page: Optional[Page] = None
 
         # 数据目录 - 使用绝对路径
-        self.data_dir_base = Path(BASE_DIR) / "browser_data" / "douyin"
+        self.data_dir_base = Path(DATA_DIR) / "browser_data" / "douyin"
         self.user_data_dir = self.data_dir_base / user_id
         self.user_data_dir.mkdir(parents=True, exist_ok=True)
 
