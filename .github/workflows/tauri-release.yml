@@ -28,18 +28,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        run: |
-          pip install uv
-
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install Python Dependencies
+        shell: bash
         run: |
-          uv sync --extra scheduler --extra dev
+          echo "=== Installing Python dependencies ==="
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install fastapi uvicorn pydantic loguru aiohttp playwright playwright-stealth psutil aiosqlite apscheduler aiofiles python-multipart python-dateutil orjson tzlocal watchdog screeninfo httpx
+          echo "=== Verifying PyInstaller installation ==="
+          python -m PyInstaller --version
 
       - name: Build Python Backend
         shell: bash
@@ -56,7 +58,7 @@ jobs:
 
           # Build the python executable
           echo "Running PyInstaller..."
-          uv run pyinstaller --clean --noconfirm --onefile --name api-server main.py
+          python -m PyInstaller --clean --noconfirm --onefile --name api-server main.py
 
           echo "=== PyInstaller output ==="
           ls -la dist/
