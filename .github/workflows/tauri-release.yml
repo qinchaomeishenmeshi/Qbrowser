@@ -44,19 +44,48 @@ jobs:
       - name: Build Python Backend
         shell: bash
         run: |
+          set -e  # Exit on any error
+
+          echo "=== Building Python Backend ==="
+          echo "Platform: ${{ matrix.platform }}"
+          echo "Target: ${{ matrix.target }}"
+          echo "Binary name: ${{ matrix.python-build-name }}"
+
           # Make sure the binaries directory exists
           mkdir -p frontend/src-tauri/binaries
 
           # Build the python executable
-          # Adjust main.py if your entry point is different
+          echo "Running PyInstaller..."
           uv run pyinstaller --clean --noconfirm --onefile --name api-server main.py
 
+          echo "=== PyInstaller output ==="
+          ls -la dist/
+
           # Move and rename based on the platform
-          # Note: PyInstaller output is in dist/
           if [ "${{ runner.os }}" == "Windows" ]; then
-            mv dist/api-server.exe frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            echo "Moving Windows executable..."
+            cp dist/api-server.exe frontend/src-tauri/binaries/${{ matrix.python-build-name }}
           else
-            mv dist/api-server frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            echo "Moving Unix executable..."
+            cp dist/api-server frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            chmod +x frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+          fi
+
+          echo "=== Verifying binary exists ==="
+          ls -la frontend/src-tauri/binaries/
+
+      - name: Verify Sidecar Binary
+        shell: bash
+        run: |
+          BINARY_PATH="frontend/src-tauri/binaries/${{ matrix.python-build-name }}"
+          if [ -f "$BINARY_PATH" ]; then
+            echo "✅ Sidecar binary exists at: $BINARY_PATH"
+            ls -la "$BINARY_PATH"
+          else
+            echo "❌ ERROR: Sidecar binary NOT found at: $BINARY_PATH"
+            echo "Contents of frontend/src-tauri/binaries/:"
+            ls -la frontend/src-tauri/binaries/ || echo "Directory does not exist"
+            exit 1
           fi
 
       - name: Install Node.js
@@ -72,6 +101,14 @@ jobs:
       - name: Install Frontend Dependencies
         working-directory: frontend
         run: npm install
+
+      - name: Debug - List Binaries Before Build
+        shell: bash
+        run: |
+          echo "=== Contents of src-tauri/binaries/ ==="
+          ls -la frontend/src-tauri/binaries/
+          echo "=== File details ==="
+          file frontend/src-tauri/binaries/* || true
 
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
