@@ -54,8 +54,10 @@ jobs:
           echo "Binary name: ${{ matrix.python-build-name }}"
 
 
+
           # Make sure the binaries directory exists
-          echo "Creating binaries directory at ./frontend/src-tauri/binaries"
+          echo "Current location: $(pwd)"
+          echo "Creating binaries directory..."
           mkdir -p ./frontend/src-tauri/binaries
 
           # Build the python executable
@@ -66,30 +68,43 @@ jobs:
           ls -la dist/
 
           # Move and rename based on the platform
+          TARGET_BIN_NAME="${{ matrix.python-build-name }}"
+          DEST_DIR="./frontend/src-tauri/binaries"
+          ROOT_SRC_TAURI="./frontend/src-tauri"
+
           if [ "${{ runner.os }}" == "Windows" ]; then
             echo "Moving Windows executable..."
-            cp dist/api-server.exe ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            # Copy to binaries/ folder
+            cp dist/api-server.exe "$DEST_DIR/$TARGET_BIN_NAME"
+            # ALSO copy to src-tauri root just in case specific tauri version looks there
+            cp dist/api-server.exe "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
           else
             echo "Moving Unix executable..."
-            cp dist/api-server ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
-            chmod +x ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            cp dist/api-server "$DEST_DIR/$TARGET_BIN_NAME"
+            chmod +x "$DEST_DIR/$TARGET_BIN_NAME"
+            # Also copy to root
+            cp dist/api-server "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
+            chmod +x "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
           fi
 
           echo "=== Verifying binary exists ==="
-          ls -la ./frontend/src-tauri/binaries/
+          echo "Checking $DEST_DIR/$TARGET_BIN_NAME..."
+          ls -la "$DEST_DIR/$TARGET_BIN_NAME"
+
+          echo "Checking $ROOT_SRC_TAURI/$TARGET_BIN_NAME..."
+          ls -la "$ROOT_SRC_TAURI/$TARGET_BIN_NAME"
 
       - name: Verify Sidecar Binary
         shell: bash
         run: |
-          echo "Current working directory: $(pwd)"
+          echo "=== Debug: Recursive list of frontend/src-tauri ==="
+          ls -R frontend/src-tauri
+
           BINARY_PATH="./frontend/src-tauri/binaries/${{ matrix.python-build-name }}"
           if [ -f "$BINARY_PATH" ]; then
-            echo "✅ Sidecar binary exists at: $BINARY_PATH"
-            ls -la "$BINARY_PATH"
+            echo "✅ Sidecar binary successfully verified at: $BINARY_PATH"
           else
             echo "❌ ERROR: Sidecar binary NOT found at: $BINARY_PATH"
-            echo "Listing frontend directory recursively:"
-            ls -R frontend || echo "frontend directory not found"
             exit 1
           fi
 
