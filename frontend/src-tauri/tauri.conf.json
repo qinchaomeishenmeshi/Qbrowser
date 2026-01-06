@@ -37,7 +37,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/api-server"
+      "api-server"
     ],
     "category": "DeveloperTool",
     "shortDescription": "清简浏览器管理工具",

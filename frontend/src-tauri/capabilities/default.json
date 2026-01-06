@@ -13,7 +13,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
-          "name": "binaries/api-server",
+          "name": "api-server",
           "sidecar": true,
           "args": []
         }
