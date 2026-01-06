@@ -15,7 +15,9 @@
         {
           "name": "api-server",
           "sidecar": true,
-          "args": []
+          "args": [
+            "--no-debug"
+          ]
         }
       ]
     }
