@@ -55,8 +55,8 @@ jobs:
 
 
           # Make sure the binaries directory exists
-          echo "Creating binaries directory at ${{ github.workspace }}/frontend/src-tauri/binaries"
-          mkdir -p ${{ github.workspace }}/frontend/src-tauri/binaries
+          echo "Creating binaries directory at ./frontend/src-tauri/binaries"
+          mkdir -p ./frontend/src-tauri/binaries
 
           # Build the python executable
           echo "Running PyInstaller..."
@@ -68,30 +68,28 @@ jobs:
           # Move and rename based on the platform
           if [ "${{ runner.os }}" == "Windows" ]; then
             echo "Moving Windows executable..."
-            cp dist/api-server.exe ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            cp dist/api-server.exe ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
           else
             echo "Moving Unix executable..."
-            cp dist/api-server ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
-            chmod +x ${{ github.workspace }}/frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            cp dist/api-server ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
+            chmod +x ./frontend/src-tauri/binaries/${{ matrix.python-build-name }}
           fi
 
           echo "=== Verifying binary exists ==="
-          ls -la ${{ github.workspace }}/frontend/src-tauri/binaries/
-
-          echo "=== Recursive list of src-tauri ==="
-          ls -R ${{ github.workspace }}/frontend/src-tauri/
+          ls -la ./frontend/src-tauri/binaries/
 
       - name: Verify Sidecar Binary
         shell: bash
         run: |
-          BINARY_PATH="frontend/src-tauri/binaries/${{ matrix.python-build-name }}"
+          echo "Current working directory: $(pwd)"
+          BINARY_PATH="./frontend/src-tauri/binaries/${{ matrix.python-build-name }}"
           if [ -f "$BINARY_PATH" ]; then
             echo "✅ Sidecar binary exists at: $BINARY_PATH"
             ls -la "$BINARY_PATH"
           else
             echo "❌ ERROR: Sidecar binary NOT found at: $BINARY_PATH"
-            echo "Contents of frontend/src-tauri/binaries/:"
-            ls -la frontend/src-tauri/binaries/ || echo "Directory does not exist"
+            echo "Listing frontend directory recursively:"
+            ls -R frontend || echo "frontend directory not found"
             exit 1
           fi
 
