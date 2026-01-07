@@ -21,10 +21,17 @@ class PlaywrightManager:
     负责单个浏览器实例的生命周期管理 (Migration Phase 1)
     """
 
-    def __init__(self, user_id: str, port: int = 9222, headless: bool = False) -> None:
+    def __init__(
+        self,
+        user_id: str,
+        port: int = 9222,
+        headless: bool = False,
+        config: Optional[Dict[str, Any]] = None,
+    ) -> None:
         self.user_id = user_id
         self.port = port
         self.headless = headless
+        self.config = config or {}  # 指纹配置
         self.playwright: Optional[Playwright] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
@@ -54,6 +61,7 @@ class PlaywrightManager:
             args = [
                 "--disable-blink-features=AutomationControlled",
                 "--no-default-browser-check",
+                "--force-webrtc-ip-handling-policy=default_public_interface_only",  # WebRTC 防泄漏
             ]
 
             # 2. 加载扩展的特殊处理
@@ -67,23 +75,86 @@ class PlaywrightManager:
                 )
                 logger.info(f"Extension paths added to args: {ext_paths}")
 
-            # 3. 启动持久化上下文
-            # 暂时不强制指定 executable_path，使用 Playwright 自带 Chromium 进行测试
-            # chrome_path = await chrome_path_manager.get_chrome_path()
+            # 3. 准备指纹参数
+            viewport = self.config.get("viewport") or get_viewport_dict()
+            user_agent = self.config.get("user_agent")  # 如果为None，Playwright使用默认
+            timezone_id = self.config.get("timezone_id")
+            locale = self.config.get("locale")
+            geolocation = self.config.get("geolocation")
+            permissions = ["geolocation"] if geolocation else []
+            proxy = self.config.get("proxy")
+            executable_path = self.config.get("executable_path")
 
+            if executable_path:
+                path_obj = Path(executable_path)
+                if not path_obj.exists():
+                    logger.warning(
+                        f"Custom kernel path not found: {executable_path}. Falling back to bundled browser."
+                    )
+                    executable_path = None
+                else:
+                    logger.info(f"Using custom chromium kernel: {executable_path}")
+
+            # 4. 启动持久化上下文
             abs_user_data_dir = str(self.user_data_dir.resolve())
             logger.info(
-                f"Launching Playwright context. User data dir: {abs_user_data_dir}"
+                f"Launching Playwright context. User: {self.user_id}, Config: {self.config}"
             )
 
             self.context = await self.playwright.chromium.launch_persistent_context(
                 user_data_dir=abs_user_data_dir,
-                # executable_path=chrome_path,
+                executable_path=executable_path,  # Custom Kernel
                 headless=self.headless,
                 args=args,
-                viewport=get_viewport_dict(),
+                viewport=viewport,
+                user_agent=user_agent,
+                timezone_id=timezone_id,
+                locale=locale,
+                geolocation=geolocation,
+                permissions=permissions,
+                proxy=proxy,
                 accept_downloads=True,
             )
+
+            # 5. 注入隐身脚本 (Stealth JS)
+            stealth_js_path = Path(resource_path("browser/stealth.js"))
+            if stealth_js_path.exists():
+                js_content = stealth_js_path.read_text(encoding="utf-8")
+
+                # 替换配置
+                # 如果 config 中没有相关字段，使用默认值
+                canvas_seed = self.config.get("canvas_seed", 123.456)
+                audio_seed = self.config.get("audio_seed", 654.321)
+                webgl_vendor = self.config.get("webgl_vendor", "Google Inc. (NVIDIA)")
+                webgl_renderer = self.config.get(
+                    "webgl_renderer",
+                    "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)",
+                )
+
+                # Use regex to safely replace values in the JS CONFIG object (replacing entire line)
+                import re
+
+                js_content = re.sub(
+                    r"canvas_seed:.+", f"canvas_seed: {canvas_seed},", js_content
+                )
+                js_content = re.sub(
+                    r"audio_seed:.+", f"audio_seed: {audio_seed}", js_content
+                )  # Last item, no comma
+                # Fix quotes for string replacements
+                js_content = re.sub(
+                    r"webgl_vendor:.+", f"webgl_vendor: '{webgl_vendor}',", js_content
+                )
+                js_content = re.sub(
+                    r"webgl_renderer:.+",
+                    f"webgl_renderer: '{webgl_renderer}',",
+                    js_content,
+                )
+
+                await self.context.add_init_script(script=js_content)
+                logger.info("Stealth script injected.")
+
+            else:
+                logger.warning(f"Stealth script not found at {stealth_js_path}")
 
             # 获取第一个页面或新建
             if self.context.pages:

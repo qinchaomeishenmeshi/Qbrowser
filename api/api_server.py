@@ -1,6 +1,6 @@
 import asyncio
 from threading import Thread
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import uvicorn
 from fastapi import (
@@ -361,14 +361,26 @@ async def stop_browser_instance(user_id: str):
     }
 
 
+from pydantic import BaseModel
+
+
+class CreateBrowserRequest(BaseModel):
+    user_id: str
+    config: Optional[Dict[str, Any]] = None
+
+
 @api_router.post("/browser/create", summary="新建浏览器配置（不启动）")
-async def create_browser(user_id: str = Body(..., embed=True)):
+async def create_browser(request: CreateBrowserRequest):
     from service.browser_service import browser_service
 
-    manager = await browser_service.create_browser(user_id)
+    manager = await browser_service.create_browser(request.user_id, request.config)
     if not manager:
         raise HTTPException(status_code=500, detail="创建浏览器失败")
-    return {"status": "success", "user_id": user_id, "message": "浏览器配置创建成功"}
+    return {
+        "status": "success",
+        "user_id": request.user_id,
+        "message": "浏览器配置创建成功",
+    }
 
 
 @api_router.post("/delete_batch", summary="批量彻底删除浏览器实例")

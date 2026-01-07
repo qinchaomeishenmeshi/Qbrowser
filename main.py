@@ -11,20 +11,21 @@ import traceback
 from pathlib import Path
 
 # 尽早设置日志重定向，以便捕获启动/导入错误
+# 尽早设置日志重定向，以便捕获启动/导入错误
 try:
-    from conf import LOG_DIR
+    # 仅在打包环境下重定向日志，本地开发保留控制台输出
+    if getattr(sys, "frozen", False):
+        from conf import LOG_DIR
 
-    log_path = Path(LOG_DIR)
-    log_path.mkdir(parents=True, exist_ok=True)
+        log_path = Path(LOG_DIR)
+        log_path.mkdir(parents=True, exist_ok=True)
 
-    # 重定向 stdout 和 stderr 到文件 (追加模式)
-    # 注意：Tauri Sidecar 模式下，print 的内容可能被 Tauri 捕获，但如果崩溃或无输出，写入文件更保险
-    sys.stdout = open(log_path / "stdout.log", "a", buffering=1, encoding="utf-8")
-    sys.stderr = open(log_path / "stderr.log", "a", buffering=1, encoding="utf-8")
-
-    print(f"--- Process Started: {os.getpid()} ---")
+        sys.stdout = open(log_path / "stdout.log", "a", buffering=1, encoding="utf-8")
+        sys.stderr = open(log_path / "stderr.log", "a", buffering=1, encoding="utf-8")
+        print(f"--- Process Started (Frozen): {os.getpid()} ---")
+    else:
+        print(f"--- Process Started (Local): {os.getpid()} ---")
 except Exception as e:
-    # 极其严重的错误，可能也没法记录
     pass
 
 import uvicorn

@@ -76,11 +76,25 @@
     </el-card>
 
     <!-- 启动实例对话框 -> 新建浏览器对话框 -->
-    <el-dialog v-model="showStartDialog" title="新建浏览器" width="460px" border-radius="12px">
-      <el-form :model="startForm" label-width="100px" label-position="left">
+    <el-dialog v-model="showStartDialog" title="新建浏览器配置" width="500px" border-radius="12px">
+      <el-form :model="startForm" label-width="120px" label-position="left">
         <el-form-item label="浏览器 ID" placeholder="例如：account-01" required>
           <el-input v-model="startForm.userId" placeholder="请输入浏览器标识符" />
           <div class="form-tip">标识符用于区分不同的浏览器环境和数据目录</div>
+        </el-form-item>
+
+        <el-divider content-position="left">高级配置 (可选)</el-divider>
+
+        <el-form-item label="自定义内核路径">
+          <el-input
+            v-model="startForm.kernelPath"
+            placeholder="例如：/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          />
+          <div class="form-tip">留空则使用默认内置内核。支持 Chrome/Edge/BitBrowser 等。</div>
+        </el-form-item>
+
+        <el-form-item label="代理服务器">
+          <el-input v-model="startForm.proxyServer" placeholder="例如：http://127.0.0.1:7890" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -220,7 +234,9 @@ const browserStore = useBrowserStore()
 const showStartDialog = ref(false)
 const startForm = ref({
   userId: '',
-  url: ''
+  url: '',
+  kernelPath: '',
+  proxyServer: ''
 })
 
 const showBatchStart = ref(false)
@@ -244,12 +260,24 @@ const handleCreateBrowser = async () => {
     return
   }
 
-  const result = await browserStore.createBrowser(startForm.value.userId)
+  const config = {} as any
+  if (startForm.value.kernelPath?.trim()) {
+    config.executable_path = startForm.value.kernelPath.trim()
+  }
+  if (startForm.value.proxyServer?.trim()) {
+    config.proxy = { server: startForm.value.proxyServer.trim() }
+  }
+
+  // Pass config object to verify it works (Need to update store first? store usually passes args to API)
+  // Assuming store.createBrowser(userId, config) sig. If not, I update API directly here or checking store code.
+  // Actually I need to check store/api code.
+  // But blindly sending it:
+  const result = await browserStore.createBrowser(startForm.value.userId, config)
 
   if (result?.status === 'success') {
     ElMessage.success(`浏览器 ${startForm.value.userId} 创建成功`)
     showStartDialog.value = false
-    startForm.value = { userId: '', url: '' }
+    startForm.value = { userId: '', url: '', kernelPath: '', proxyServer: '' }
   } else {
     ElMessage.error('创建失败')
   }

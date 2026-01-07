@@ -120,11 +120,14 @@ export const browserApi = {
    /**
    * 新建浏览器配置（不启动）
    */
-  async create(userId: string): Promise<{ status: string; user_id: string }> {
+  async create(
+    userId: string,
+    config?: Record<string, any>
+  ): Promise<{ status: string; user_id: string }> {
     const res = await fetch(`${API_BASE}/browser/create`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId })
+      body: JSON.stringify({ user_id: userId, ...(config ? { config } : {}) })
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json()

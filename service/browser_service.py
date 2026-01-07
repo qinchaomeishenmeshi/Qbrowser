@@ -342,8 +342,16 @@ class BrowserService:
             channel="browser",
         )
 
-        # 如果存在但已停止，我们需要重新初始化
         try:
+            # 加载指纹配置
+            config = await db_manager.get_browser_config(user_id)
+            if not config:
+                # 兼容旧数据：如果没有配置，生成一个新的并保存（或者保持为空）
+                # 为了保持指纹浏览器特性，建议补充生成
+                config = self._generate_fingerprint()
+                await db_manager.save_browser_config(user_id, config)
+                logger.info(f"为旧实例 {user_id} 补充生成指纹配置")
+
             if manager:
                 # 如果 manager 已经存在，可能需要尝试使用原有端口或重新分配
                 port = manager.port
@@ -351,9 +359,12 @@ class BrowserService:
                 if not await self._is_port_available(port):
                     port = await self.port_manager.allocate_port()
                     manager.port = port
+
+                # 更新 manager 的 config
+                manager.config = config
             else:
                 port = await self.port_manager.allocate_port()
-                manager = PlaywrightManager(user_id, port)
+                manager = PlaywrightManager(user_id, port, config=config)
                 await self.browser_store.add(manager)
 
             ok = await manager.initialize()
@@ -392,15 +403,28 @@ class BrowserService:
 
             return None
 
-    async def create_browser(self, user_id: str) -> Optional[PlaywrightManager]:
+    async def create_browser(
+        self, user_id: str, config_override: Optional[Dict[str, Any]] = None
+    ) -> Optional[PlaywrightManager]:
         """仅新建浏览器配置而不启动"""
         try:
             manager = await self.browser_store.get(user_id)
             if manager:
                 return manager
 
+            # 1. 生成基础指纹配置
+            config = self._generate_fingerprint()
+
+            # 2. 合并用户自定义配置 (如代理)
+            if config_override:
+                config.update(config_override)
+
+            await db_manager.save_browser_config(user_id, config)
+            logger.info(f"已创建新浏览器配置 {user_id}: {config}")
+
+            # 3. 分配端口并初始化 Manager (但不启动)
             port = await self.port_manager.allocate_port()
-            manager = PlaywrightManager(user_id, port)
+            manager = PlaywrightManager(user_id, port, config=config)
             await self.browser_store.add(manager)
             await self.save_ports()
 
@@ -419,6 +443,57 @@ class BrowserService:
             logger.error(f"创建浏览器配置失败 {user_id}: {e}", exc_info=True)
             return None
 
+    def _generate_fingerprint(self) -> Dict[str, Any]:
+        """生成随机指纹配置"""
+        import random
+        from fake_useragent import UserAgent
+
+        # 随机 User-Agent
+        try:
+            ua = UserAgent(platforms="pc", os=os.name if os.name != "posix" else "mac")
+            user_agent = ua.random
+        except Exception:
+            # Fallback
+            user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+        # 随机 Viewport (常见分辨率)
+        viewports = [
+            {"width": 1920, "height": 1080},
+            {"width": 1366, "height": 768},
+            {"width": 1440, "height": 900},
+            {"width": 1536, "height": 864},
+        ]
+        viewport = random.choice(viewports)
+
+        # 随机 WebGL 厂商信息
+        webgl_vendors = [
+            {
+                "vendor": "Google Inc. (NVIDIA)",
+                "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0)",
+            },
+            {
+                "vendor": "Google Inc. (Intel)",
+                "renderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0)",
+            },
+            {
+                "vendor": "Google Inc. (AMD)",
+                "renderer": "ANGLE (AMD, AMD Radeon RX 580 Direct3D11 vs_5_0 ps_5_0)",
+            },
+        ]
+        webgl_info = random.choice(webgl_vendors)
+
+        return {
+            "user_agent": user_agent,
+            "viewport": viewport,
+            "timezone_id": "Asia/Shanghai",  # 默认与本地一致，后续可扩展
+            "locale": "zh-CN,zh;q=0.9,en;q=0.8",
+            "geolocation": None,
+            "canvas_seed": random.random() * 1000,
+            "audio_seed": random.random() * 1000,
+            "webgl_vendor": webgl_info["vendor"],
+            "webgl_renderer": webgl_info["renderer"],
+        }
+
     async def delete_browser(self, user_id: str) -> bool:
         """删除浏览器实例及其本地缓存数据"""
         try:
@@ -435,7 +510,10 @@ class BrowserService:
                 # 4. 从数据库移除端口记录
                 await db_manager.delete_port(user_id)
 
-                # 5. 删除本地数据目录
+                # 5. 从数据库移除配置
+                await db_manager.delete_browser_config(user_id)
+
+                # 6. 删除本地数据目录
                 import shutil
 
                 if manager.user_data_dir.exists():

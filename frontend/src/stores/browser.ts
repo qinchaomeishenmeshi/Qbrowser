@@ -112,12 +112,13 @@ export const useBrowserStore = defineStore('browser', () => {
   }
 
   async function createBrowser(
-    userId: string
+    userId: string,
+    config?: Record<string, any>
   ): Promise<{ status: string; user_id: string } | null> {
     loading.value = true
     error.value = null
     try {
-      const result = await browserApi.create(userId)
+      const result = await browserApi.create(userId, config)
       // WebSocket 会推送新增事件，这里不需要手动 push
       return result
     } catch (e) {

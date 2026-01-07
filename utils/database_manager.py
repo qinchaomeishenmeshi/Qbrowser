@@ -116,6 +116,14 @@ class DatabaseManager:
                 created_at REAL
             )
             """,
+            # 7. 浏览器指纹配置表
+            """
+            CREATE TABLE IF NOT EXISTS browser_configs (
+                user_id TEXT PRIMARY KEY,
+                config_json TEXT,  -- 存储 UA, timezone, viewport, proxy 等
+                updated_at DATETIME
+            )
+            """,
         ]
 
         db = await self.get_db()
@@ -130,6 +138,40 @@ class DatabaseManager:
             await self._conn.close()
             self._conn = None
             logger.info("数据库连接已关闭")
+
+    # --- 浏览器配置管理接口 ---
+    async def save_browser_config(self, user_id: str, config: Dict[str, Any]):
+        """保存浏览器指纹配置"""
+        db = await self.get_db()
+        await db.execute(
+            "INSERT OR REPLACE INTO browser_configs (user_id, config_json, updated_at) VALUES (?, ?, ?)",
+            (
+                user_id,
+                json.dumps(config, ensure_ascii=False),
+                datetime.now().isoformat(),
+            ),
+        )
+        await db.commit()
+
+    async def get_browser_config(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """获取浏览器指纹配置"""
+        db = await self.get_db()
+        async with db.execute(
+            "SELECT config_json FROM browser_configs WHERE user_id = ?", (user_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                try:
+                    return json.loads(row[0])
+                except Exception:
+                    pass
+        return None
+
+    async def delete_browser_config(self, user_id: str):
+        """删除浏览器指纹配置"""
+        db = await self.get_db()
+        await db.execute("DELETE FROM browser_configs WHERE user_id = ?", (user_id,))
+        await db.commit()
 
     # --- 通用 KV 存储接口 ---
     async def set_value(self, key: str, value: Any):

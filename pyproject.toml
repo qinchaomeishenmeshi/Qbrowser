@@ -50,6 +50,7 @@ dependencies = [
     "setuptools", # Required for pkg_resources used by playwright-stealth
     "screeninfo>=0.8.1", # 用于获取设备屏幕分辨率
     "aiosqlite>=0.20.0", # 异步 SQLite 驱动
+    "fake-useragent>=1.4.0", # 随机User-Agent生成
 ]
 
 
