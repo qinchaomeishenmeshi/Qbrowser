@@ -15,6 +15,9 @@ from pathlib import Path
 try:
     # 仅在打包环境下重定向日志，本地开发保留控制台输出
     if getattr(sys, "frozen", False):
+        # [Fix] 禁用 Playwright 在打包环境下的浏览器检查
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
         from conf import LOG_DIR
 
         log_path = Path(LOG_DIR)

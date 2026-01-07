@@ -85,12 +85,19 @@ class PlaywrightManager:
             proxy = self.config.get("proxy")
             executable_path = self.config.get("executable_path")
 
+            if not executable_path:
+                # 如果没有指定路径，尝试获取系统 Chrome 路径
+                executable_path = await chrome_path_manager.get_chrome_path()
+                if executable_path:
+                    logger.info(f"Using system default chrome: {executable_path}")
+
             if executable_path:
                 path_obj = Path(executable_path)
                 if not path_obj.exists():
                     logger.warning(
                         f"Custom kernel path not found: {executable_path}. Falling back to bundled browser."
                     )
+                    # 如果系统/自定义路径都找不到，最后才会回退到 Playwright 内置 (虽然在打包版里可能不存在)
                     executable_path = None
                 else:
                     logger.info(f"Using custom chromium kernel: {executable_path}")
